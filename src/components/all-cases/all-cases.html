@@ -1,0 +1,72 @@
+<div class="page-view page-view--hidden" id="view-all-cases">
+
+  <!-- Page Header Title Glass Card -->
+  <div class="glass-card" style="padding: 22px 28px; margin-bottom: 24px;">
+    <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;">
+      <div>
+        <h1 style="font-size: 24px; font-weight: 800; color: #000; margin: 0;">سجل ودفتر جميع الحالات والملفات
+          الاجتماعية 📁</h1>
+        <p style="font-size: var(--font-size-xs); color: var(--text-secondary); margin: 4px 0 0;">
+          استعراض الحالات وقوائم المراجعة، والتقارير الميدانية الكاملة ورأي الأخصائي الاجتماعي والدعم المباشر
+        </p>
+      </div>
+
+      <button type="button" class="btn btn--secondary" data-view-target="dashboard" style="font-weight: 700;">
+        ‹ العودة للرئيسية
+      </button>
+    </div>
+  </div>
+
+  <!-- Filter Controls & Search Toolbar Glass Card -->
+  <div class="glass-card" style="padding: 18px 24px; margin-bottom: 24px;">
+    <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;">
+
+      <!-- Status Filter Tabs -->
+      <div class="all-cases-filter-tabs" style="display: flex; gap: 8px; flex-wrap: wrap;">
+        <button type="button" class="btn-case-filter btn-case-filter--active" data-filter="all">جميع الحالات
+          (<span class="case-filter-count" data-filter-count="all">0</span>)</button>
+        <button type="button" class="btn-case-filter" data-filter="pending">قيد المراجعة (<span class="case-filter-count" data-filter-count="pending">0</span>) 🟡</button>
+        <button type="button" class="btn-case-filter" id="btn-filter-awaiting-approval" data-filter="awaiting_approval" style="display: none;">بانتظار اعتمادك (<span class="case-filter-count" data-filter-count="awaiting_approval">0</span>) 🔵</button>
+        <button type="button" class="btn-case-filter" data-filter="accepted">الحالات المقبولة (<span class="case-filter-count" data-filter-count="accepted">0</span>) 🟢</button>
+        <button type="button" class="btn-case-filter" data-filter="rejected">الحالات المرفوضة (<span class="case-filter-count" data-filter-count="rejected">0</span>) 🔴</button>
+      </div>
+
+      <!-- Quick Search Bar -->
+      <div style="position: relative; min-width: 280px; flex: 1; max-width: 380px;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          style="position: absolute; right: 14px; top: 12px; color: var(--text-secondary);">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <input type="text" id="all-cases-search-input" class="dash-search-input"
+          placeholder="ابحث بالاسم أو الرقم القومي..." dir="rtl"
+          style="height: 42px; padding-right: 40px; font-size: 13px;">
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Cases Grid List Container -->
+  <div class="all-cases-grid" id="all-cases-grid">
+    <!-- Dynamically populated cases cards -->
+  </div>
+
+  <!-- Full Case Review Inspection Modal (الفحص والتقرير الشامل للحالة في صفحة واحدة كروت) -->
+  <div class="case-modal-overlay" id="case-detail-modal" style="display: none;">
+    <div class="glass-card case-modal-content">
+      <div class="case-modal-header">
+        <div>
+          <span class="badge" style="background: rgba(37, 99, 235, 0.15); color: #2563eb; font-weight: 800;"
+            id="modal-case-code">CASE-101</span>
+          <h2 class="case-modal-title" id="modal-case-name">أحمد محمود علي عبد الفتاح</h2>
+        </div>
+        <button type="button" class="case-modal-close" id="btn-close-case-modal" title="إغلاق التقرير">&times;</button>
+      </div>
+
+      <div class="case-modal-body" id="modal-case-body">
+        <!-- Dynamically rendered 9 ordered section cards -->
+      </div>
+    </div>
+  </div>
+
+</div>

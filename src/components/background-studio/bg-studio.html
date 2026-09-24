@@ -1,0 +1,203 @@
+<!-- PAGE VIEW 2: صفحة استوديو تخصيص الخلفية والمؤثرات -->
+<div class="page-view page-view--hidden" id="view-bg-studio">
+  <section class="glass-card" id="bg-customizer-card">
+    <div class="glass-card__header" style="justify-content: space-between; flex-wrap: wrap; gap: 16px;">
+      <div class="glass-card__title-group">
+        <div class="glass-card__icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+            <circle cx="8.5" cy="8.5" r="1.5"></circle>
+            <polyline points="21 15 16 10 5 21"></polyline>
+          </svg>
+        </div>
+        <div>
+          <h2 class="glass-card__title">استوديو تخصيص الخلفية والمؤثرات البصرية</h2>
+          <p class="glass-card__subtitle">تحكم كامل ومباشر في صورة الخلفية، الضبابية، السطوع، التباين والتشبع
+            بالوقت الفعلي</p>
+        </div>
+      </div>
+
+      <button class="btn btn--secondary" id="btn-back-to-personal-data" title="الرجوع للبيانات الشخصية">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="9 18 15 12 9 6"></polyline>
+        </svg>
+        <span>العودة للبيانات الشخصية</span>
+      </button>
+    </div>
+
+    <div class="form-grid form-grid--full" style="gap: 24px;">
+      <!-- Sub-Card 1: Upload Custom Background Image -->
+      <div class="form-group form-group--full">
+        <label class="form-label" style="font-size: var(--font-size-md);">اختيار صورة الخلفية (رفع صورة
+          جديدة)</label>
+        <label class="form-upload">
+          <input type="file" id="inpage-bg-file" accept="image/*" style="display: none;">
+          <div class="form-upload__icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="17 8 12 3 7 8"></polyline>
+              <line x1="12" y1="3" x2="12" y2="15"></line>
+            </svg>
+          </div>
+          <div class="form-upload__title">اضغط هنا لاختيار صورة من جهازك لتطبيقها خلفيةً فورية للمنظومة</div>
+          <div class="form-upload__hint">تتحدث الخلفية فوراً بالوقت الفعلي فوق جميع الكروت المنزلقة</div>
+        </label>
+      </div>
+
+      <!-- Sub-Card 1.5: Preset Background Colors & Gradients -->
+      <div class="form-group form-group--full">
+        <label class="form-label"
+          style="font-size: var(--font-size-md); margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between;">
+          <span>ألوان خلفية جاهزة وثابتة (فواتح، غوامق، وتدرجات)</span>
+          <span class="badge badge--secondary" style="font-size: 11px;">تخصيص سريع</span>
+        </label>
+        <div class="color-palette-grid">
+          <!-- Default Image Swatch -->
+          <button type="button" class="color-swatch active" data-bg-type="image"
+            data-bg-val="assets/background.jpg" title="الخلفية الأصلية">
+            <span class="color-swatch__preview color-swatch__preview--img"></span>
+            <span class="color-swatch__name">الصورة الأصلية</span>
+          </button>
+
+          <!-- Dark Colors -->
+          <button type="button" class="color-swatch" data-bg-type="color" data-bg-val="#0f172a"
+            title="كحلي داكن ملكي">
+            <span class="color-swatch__preview" style="background-color: #0f172a;"></span>
+            <span class="color-swatch__name">كحلي داكن</span>
+          </button>
+          <button type="button" class="color-swatch" data-bg-type="color" data-bg-val="#18181b"
+            title="رمادي فاحم">
+            <span class="color-swatch__preview" style="background-color: #18181b;"></span>
+            <span class="color-swatch__name">رمادي فاحم</span>
+          </button>
+          <button type="button" class="color-swatch" data-bg-type="color" data-bg-val="#064e3b" title="زيتي داكن">
+            <span class="color-swatch__preview" style="background-color: #064e3b;"></span>
+            <span class="color-swatch__name">زيتي داكن</span>
+          </button>
+          <button type="button" class="color-swatch" data-bg-type="color" data-bg-val="#4c0519"
+            title="عنابي داكن">
+            <span class="color-swatch__preview" style="background-color: #4c0519;"></span>
+            <span class="color-swatch__name">عنابي داكن</span>
+          </button>
+
+          <!-- Light Colors -->
+          <button type="button" class="color-swatch" data-bg-type="color" data-bg-val="#f8fafc"
+            title="أوف وايت عاجي">
+            <span class="color-swatch__preview"
+              style="background-color: #f8fafc; border: 1px solid rgba(0,0,0,0.15);"></span>
+            <span class="color-swatch__name">أوف وايت</span>
+          </button>
+          <button type="button" class="color-swatch" data-bg-type="color" data-bg-val="#e0f2fe"
+            title="أزرق سماوي فاتح">
+            <span class="color-swatch__preview"
+              style="background-color: #e0f2fe; border: 1px solid rgba(0,0,0,0.15);"></span>
+            <span class="color-swatch__name">سماوي ناعم</span>
+          </button>
+          <button type="button" class="color-swatch" data-bg-type="color" data-bg-val="#ecfdf5"
+            title="نعناعي فاتح">
+            <span class="color-swatch__preview"
+              style="background-color: #ecfdf5; border: 1px solid rgba(0,0,0,0.15);"></span>
+            <span class="color-swatch__name">نعناعي فاتح</span>
+          </button>
+          <button type="button" class="color-swatch" data-bg-type="color" data-bg-val="#fef3c7" title="بيج دافئ">
+            <span class="color-swatch__preview"
+              style="background-color: #fef3c7; border: 1px solid rgba(0,0,0,0.15);"></span>
+            <span class="color-swatch__name">بيج دافئ</span>
+          </button>
+
+          <!-- Gradients -->
+          <button type="button" class="color-swatch" data-bg-type="gradient"
+            data-bg-val="linear-gradient(135deg, #0f172a, #1e3a8a)" title="تدرج المحيط">
+            <span class="color-swatch__preview"
+              style="background: linear-gradient(135deg, #0f172a, #1e3a8a);"></span>
+            <span class="color-swatch__name">تدرج المحيط</span>
+          </button>
+          <button type="button" class="color-swatch" data-bg-type="gradient"
+            data-bg-val="linear-gradient(135deg, #064e3b, #0f172a)" title="تدرج زمردي">
+            <span class="color-swatch__preview"
+              style="background: linear-gradient(135deg, #064e3b, #0f172a);"></span>
+            <span class="color-swatch__name">تدرج زمردي</span>
+          </button>
+          <button type="button" class="color-swatch" data-bg-type="gradient"
+            data-bg-val="linear-gradient(135deg, #311042, #701a75)" title="تدرج أرجواني">
+            <span class="color-swatch__preview"
+              style="background: linear-gradient(135deg, #311042, #701a75);"></span>
+            <span class="color-swatch__name">تدرج أرجواني</span>
+          </button>
+
+          <!-- Custom Color Picker -->
+          <label class="color-swatch color-swatch--custom" title="اختيار لون مخصص">
+            <input type="color" id="inpage-bg-custom-color" value="#0f172a"
+              style="opacity: 0; position: absolute; width: 0; height: 0;">
+            <span class="color-swatch__preview color-swatch__preview--picker" id="custom-color-preview"
+              style="background: conic-gradient(red, yellow, lime, aqua, blue, magenta, red);"></span>
+            <span class="color-swatch__name">لون مخصص</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Sub-Card 2: Realtime Visual Sliders -->
+      <div class="form-group form-group--full">
+        <label class="form-label" style="font-size: var(--font-size-md); margin-bottom: 8px;">مؤثرات الفلترة
+          البصرية والتحكم بالضبابية والسطوع</label>
+
+        <div class="sliders-grid">
+          <!-- Blur Slider -->
+          <div class="slider-group">
+            <div class="slider-header">
+              <label for="inpage-slider-blur">درجة الضبابية (Blur)</label>
+              <span class="slider-val" id="inpage-val-blur">20px</span>
+            </div>
+            <input type="range" id="inpage-slider-blur" min="0" max="30" value="20" class="custom-slider">
+          </div>
+
+          <!-- Brightness Slider -->
+          <div class="slider-group">
+            <div class="slider-header">
+              <label for="inpage-slider-brightness">الإضاءة والسطوع (Brightness)</label>
+              <span class="slider-val" id="inpage-val-brightness">89%</span>
+            </div>
+            <input type="range" id="inpage-slider-brightness" min="40" max="160" value="89" class="custom-slider">
+          </div>
+
+          <!-- Contrast Slider -->
+          <div class="slider-group">
+            <div class="slider-header">
+              <label for="inpage-slider-contrast">درجة التباين (Contrast)</label>
+              <span class="slider-val" id="inpage-val-contrast">98%</span>
+            </div>
+            <input type="range" id="inpage-slider-contrast" min="50" max="160" value="98" class="custom-slider">
+          </div>
+
+          <!-- Saturation Slider -->
+          <div class="slider-group">
+            <div class="slider-header">
+              <label for="inpage-slider-saturate">درجة تشبع الألوان (Saturation)</label>
+              <span class="slider-val" id="inpage-val-saturate">140%</span>
+            </div>
+            <input type="range" id="inpage-slider-saturate" min="0" max="220" value="140" class="custom-slider">
+          </div>
+
+          <!-- Overlay Opacity Slider -->
+          <div class="slider-group slider-group--full">
+            <div class="slider-header">
+              <label for="inpage-slider-overlay">شفافية غطاء الصفحة (Overlay Opacity)</label>
+              <span class="slider-val" id="inpage-val-overlay">22%</span>
+            </div>
+            <input type="range" id="inpage-slider-overlay" min="0" max="80" value="22" class="custom-slider">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="btn-group" style="margin-top: 20px;">
+      <button class="btn btn--secondary" id="inpage-reset-bg-settings">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="23 4 23 10 17 10"></polyline>
+          <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+        </svg>
+        <span>إعادة ضبط المصنع</span>
+      </button>
+    </div>
+  </section>
+</div>

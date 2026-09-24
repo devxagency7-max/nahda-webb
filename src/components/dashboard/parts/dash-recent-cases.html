@@ -1,0 +1,35 @@
+<!-- 5. Recent Cases Stream Glass Card -->
+<div class="glass-card dash-recent-section dash-recent-section--collapsed" id="dash-recent-card"
+  style="padding: 24px;">
+  <div class="glass-card__header" style="padding-bottom: 16px; margin-bottom: 20px;">
+    <div class="glass-card__title-group">
+      <div class="glass-card__icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <polyline points="12 6 12 12 16 14"></polyline>
+        </svg>
+      </div>
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <h2 class="glass-card__title" style="font-size: var(--font-size-lg);" id="dash-recent-title">أحدث الحالات المُضافة مؤخراً
+        </h2>
+        <span class="badge" id="dash-recent-count" style="background: rgba(16, 185, 129, 0.15); color: #047857;">محدث</span>
+      </div>
+    </div>
+
+    <!-- Left Header Controls: Expand/Collapse Arrow Button -->
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <button type="button" class="btn btn--secondary btn--icon dash-recent-toggle-btn" id="btn-toggle-recent"
+        aria-expanded="false" title="توسيع/طي كارت الحالات المُضافة">
+        <svg class="dash-recent-toggle-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2.5">
+          <polyline points="6 9 12 15 18 9"></polyline>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Vertical Stacked Cards Stream -->
+  <div class="dash-recent-list" id="dash-recent-list">
+    <!-- Rows are rendered from case data by updateRecentCases() -->
+  </div>
+</div>

@@ -1,0 +1,37 @@
+<div class="page-view page-view--hidden" id="view-case-details">
+  
+  <!-- Header Title Glass Card -->
+  <div class="glass-card" style="padding: 22px 28px; margin-bottom: 24px;">
+    <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;">
+      <div>
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
+          <span class="badge" style="background: rgba(37, 99, 235, 0.15); color: #2563eb; font-weight: 800; font-size: 14px;" id="case-detail-code">CASE-101</span>
+          <span class="dash-status-pill dash-status-pill--warning" id="case-detail-status-pill">🟡 قيد المراجعة</span>
+        </div>
+        <h1 style="font-size: 24px; font-weight: 800; color: #000; margin: 0;" id="case-detail-name">أحمد محمود علي عبد الفتاح</h1>
+        <p style="font-size: var(--font-size-xs); color: var(--text-secondary); margin: 4px 0 0;" id="case-detail-subinfo">
+          الرقم القومي: 29805142200154 — جمعية النهضة للتنمية والتطوير (بني سويف — إبشنا)
+        </p>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+        <button type="button" class="btn btn--primary" id="btn-export-case-pdf" style="font-weight: 700; display: inline-flex; align-items: center; gap: 8px;">
+          <span>📥</span>
+          <span id="btn-export-case-pdf-text">تحميل الحالة PDF</span>
+        </button>
+        <button type="button" class="btn btn--secondary" data-view-target="all-cases" style="font-weight: 700;">
+          ‹ العودة لقائمة وسجل الحالات
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Full 10 Glassmorphic Cards Stack Container -->
+  <div class="case-details-stack" id="case-details-stack">
+    <!-- Dynamically populated 10 ordered glassmorphic cards -->
+  </div>
+
+  <!-- أزرار الإجراء العائمة — تُبنى حسب دور المستخدم وحالة الملف -->
+  <div class="case-float-actions" id="case-float-actions"></div>
+
+</div>

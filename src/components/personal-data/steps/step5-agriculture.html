@@ -1,0 +1,122 @@
+<!-- TAB 5: الحيازة الزراعية -->
+<div class="step-pane" id="step-pane-5" style="display: none;" tabindex="-1">
+  <section class="glass-card" id="card-tab-5">
+    <div class="glass-card__header">
+      <div class="glass-card__title-group">
+        <div class="glass-card__icon" style="background: rgba(16, 185, 129, 0.15); color: #059669;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22V9"></path>
+            <path d="M12 13c0-3.3 2.2-6 5-6 0 3.3-2.2 6-5 6z"></path>
+            <path d="M12 16c0-3.3-2.2-6-5-6 0 3.3 2.2 6 5 6z"></path>
+            <path d="M4 22h16"></path>
+          </svg>
+        </div>
+        <div>
+          <h2 class="glass-card__title">5. الحيازة والأصول الزراعية</h2>
+          <p class="glass-card__subtitle">الأرض الزراعية المملوكة أو المستأجرة، والمواشي والأصول الحيوانية</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- الأرض الزراعية -->
+    <div class="agri-subsection">
+      <h3 class="agri-subsection__title">🌾 الأرض الزراعية</h3>
+
+      <fieldset class="agri-yesno" id="agri-land-yesno">
+        <legend class="agri-yesno__legend">هل تملك/تستأجر الأسرة أرضًا زراعية؟ <span class="agri-yesno__required">*</span></legend>
+        <div class="agri-yesno__options">
+          <label class="agri-yesno__option">
+            <input type="radio" name="agri-has-land" id="agri-has-land-yes" value="yes">
+            <span>نعم</span>
+          </label>
+          <label class="agri-yesno__option">
+            <input type="radio" name="agri-has-land" id="agri-has-land-no" value="no">
+            <span>لا</span>
+          </label>
+        </div>
+      </fieldset>
+
+      <div id="agri-land-fields" class="form-grid form-grid--3-col" style="display: none; margin-top: 14px;">
+        <div class="form-group">
+          <label class="form-label" for="agri-land-type"><span>طبيعة حيازة الأرض <span class="agri-yesno__required">*</span></span></label>
+          <div class="form-select-wrapper">
+            <select id="agri-land-type" class="form-select" data-no-other="true">
+              <option value="" selected disabled>اختر طبيعة الحيازة...</option>
+              <option value="تمليك">تمليك</option>
+              <option value="إيجار">إيجار</option>
+            </select>
+            <svg class="select-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="agri-area"><span>المساحة (فدان) <span class="agri-yesno__required">*</span></span></label>
+          <input type="number" id="agri-area" class="form-input" min="0" step="0.01" inputmode="decimal" placeholder="أدخل المساحة بالفدان...">
+        </div>
+
+        <div class="form-group" id="agri-rent-group" style="display: none;">
+          <label class="form-label" for="agri-rent-amount"><span>سعر إيجار الأرض (جنيه)</span></label>
+          <input type="number" id="agri-rent-amount" class="form-input" min="0" step="0.01" inputmode="decimal" placeholder="قيمة الإيجار بالجنيه...">
+        </div>
+
+        <div class="form-group" id="agri-income-group" style="display: none;">
+          <label class="form-label" for="agri-annual-income"><span>الدخل السنوي للأرض (جنيه/سنة - يُقسم على 12 في الدخل)</span></label>
+          <input type="number" id="agri-annual-income" class="form-input" min="0" step="0.01" inputmode="decimal" placeholder="الدخل السنوي بالجنيه...">
+        </div>
+      </div>
+    </div>
+
+    <!-- المواشي والأصول الحيوانية -->
+    <div class="agri-subsection">
+      <h3 class="agri-subsection__title">🐄 المواشي والأصول الحيوانية</h3>
+
+      <fieldset class="agri-yesno" id="agri-livestock-yesno">
+        <legend class="agri-yesno__legend">هل تمتلك الأسرة مواشي أو أصول حيوانية؟ <span class="agri-yesno__required">*</span></legend>
+        <div class="agri-yesno__options">
+          <label class="agri-yesno__option">
+            <input type="radio" name="agri-has-livestock" id="agri-has-livestock-yes" value="yes">
+            <span>نعم</span>
+          </label>
+          <label class="agri-yesno__option">
+            <input type="radio" name="agri-has-livestock" id="agri-has-livestock-no" value="no">
+            <span>لا</span>
+          </label>
+        </div>
+      </fieldset>
+
+      <div id="agri-livestock-fields" style="display: none; margin-top: 14px;">
+        <div class="chip-field" data-field="livestock">
+          <div class="chip-field__header">
+            <span class="chip-field__label">اختر أنواع المواشي والأصول <span class="agri-yesno__required">*</span></span>
+            <span class="badge chip-field__count">0 اختيار</span>
+          </div>
+          <div class="chip-field__options">
+            <button type="button" class="chip-btn" data-value="بقرة">بقرة</button>
+            <button type="button" class="chip-btn" data-value="عجلة">عجلة</button>
+            <button type="button" class="chip-btn" data-value="جاموسة">جاموسة</button>
+            <button type="button" class="chip-btn" data-value="أغنام / ماعز">أغنام / ماعز</button>
+            <button type="button" class="chip-btn" data-value="حمير / خيول">حمير / خيول</button>
+            <button type="button" class="chip-btn" data-value="دواجن">دواجن</button>
+            <button type="button" class="chip-btn" data-value="أخرى">أخرى</button>
+          </div>
+          <input type="text" class="form-input chip-field__other" style="display: none;" placeholder="اكتب هنا...">
+        </div>
+
+        <div class="form-group" style="margin-top: 14px;">
+          <label class="form-label" for="agri-livestock-details"><span>تفاصيل إضافية والعدد</span></label>
+          <input type="text" id="agri-livestock-details" class="form-input" placeholder="أدخل تفاصيل إضافية والعدد...">
+        </div>
+      </div>
+    </div>
+
+    <!-- ملاحظات وتفاصيل الأصول -->
+    <div class="agri-subsection" style="border-bottom: none; padding-bottom: 0; margin-bottom: 0;">
+      <h3 class="agri-subsection__title">📝 ملاحظات وتفاصيل الأصول</h3>
+      <div class="form-group form-group--full">
+        <input type="text" id="agri-notes" class="form-input" placeholder="أدخل أي تفاصيل وملاحظات إضافية...">
+      </div>
+    </div>
+  </section>
+</div>

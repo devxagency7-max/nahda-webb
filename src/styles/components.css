@@ -1,0 +1,1940 @@
+/* --------------------------------------------------------------------------
+   7. FLOATING GLASS CARDS (IN-PAGE SECTIONS)
+   -------------------------------------------------------------------------- */
+.glass-card {
+  background: var(--glass-bg-gradient);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  border-radius: var(--card-radius);
+  padding: 32px;
+  margin-bottom: 32px;
+  transition: box-shadow var(--transition-normal), transform var(--transition-normal);
+  animation: fadeIn 0.4s ease-out;
+}
+
+.glass-card:hover {
+  box-shadow: var(--glass-shadow-hover);
+}
+
+.glass-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 20px;
+  margin-bottom: 28px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.glass-card__title-group {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.glass-card__icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: rgba(29, 78, 216, 0.15);
+  backdrop-filter: blur(8px);
+  color: var(--color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(29, 78, 216, 0.18);
+}
+
+.glass-card__title {
+  font-size: var(--font-size-xl);
+  /* 20px */
+  font-weight: 800;
+  /* Prominent Bold Card Title */
+  color: #000000;
+  /* Deep Pure Black */
+}
+
+.glass-card__subtitle {
+  font-size: var(--font-size-xs);
+  color: #334155;
+  font-weight: 700;
+  margin-top: 3px;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 99px;
+  font-size: var(--font-size-xs);
+  font-weight: 800;
+}
+
+.badge--primary {
+  background: rgba(29, 78, 216, 0.15);
+  color: var(--color-primary);
+  border: 1px solid var(--color-primary-border);
+}
+
+.badge--neutral {
+  background: rgba(255, 255, 255, 0.5);
+  color: #000000;
+  border: 1px solid var(--border-color);
+}
+
+/* --------------------------------------------------------------------------
+   8. FORM LAYOUT & INPUT COMPONENTS
+   -------------------------------------------------------------------------- */
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 28px;
+}
+
+.form-grid--3-col {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+@media (max-width: 1024px) {
+  .form-grid--3-col {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .form-grid--3-col {
+    grid-template-columns: 1fr;
+  }
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* --------------------------------------------------------------------------
+   FINANCIAL SUMMARY (الملخص المالي — مطابق لكارت الملخص في الأبلكيشن:
+   صفوف مكدّسة فوق بعض، خط فاصل قبل صافي الدخل)
+   -------------------------------------------------------------------------- */
+#card-tab-6-summary .glass-card__title {
+  font-size: 26px;
+}
+
+#card-tab-6-summary .glass-card__subtitle {
+  font-size: var(--font-size-md);
+}
+
+.financial-summary__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 14px;
+}
+
+.financial-summary__label {
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.financial-summary__label--bold {
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.financial-summary__value {
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.financial-summary__value--bold {
+  font-size: 26px;
+}
+
+.financial-summary__divider {
+  height: 1px;
+  background: var(--border-color);
+  margin: 10px 0 22px;
+}
+
+.financial-summary__hint {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--text-muted, #64748b);
+  margin-top: 4px;
+}
+
+/* --------------------------------------------------------------------------
+   FINANCIAL CARDS ROW (مصادر الدخل + المصروفات جمب بعض)
+   -------------------------------------------------------------------------- */
+.financial-cards-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  align-items: start;
+  margin-top: 24px;
+}
+
+@media (max-width: 900px) {
+  .financial-cards-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.form-group--full {
+  grid-column: 1 / -1;
+}
+
+.form-label {
+  font-size: var(--font-size-sm);
+  /* 14px */
+  font-weight: 800;
+  /* Bold label for clear field distinction */
+  color: #000000;
+  /* Deep Black */
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.form-label__required {
+  color: #dc2626;
+}
+
+.input-container {
+  position: relative;
+  width: 100%;
+}
+
+.form-input {
+  width: 100%;
+  padding: 14px 18px;
+  border-radius: var(--input-radius);
+  border: 1px solid var(--border-color-strong);
+  background: rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(12px);
+  font-size: var(--font-size-md);
+  color: var(--text-body);
+  font-weight: 700;
+  transition: all var(--transition-fast);
+  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.5);
+}
+
+.form-input:hover {
+  border-color: rgba(0, 0, 0, 0.3);
+  background: rgba(255, 255, 255, 0.65);
+}
+
+.form-input:focus {
+  outline: none;
+  background: rgba(255, 255, 255, 0.95);
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 4px rgba(29, 78, 216, 0.20), 0 4px 12px rgba(29, 78, 216, 0.12);
+}
+
+/* Custom Select Component */
+.form-select-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.form-select {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 100%;
+  padding: 14px 18px 14px 44px;
+  border-radius: var(--input-radius);
+  border: 1px solid var(--border-color-strong);
+  background: rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(12px);
+  font-size: var(--font-size-md);
+  color: var(--text-body);
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.form-select:hover {
+  border-color: rgba(0, 0, 0, 0.3);
+  background: rgba(255, 255, 255, 0.65);
+}
+
+.form-select:focus {
+  outline: none;
+  background: rgba(255, 255, 255, 0.95);
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 4px rgba(29, 78, 216, 0.20);
+}
+
+.select-arrow {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 18px;
+  height: 18px;
+  stroke: #000000;
+  pointer-events: none;
+}
+
+/* Textarea Component */
+.form-textarea {
+  width: 100%;
+  min-height: 110px;
+  padding: 14px 18px;
+  border-radius: var(--input-radius);
+  border: 1px solid var(--border-color-strong);
+  background: rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(12px);
+  font-size: var(--font-size-md);
+  color: var(--text-body);
+  font-weight: 700;
+  resize: vertical;
+  line-height: 1.6;
+  transition: all var(--transition-fast);
+}
+
+.form-textarea::placeholder {
+  color: #475569;
+  font-weight: 500;
+}
+
+.form-textarea:focus {
+  outline: none;
+  background: rgba(255, 255, 255, 0.95);
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 4px rgba(29, 78, 216, 0.20);
+}
+
+/* Drag & Drop Upload Area Component */
+.form-upload {
+  border: 2px dashed rgba(0, 0, 0, 0.35);
+  border-radius: var(--card-radius);
+  padding: 28px;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(12px);
+  cursor: pointer;
+  transition: all var(--transition-normal);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.form-upload:hover,
+.form-upload--dragover {
+  border-color: var(--color-primary);
+  background: rgba(29, 78, 216, 0.15);
+  transform: translateY(-2px);
+}
+
+.form-upload__icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-primary);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+}
+
+.form-upload__title {
+  font-size: var(--font-size-sm);
+  font-weight: 800;
+  color: #000000;
+}
+
+.form-upload__hint {
+  font-size: var(--font-size-xs);
+  color: #334155;
+  font-weight: 700;
+}
+
+/* --------------------------------------------------------------------------
+   9. IN-PAGE BACKGROUND STUDIO SLIDERS
+   -------------------------------------------------------------------------- */
+.sliders-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+
+@media (max-width: 640px) {
+  .sliders-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.slider-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.3);
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid var(--border-color);
+}
+
+.slider-group--full {
+  grid-column: 1 / -1;
+}
+
+.slider-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: var(--font-size-xs);
+  font-weight: 800;
+  color: #000000;
+}
+
+.slider-val {
+  color: var(--color-primary);
+  background: rgba(29, 78, 216, 0.15);
+  padding: 2px 10px;
+  border-radius: 6px;
+  font-family: monospace;
+  font-weight: 800;
+}
+
+.custom-slider {
+  width: 100%;
+  height: 6px;
+  border-radius: 99px;
+  background: rgba(0, 0, 0, 0.15);
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+}
+
+.custom-slider::-webkit-slider-thumb {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  border: 2px solid #ffffff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+  transition: transform var(--transition-fast);
+}
+
+.custom-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.25);
+}
+
+/* --------------------------------------------------------------------------
+   10. BUTTON COMPONENTS
+   -------------------------------------------------------------------------- */
+.btn-group {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 12px 24px;
+  border-radius: var(--btn-radius);
+  font-size: var(--font-size-sm);
+  font-weight: 800;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+.btn--primary {
+  background: var(--color-primary);
+  color: #ffffff;
+  font-weight: 800;
+  box-shadow: 0 6px 20px rgba(29, 78, 216, 0.4);
+}
+
+.btn--primary:hover {
+  background: var(--color-primary-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(29, 78, 216, 0.5);
+}
+
+.btn--secondary {
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(12px);
+  color: #000000;
+  border-color: rgba(0, 0, 0, 0.25);
+  font-weight: 800;
+}
+
+.btn--secondary:hover {
+  background: #ffffff;
+  border-color: #000000;
+  transform: translateY(-2px);
+}
+
+.btn--ghost {
+  background: transparent;
+  color: #000000;
+  font-weight: 800;
+}
+
+.btn--ghost:hover {
+  background: rgba(255, 255, 255, 0.5);
+  color: var(--color-primary);
+}
+
+.btn--icon {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border-radius: 12px;
+}
+
+/* --------------------------------------------------------------------------
+   11. ANIMATIONS & TOAST UTILITIES
+   -------------------------------------------------------------------------- */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.toast {
+  position: fixed;
+  bottom: 28px;
+  left: 28px;
+  background: #000000;
+  backdrop-filter: blur(16px);
+  color: #ffffff;
+  padding: 14px 28px;
+  border-radius: 14px;
+  font-size: var(--font-size-sm);
+  font-weight: 800;
+  box-shadow: 0 14px 35px rgba(0, 0, 0, 0.35);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: all var(--transition-normal);
+  pointer-events: none;
+}
+
+.toast--visible {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+/* شريط لون جانبي يميّز نوع الرسالة بصريًا (نجاح/خطأ/تحذير/معلومة) بالإضافة
+   لأيقونتها — راجع showToast في utils/toast.js. */
+.toast--success { border-inline-start: 4px solid #10b981; }
+.toast--error { border-inline-start: 4px solid #ef4444; }
+.toast--warning { border-inline-start: 4px solid #f59e0b; }
+.toast--info { border-inline-start: 4px solid #3b82f6; }
+
+/* --------------------------------------------------------------------------
+   BACKGROUND COLOR PALETTE & SWATCHES
+   -------------------------------------------------------------------------- */
+.color-palette-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(105px, 1fr));
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.color-swatch {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 8px;
+  background: rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(12px);
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--input-radius);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  outline: none;
+  font-family: inherit;
+  user-select: none;
+}
+
+.color-swatch:hover {
+  background: rgba(255, 255, 255, 0.75);
+  border-color: var(--border-color-strong);
+  transform: translateY(-2px);
+}
+
+.color-swatch.active {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: #1d4ed8;
+  box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.3);
+}
+
+.color-swatch__preview {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  box-shadow: 0 3px 10px rgba(15, 23, 42, 0.2);
+  transition: transform var(--transition-fast);
+}
+
+.color-swatch:hover .color-swatch__preview {
+  transform: scale(1.1);
+}
+
+.color-swatch__preview--img {
+  background-image: url('/assets/background.jpg');
+  background-size: cover;
+  background-position: center;
+}
+
+.color-swatch__name {
+  font-size: var(--font-size-xs);
+  color: var(--text-primary);
+  font-weight: 700;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.color-swatch--custom {
+  position: relative;
+}
+
+/* --------------------------------------------------------------------------
+   FAMILY MEMBERS (إضافة فرد) CARD STYLES
+   -------------------------------------------------------------------------- */
+.members-cards-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.member-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--border-color);
+  transition: all var(--transition-fast);
+  cursor: pointer;
+}
+
+.member-card:hover {
+  background: rgba(255, 255, 255, 0.75);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+  border-color: var(--primary-color);
+}
+
+.member-card__info {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.member-card__avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: var(--font-size-sm);
+  flex-shrink: 0;
+}
+
+.member-card__name {
+  font-size: var(--font-size-md);
+  font-weight: 800;
+  color: #000000;
+}
+
+.member-card__meta {
+  font-size: var(--font-size-xs);
+  color: var(--color-primary);
+  font-weight: 700;
+  margin-top: 2px;
+}
+
+.member-card__details {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+/* --------------------------------------------------------------------------
+   MODAL DIALOG STYLES (نافذة إدخال فرد تابع جديد)
+   -------------------------------------------------------------------------- */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: fadeInModal 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes fadeInModal {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.modal-card {
+  width: 100%;
+  max-width: 720px;
+  background: var(--color-surface);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: var(--glass-border);
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.35);
+  border-radius: var(--card-radius);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;
+}
+
+.modal-card__header {
+  padding: 20px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.modal-card__title {
+  font-size: var(--font-size-lg);
+  font-weight: 800;
+  color: #000000;
+}
+
+.modal-card__subtitle {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+}
+
+.modal-card__close {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--border-color);
+  background: rgba(255, 255, 255, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-body);
+  transition: all var(--transition-fast);
+}
+
+.modal-card__close:hover {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.4);
+}
+
+.modal-card__body {
+  padding: 24px;
+  overflow-y: auto;
+}
+
+.modal-card__footer {
+  padding: 16px 24px;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* --------------------------------------------------------------------------
+   INLINE ADD-MEMBER FORM (opens inside the family members card, not a modal)
+   -------------------------------------------------------------------------- */
+.inline-member-form {
+  margin-top: 20px;
+  margin-bottom: 28px;
+  background: rgba(255, 255, 255, 0.45);
+  border: 1px solid var(--border-color);
+  border-radius: var(--card-radius);
+  overflow: hidden;
+  animation: fadeInView 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.inline-member-form__header {
+  padding: 18px 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.inline-member-form__body {
+  padding: 22px;
+}
+
+.inline-member-form__footer {
+  padding: 16px 22px;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* --------------------------------------------------------------------------
+   FORM CHECKBOX CARD STYLE (هل الفرد طالب؟)
+   -------------------------------------------------------------------------- */
+.form-checkbox-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.45);
+  border: 1px solid var(--border-color);
+  cursor: pointer;
+  user-select: none;
+  transition: all var(--transition-fast);
+}
+
+.form-checkbox-card:hover {
+  background: rgba(255, 255, 255, 0.75);
+  border-color: var(--color-primary-border);
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
+}
+
+.form-checkbox-card__input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.form-checkbox-card__box {
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+  border: 2px solid var(--border-color);
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  flex-shrink: 0;
+  transition: all var(--transition-fast);
+}
+
+.form-checkbox-card__box svg {
+  opacity: 0;
+  transform: scale(0.5);
+  transition: all var(--transition-fast);
+}
+
+.form-checkbox-card__input:checked + .form-checkbox-card__box {
+  background: linear-gradient(135deg, #10b981, #059669);
+  border-color: #059669;
+}
+
+.form-checkbox-card__input:checked + .form-checkbox-card__box svg {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.form-checkbox-card__content {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-checkbox-card__title {
+  font-size: var(--font-size-sm);
+  font-weight: 800;
+  color: #000000;
+}
+
+.form-checkbox-card__desc {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  margin-top: 1px;
+}
+
+/* --------------------------------------------------------------------------
+   CHIP BUTTONS (التصنيفات الملونة القابلة للاختيار)
+   -------------------------------------------------------------------------- */
+.chip-btn {
+  padding: 8px 16px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.6);
+  border: 1.5px solid rgba(0, 0, 0, 0.12);
+  color: var(--text-primary);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  user-select: none;
+}
+
+.chip-btn:hover {
+  background: rgba(37, 99, 235, 0.08);
+  border-color: rgba(37, 99, 235, 0.3);
+}
+
+.chip-btn--active {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8) !important;
+  color: #ffffff !important;
+  border-color: #1d4ed8 !important;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+
+/* --------------------------------------------------------------------------
+   AGRICULTURE SUBSECTION (الحيازة والأصول الزراعية — تقسيم الكارت لأقسام)
+   -------------------------------------------------------------------------- */
+.agri-subsection {
+  padding-bottom: 20px;
+  margin-bottom: 20px;
+  border-bottom: 1px dashed var(--border-color);
+}
+
+.agri-subsection__title {
+  font-size: var(--font-size-sm);
+  font-weight: 800;
+  margin: 0 0 14px;
+}
+
+/* --------------------------------------------------------------------------
+   SUPPORT TYPE TILE (أنواع الدعم المقترحة — لحوم، دعم طبي، دعم المرافق... إلخ)
+   -------------------------------------------------------------------------- */
+.support-type-tile {
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  background: rgba(255, 255, 255, 0.4);
+  transition: all var(--transition-fast);
+}
+
+.support-type-tile--active {
+  background: rgba(29, 78, 216, 0.08);
+  border-color: var(--color-primary);
+  border-width: 1.5px;
+}
+
+.support-type-tile__header {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  text-align: right;
+}
+
+.support-type-tile--active .support-type-tile__header label {
+  color: var(--color-primary);
+  font-weight: 800;
+}
+
+.support-type-tile__subs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0 14px 14px;
+}
+
+/* --------------------------------------------------------------------------
+   MULTI-SELECT CHIP FIELD CARD (طبيعة السكن، الحوائط، السقف... إلخ)
+   -------------------------------------------------------------------------- */
+.chip-field {
+  padding: 18px 20px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid var(--border-color);
+}
+
+.chip-field__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.chip-field__label {
+  font-size: var(--font-size-sm);
+  font-weight: 800;
+}
+
+.chip-field__count {
+  background: rgba(255, 255, 255, 0.6);
+  color: var(--text-muted, #64748b);
+  border: 1px solid var(--border-color);
+}
+
+.chip-field__count--active {
+  background: rgba(29, 78, 216, 0.15);
+  color: var(--color-primary);
+  border-color: var(--color-primary-border);
+}
+
+.chip-field__options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip-field__other {
+  margin-top: 12px;
+}
+
+/* --------------------------------------------------------------------------
+   12. STATE DATA MANAGEMENT CONTROL CENTER STYLES («إدارة بيانات الحالة»)
+   -------------------------------------------------------------------------- */
+/* --------------------------------------------------------------------------
+   12. STATE DATA MANAGEMENT NARROW SIDE DRAWER STYLES («إدارة بيانات الحالة»)
+   -------------------------------------------------------------------------- */
+.drawer-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 1050;
+  display: flex;
+  justify-content: flex-end;
+  animation: fadeInDrawer 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.drawer-overlay--hidden {
+  display: none !important;
+}
+
+@keyframes fadeInDrawer {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.state-mgmt-drawer {
+  width: 440px;
+  max-width: 90vw;
+  height: 100vh;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-left: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: -15px 0 45px rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+  animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.drawer-header {
+  padding: 18px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border-color);
+  background: #ffffff;
+}
+
+.drawer-title {
+  font-size: 16px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+}
+
+.drawer-subtitle {
+  font-size: 11px;
+  color: #64748b;
+  margin-top: 2px;
+  font-weight: 600;
+}
+
+.drawer-body {
+  padding: 18px 20px;
+  overflow-y: auto;
+  flex: 1;
+  background: #f8fafc;
+}
+
+.drawer-footer {
+  padding: 14px 20px;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  background: #ffffff;
+}
+
+.state-mgmt-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.drawer-field-card {
+  background: #ffffff;
+  border-radius: 14px;
+  border: 1.5px solid rgba(226, 232, 240, 0.9);
+  padding: 16px;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.03);
+  transition: all var(--transition-fast);
+}
+
+.drawer-field-card:hover {
+  border-color: rgba(37, 99, 235, 0.35);
+  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.06);
+}
+
+.drawer-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.drawer-field-title {
+  font-size: 14px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 3px 0 0 0;
+}
+
+.drawer-field-id {
+  font-size: 10px;
+  background: rgba(241, 245, 249, 0.9);
+  color: #64748b;
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-family: monospace;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+/* Options CRUD Container */
+.options-crud-section {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 12px;
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+}
+
+.options-crud-header {
+  font-size: 11.5px;
+  font-weight: 800;
+  color: #334155;
+  margin-bottom: 8px;
+}
+
+.options-list-container {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 140px;
+  overflow-y: auto;
+  margin-bottom: 8px;
+}
+
+.option-item-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 10px;
+  background: #ffffff;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  font-size: 12px;
+  font-weight: 700;
+  color: #1e293b;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.option-item-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.option-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.btn-opt-action {
+  background: transparent;
+  border: none;
+  padding: 4px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  transition: all var(--transition-fast);
+}
+
+.btn-opt-action:hover {
+  background: rgba(0, 0, 0, 0.06);
+  color: #0f172a;
+}
+
+.add-option-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.add-opt-input {
+  flex: 1;
+  min-width: 0;
+}
+
+/* In-Field Combobox Reset Button */
+.btn-in-field-reset {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid var(--border-color);
+  background: #ffffff;
+  color: var(--color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  transition: all var(--transition-fast);
+}
+
+.btn-in-field-reset:hover {
+  background: var(--color-primary);
+  color: #ffffff;
+  transform: translateY(-50%) scale(1.1);
+}
+
+/* Page View Grid for State Data Management (Dynamic 2 vs 3 Cards based on Sidebar State) */
+#view-state-mgmt {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-x: hidden;
+}
+
+#state-mgmt-card {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 32px;
+  padding: 28px 32px;
+  overflow-x: hidden;
+  transition: padding var(--transition-smooth);
+}
+
+/* 1. Default state (Sidebar OPEN): Strictly 2 Cards per row */
+.state-mgmt-page-grid {
+  display: grid !important;
+  grid-template-columns: repeat(2, 1fr) !important;
+  gap: 20px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  transition: all var(--transition-smooth);
+}
+
+/* 2. Sidebar COLLAPSED (Closed): Dynamically expands to 3 Cards per row */
+body.sidebar-is-collapsed .state-mgmt-page-grid,
+.sidebar--collapsed + .main-wrapper .state-mgmt-page-grid,
+.sidebar--collapsed ~ .main-wrapper .state-mgmt-page-grid {
+  grid-template-columns: repeat(3, 1fr) !important;
+}
+
+/* Mobile & Small Screens (<= 768px): 1 Column */
+@media (max-width: 768px) {
+  #state-mgmt-card {
+    padding: 18px 14px;
+  }
+
+  body.sidebar-is-collapsed .state-mgmt-page-grid,
+  .sidebar--collapsed + .main-wrapper .state-mgmt-page-grid,
+  .sidebar--collapsed ~ .main-wrapper .state-mgmt-page-grid,
+  .state-mgmt-page-grid {
+    grid-template-columns: 1fr !important;
+    gap: 14px;
+  }
+}
+
+.state-page-field-card {
+  border-radius: 16px;
+  transition: all var(--transition-normal);
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1.5px solid rgba(226, 232, 240, 0.9);
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04);
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.state-page-field-card:hover {
+  box-shadow: 0 8px 24px rgba(37, 99, 235, 0.12);
+  border-color: rgba(37, 99, 235, 0.4);
+  transform: translateY(-2px);
+}
+
+/* Enhanced Glassmorphism Dynamic Tab Bar (Flex Wrap - No Page Scroll) */
+.state-mgmt-tabs-wrapper {
+  background: rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(14px);
+  border: 1px solid var(--border-color-strong);
+  border-radius: 18px;
+  padding: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-x: hidden;
+}
+
+.state-mgmt-tabs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.state-mgmt-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.65);
+  border: 1.5px solid rgba(0, 0, 0, 0.08);
+  font-size: 12.5px;
+  font-weight: 800;
+  color: #334155;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  user-select: none;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+}
+
+.state-mgmt-tab:hover {
+  background: #ffffff;
+  color: var(--color-primary);
+  border-color: rgba(37, 99, 235, 0.35);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.1);
+}
+
+.state-mgmt-tab--active {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8) !important;
+  color: #ffffff !important;
+  border-color: #1d4ed8 !important;
+  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.35) !important;
+  transform: translateY(-1px);
+}
+
+.state-mgmt-tab .tab-num {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(37, 99, 235, 0.12);
+  color: var(--color-primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 800;
+  transition: all var(--transition-fast);
+}
+
+.state-mgmt-tab--active .tab-num {
+  background: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+}
+
+.state-mgmt-tab .tab-icon {
+  font-size: 14px;
+}
+
+/* --- Locations & Villages Management Card Styles --- */
+.location-center-box {
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  border-radius: 16px;
+  padding: 16px 20px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+  transition: all 0.2s ease;
+}
+
+.location-center-box:hover {
+  background: rgba(255, 255, 255, 0.85);
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.08);
+  border-color: rgba(16, 185, 129, 0.4);
+}
+
+.location-center-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px dashed rgba(16, 185, 129, 0.25);
+}
+
+.location-center-title-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.location-center-icon {
+  font-size: 18px;
+}
+
+.location-center-name {
+  font-size: 15px;
+  font-weight: 800;
+  color: #065f46;
+}
+
+.location-center-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.location-villages-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.location-village-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 20px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #334155;
+  transition: all 0.15s ease;
+}
+
+.location-village-chip:hover {
+  background: #ffffff;
+  border-color: rgba(16, 185, 129, 0.4);
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.15);
+  transform: translateY(-1px);
+}
+
+.btn-location-village-edit,
+.btn-location-village-delete {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0 2px;
+  font-size: 12px;
+  opacity: 0.6;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.btn-location-village-edit:hover,
+.btn-location-village-delete:hover {
+  opacity: 1;
+  transform: scale(1.2);
+}
+
+/* --------------------------------------------------------------------------
+   SPECIALIST ASSIGNMENT MODAL (نافذة إرسال وتكليف الحالة لأخصائي)
+   -------------------------------------------------------------------------- */
+.specialist-modal-card {
+  max-width: 700px;
+  width: 100%;
+  height: 72vh;
+  min-height: 560px;
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+  border-radius: 20px;
+  box-shadow: 0 32px 72px rgba(15, 23, 42, 0.45);
+  background: var(--color-surface);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  overflow: hidden;
+  animation: modalSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.specialist-modal-header-info {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.specialist-modal-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  background: rgba(13, 148, 136, 0.15);
+  color: #0d9488;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(13, 148, 136, 0.15);
+}
+
+.specialist-modal-body {
+  padding: 24px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.specialist-search-box {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.specialist-search-input-wrap {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.specialist-search-icon {
+  position: absolute;
+  right: 14px;
+  color: #64748b;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+}
+
+.specialist-search-input {
+  width: 100%;
+  padding: 13px 44px 13px 38px;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 12px;
+  border: 1.5px solid rgba(203, 213, 225, 0.9);
+  background: rgba(255, 255, 255, 0.95);
+  color: #0f172a;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  font-family: inherit;
+}
+
+.specialist-search-input:focus {
+  border-color: #0d9488;
+  background: #ffffff;
+  box-shadow: 0 0 0 4px rgba(13, 148, 136, 0.15);
+}
+
+.specialist-search-clear {
+  position: absolute;
+  left: 12px;
+  background: none;
+  border: none;
+  font-size: 14px;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 50%;
+  line-height: 1;
+}
+
+.specialist-search-clear:hover {
+  color: #ef4444;
+}
+
+.specialist-list-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.specialist-list-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+.specialist-list-container::-webkit-scrollbar-thumb {
+  background: rgba(13, 148, 136, 0.3);
+  border-radius: 10px;
+}
+
+.specialist-card-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 18px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1.5px solid rgba(226, 232, 240, 0.95);
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.specialist-card-item:hover {
+  transform: translateY(-2px);
+  border-color: #0d9488;
+  background: #ffffff;
+  box-shadow: 0 10px 24px -4px rgba(13, 148, 136, 0.2);
+}
+
+.specialist-card-item--active {
+  border-color: #0d9488;
+  background: rgba(13, 148, 136, 0.05);
+}
+
+.specialist-item-profile {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.specialist-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #0d9488 0%, #14b8a6 100%);
+  color: #ffffff;
+  font-weight: 800;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 4px 10px rgba(13, 148, 136, 0.3);
+}
+
+.specialist-item-details {
+  min-width: 0;
+}
+
+.specialist-item-name {
+  font-size: 15px;
+  font-weight: 800;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 3px;
+}
+
+.specialist-item-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 12px;
+}
+
+.specialist-meta-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-weight: 600;
+}
+
+.specialist-meta-pill--role {
+  background: rgba(13, 148, 136, 0.12);
+  color: #0d9488;
+}
+
+.specialist-meta-pill--center {
+  background: rgba(37, 99, 235, 0.1);
+  color: #2563eb;
+}
+
+.specialist-meta-pill--phone {
+  background: rgba(100, 116, 139, 0.1);
+  color: #475569;
+  direction: ltr;
+}
+
+.btn-assign-specialist-action {
+  background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%);
+  color: #ffffff;
+  border: none;
+  padding: 8px 18px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(13, 148, 136, 0.25);
+}
+
+.btn-assign-specialist-action:hover {
+  background: linear-gradient(135deg, #0f766e 0%, #115e59 100%);
+  transform: scale(1.03);
+  box-shadow: 0 6px 18px rgba(13, 148, 136, 0.4);
+}
+
+.specialist-empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: #64748b;
+}
+
+.specialist-empty-icon {
+  font-size: 36px;
+  margin-bottom: 8px;
+  opacity: 0.8;
+}
+
+.specialist-empty-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #334155;
+  margin-bottom: 4px;
+}
+
+.specialist-empty-desc {
+  font-size: 13px;
+}
+
+.specialist-modal-footer {
+  padding: 14px 24px;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  justify-content: flex-end;
+  background: rgba(255, 255, 255, 0.35);
+}
+
+
+
+
+
+
+
+
+/* --------------------------------------------------------------------------
+   AGRI YES/NO RADIO GROUP (سؤال نعم/لا صريح بدل الشيك بوكس — علشان نفرّق
+   بين "الأسرة ماعندهاش" و "الموظف لسه ماجاوبش")
+   -------------------------------------------------------------------------- */
+.agri-yesno {
+  border: none;
+  margin: 0;
+  padding: 0;
+}
+
+.agri-yesno__legend {
+  font-weight: 700;
+  font-size: var(--font-size-sm);
+  padding: 0;
+  margin-bottom: 10px;
+  text-align: right;
+}
+
+.agri-yesno__required {
+  color: #dc2626;
+  font-weight: 800;
+}
+
+.agri-yesno__options {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.agri-yesno__option {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 20px;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  background: rgba(255, 255, 255, 0.45);
+  font-weight: 700;
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.agri-yesno__option:hover {
+  border-color: var(--color-primary);
+}
+
+.agri-yesno__option input[type="radio"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--color-primary);
+  flex-shrink: 0;
+}
+
+.agri-yesno__option:has(input:checked) {
+  background: rgba(29, 78, 216, 0.1);
+  border-color: var(--color-primary);
+  border-width: 1.5px;
+}
+
+.agri-yesno__option:has(input:focus-visible) {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* حالة الخطأ عند محاولة الانتقال بحقول ناقصة */
+.agri-yesno--invalid .agri-yesno__legend {
+  color: #dc2626;
+}
+
+.agri-yesno--invalid .agri-yesno__option {
+  border-color: #dc2626;
+}
+
+.field-invalid,
+.form-input.field-invalid,
+.form-select.field-invalid {
+  border-color: #dc2626 !important;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.12);
+}
+
+.chip-field--invalid {
+  border-radius: 12px;
+  outline: 1.5px solid #dc2626;
+  outline-offset: 4px;
+}
+
+/* رسالة التحقق أسفل الخطوة قبل الانتقال */
+.step-validation-msg {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: rgba(254, 226, 226, 0.92);
+  border: 1px solid rgba(220, 38, 38, 0.35);
+  color: #991b1b;
+  font-weight: 700;
+  font-size: var(--font-size-sm);
+  text-align: right;
+}
+
+.step-validation-msg--visible {
+  display: flex;
+}
+
+/* إخفاء بصري مع إبقاء العنصر متاحًا لقارئات الشاشة */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.step-pane:focus {
+  outline: none;
+}

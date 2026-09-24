@@ -1,0 +1,134 @@
+<!-- TAB 7: الدعم -->
+<div class="step-pane" id="step-pane-7" style="display: none;">
+  <!-- 1. كارت الدعم المقترح من الأخصائي -->
+  <section class="glass-card" id="card-tab-7-proposed">
+    <div class="glass-card__header">
+      <div class="glass-card__title-group">
+        <div class="glass-card__icon" style="background: rgba(16, 185, 129, 0.15); color: #059669;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+          </svg>
+        </div>
+        <div>
+          <h2 class="glass-card__title">أنواع الدعم المقترحة (اختيارات متعددة)</h2>
+          <p class="glass-card__subtitle">اختر الدعم المطلوبة للحالة (يمكن اختيار أكثر من نوع)</p>
+        </div>
+      </div>
+    </div>
+
+    <div id="support-types-list" style="display: flex; flex-direction: column; gap: 10px;">
+      <div class="support-type-tile" data-support-type="لحوم">
+        <div class="form-group form-group--full support-type-tile__header">
+          <input type="checkbox" class="support-type-checkbox" id="support-type-1" style="width: 18px; height: 18px; cursor: pointer; flex-shrink: 0;">
+          <label for="support-type-1" style="font-weight: 700; font-size: var(--font-size-sm); cursor: pointer;">لحوم</label>
+        </div>
+        <div class="support-type-tile__subs" style="display: none;">
+          <button type="button" class="chip-btn" data-value="نص كيلو">نص كيلو</button>
+          <button type="button" class="chip-btn" data-value="كيلو">كيلو</button>
+        </div>
+      </div>
+
+      <div class="support-type-tile" data-support-type="كرتونة مواد غذائية">
+        <div class="form-group form-group--full support-type-tile__header">
+          <input type="checkbox" class="support-type-checkbox" id="support-type-2" style="width: 18px; height: 18px; cursor: pointer; flex-shrink: 0;">
+          <label for="support-type-2" style="font-weight: 700; font-size: var(--font-size-sm); cursor: pointer;">كرتونة مواد غذائية</label>
+        </div>
+      </div>
+
+      <div class="support-type-tile" data-support-type="زي مدرسي ومصروفات دراسية">
+        <div class="form-group form-group--full support-type-tile__header">
+          <input type="checkbox" class="support-type-checkbox" id="support-type-3" style="width: 18px; height: 18px; cursor: pointer; flex-shrink: 0;">
+          <label for="support-type-3" style="font-weight: 700; font-size: var(--font-size-sm); cursor: pointer;">زي مدرسي ومصروفات دراسية</label>
+        </div>
+      </div>
+
+      <div class="support-type-tile" data-support-type="دعم طبي">
+        <div class="form-group form-group--full support-type-tile__header">
+          <input type="checkbox" class="support-type-checkbox" id="support-type-4" style="width: 18px; height: 18px; cursor: pointer; flex-shrink: 0;">
+          <label for="support-type-4" style="font-weight: 700; font-size: var(--font-size-sm); cursor: pointer;">دعم طبي</label>
+        </div>
+        <div class="support-type-tile__subs" style="display: none;">
+          <button type="button" class="chip-btn" data-value="علاج">علاج</button>
+          <button type="button" class="chip-btn" data-value="عمليات">عمليات</button>
+          <button type="button" class="chip-btn" data-value="طرف صناعي">طرف صناعي</button>
+          <button type="button" class="chip-btn" data-value="كرسي متحرك">كرسي متحرك</button>
+          <button type="button" class="chip-btn" data-value="سماعة">سماعة</button>
+          <button type="button" class="chip-btn" data-value="منح">منح</button>
+        </div>
+      </div>
+
+      <div class="support-type-tile" data-support-type="جهاز عرايس">
+        <div class="form-group form-group--full support-type-tile__header">
+          <input type="checkbox" class="support-type-checkbox" id="support-type-5" style="width: 18px; height: 18px; cursor: pointer; flex-shrink: 0;">
+          <label for="support-type-5" style="font-weight: 700; font-size: var(--font-size-sm); cursor: pointer;">جهاز عرايس</label>
+        </div>
+      </div>
+
+      <div class="support-type-tile" data-support-type="منح دراسية">
+        <div class="form-group form-group--full support-type-tile__header">
+          <input type="checkbox" class="support-type-checkbox" id="support-type-6" style="width: 18px; height: 18px; cursor: pointer; flex-shrink: 0;">
+          <label for="support-type-6" style="font-weight: 700; font-size: var(--font-size-sm); cursor: pointer;">منح دراسية</label>
+        </div>
+      </div>
+
+      <div class="support-type-tile" data-support-type="دعم المرافق">
+        <div class="form-group form-group--full support-type-tile__header">
+          <input type="checkbox" class="support-type-checkbox" id="support-type-7" style="width: 18px; height: 18px; cursor: pointer; flex-shrink: 0;">
+          <label for="support-type-7" style="font-weight: 700; font-size: var(--font-size-sm); cursor: pointer;">دعم المرافق</label>
+        </div>
+        <div class="support-type-tile__subs" style="display: none;">
+          <button type="button" class="chip-btn" data-value="وصلة مية">وصلة مية</button>
+          <button type="button" class="chip-btn" data-value="وصلة كهرباء">وصلة كهرباء</button>
+          <button type="button" class="chip-btn" data-value="حمام">حمام</button>
+          <button type="button" class="chip-btn" data-value="سقف">سقف</button>
+          <button type="button" class="chip-btn" data-value="صرف صحي">صرف صحي</button>
+          <button type="button" class="chip-btn" data-value="بناء">بناء</button>
+        </div>
+      </div>
+
+      <div class="support-type-tile" data-support-type="دعم أجهزة منزلية وأثاث منزلي">
+        <div class="form-group form-group--full support-type-tile__header">
+          <input type="checkbox" class="support-type-checkbox" id="support-type-8" style="width: 18px; height: 18px; cursor: pointer; flex-shrink: 0;">
+          <label for="support-type-8" style="font-weight: 700; font-size: var(--font-size-sm); cursor: pointer;">دعم أجهزة منزلية وأثاث منزلي</label>
+        </div>
+      </div>
+
+      <div class="support-type-tile" data-support-type="مرشح بنك الطعام">
+        <div class="form-group form-group--full support-type-tile__header">
+          <input type="checkbox" class="support-type-checkbox" id="support-type-9" style="width: 18px; height: 18px; cursor: pointer; flex-shrink: 0;">
+          <label for="support-type-9" style="font-weight: 700; font-size: var(--font-size-sm); cursor: pointer;">مرشح بنك الطعام</label>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2. كارت الدعم المعتمد (View-only) -->
+  <section class="glass-card" id="card-tab-7-approved" style="margin-top: 24px; border: 1.5px solid rgba(37, 99, 235, 0.4);">
+    <div class="glass-card__header">
+      <div class="glass-card__title-group">
+        <div class="glass-card__icon" style="background: rgba(37, 99, 235, 0.15); color: #2563eb;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+        </div>
+        <div>
+          <h3 class="glass-card__title">الدعم المعتمد</h3>
+        </div>
+      </div>
+    </div>
+
+    <div id="approved-support-empty"
+      style="background: rgba(37, 99, 235, 0.06); padding: 14px; border-radius: 10px; color: #1d4ed8; font-size: 13px; font-weight: 600;">
+      القرار لسه في انتظار اعتماد المراجع — هيظهر هنا أول ما يتحدد.
+    </div>
+
+    <div id="approved-support-details" style="display: none;" class="case-page-grid">
+      <div><strong>نوع الدعم المعتمد:</strong> <span id="approved-support-type"></span></div>
+      <div><strong>القيمة المعتمدة:</strong> <span id="approved-support-amount"></span></div>
+      <div><strong>المستفيد:</strong> <span id="approved-support-beneficiary"></span></div>
+      <div><strong>تاريخ الاعتماد:</strong> <span id="approved-support-date"></span></div>
+      <div style="grid-column: 1 / -1;"><strong>ملاحظات الاعتماد:</strong> <span id="approved-support-notes"></span></div>
+    </div>
+  </section>
+</div>

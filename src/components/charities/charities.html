@@ -1,0 +1,193 @@
+<!-- PAGE VIEW: صفحة إدارة الجمعيات -->
+<div class="page-view page-view--hidden" id="view-charities">
+  <section class="glass-card charities-page-card">
+    <!-- Header Section -->
+    <div class="glass-card__header" style="justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 24px;">
+      <div class="glass-card__title-group">
+        <div class="glass-card__icon" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(5, 150, 105, 0.25)); color: #059669;">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 21h18"></path>
+            <path d="M5 21V7l8-4v18"></path>
+            <path d="M19 21V11l-6-3"></path>
+            <rect x="9" y="9" width="2" height="2"></rect>
+            <rect x="9" y="13" width="2" height="2"></rect>
+            <rect x="9" y="17" width="2" height="2"></rect>
+          </svg>
+        </div>
+        <div>
+          <h2 class="glass-card__title">إدارة الجمعيات</h2>
+          <p class="glass-card__subtitle">إضافة وتعديل الجمعيات وتوزيعها الجغرافي على مراكز وقرى بني سويف</p>
+        </div>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+        <button type="button" class="btn btn--secondary btn--sm" id="btn-export-charities" title="تصدير قائمة الجمعيات">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+          <span>تصدير CSV</span>
+        </button>
+        <button type="button" class="btn btn--secondary" data-view-target="dashboard" title="الرجوع للرئيسية">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="9 18 15 12 9 6"></polyline>
+          </svg>
+          <span>لوحة التحكم الرئيسية</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Quick Stats Card -->
+    <div class="charities-stats-grid" style="margin-bottom: 24px;">
+      <div class="charity-stat-card" style="max-width: 320px;">
+        <div class="charity-stat-icon" style="background: rgba(37, 99, 235, 0.12); color: #2563eb;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+            <circle cx="9" cy="7" r="4"></circle>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+          </svg>
+        </div>
+        <div class="charity-stat-info">
+          <span class="charity-stat-label">إجمالي الجمعيات المسجلة</span>
+          <span class="charity-stat-value" id="stat-total-charities">0</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Content Layout (Form + Data Table) -->
+    <div class="charities-main-grid">
+      
+      <!-- 1. Form Card: Add / Edit Charity -->
+      <div class="charities-form-panel glass-subcard">
+        <div class="glass-subcard__header">
+          <div class="glass-subcard__title-row">
+            <h3 class="glass-subcard__title" id="charity-form-title">إضافة جمعية جديدة</h3>
+          </div>
+          <p class="glass-subcard__desc">ادخل اسم الجمعية واختر المركز والقرية التابعة لها من قائمة بني سويف</p>
+        </div>
+
+        <form id="charity-form" class="charity-form" novalidate>
+          <input type="hidden" id="charity-edit-id" value="">
+
+          <!-- Field 1: Charity Name -->
+          <div class="form-group" style="margin-bottom: 16px;">
+            <label for="charity-name-input" class="form-label">
+              <span>اسم الجمعية</span>
+              <span class="required-star">*</span>
+            </label>
+            <input type="text" id="charity-name-input" class="form-input" placeholder="أدخل اسم الجمعية..." required dir="rtl">
+          </div>
+
+          <!-- Field 2: Center Selection -->
+          <div class="form-group" style="margin-bottom: 16px;">
+            <label for="charity-center-select" class="form-label">
+              <span>المركز</span>
+              <span class="required-star">*</span>
+            </label>
+            <div class="field-slot-wrapper">
+              <select id="charity-center-select" class="form-select" required dir="rtl">
+                <option value="" selected disabled>-- اختر المركز --</option>
+                <!-- Populated dynamically via JS from CSV data + أخرى -->
+              </select>
+              <div id="charity-center-other-container" style="display: none; position: relative;">
+                <input type="text" id="charity-center-other-input" class="form-input" placeholder="اكتب اسم المركز هنا..." dir="rtl" style="padding-left: 36px;">
+                <button type="button" id="btn-reset-center-select" title="الرجوع للقائمة" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,0.06); border: none; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 11px; color: #64748b;">✕</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Field 3: Village Selection -->
+          <div class="form-group" style="margin-bottom: 16px;">
+            <label for="charity-village-select" class="form-label">
+              <span>القرية / المنطقة التابعة</span>
+              <span class="required-star">*</span>
+            </label>
+            <div class="field-slot-wrapper">
+              <select id="charity-village-select" class="form-select" required dir="rtl" disabled>
+                <option value="" selected disabled>-- اختر المركز أولاً --</option>
+                <!-- Populated dynamically based on chosen center + أخرى -->
+              </select>
+              <div id="charity-village-other-container" style="display: none; position: relative;">
+                <input type="text" id="charity-village-other-input" class="form-input" placeholder="اكتب اسم القرية / المنطقة هنا..." dir="rtl" style="padding-left: 36px;">
+                <button type="button" id="btn-reset-village-select" title="الرجوع للقائمة" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,0.06); border: none; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 11px; color: #64748b;">✕</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Field 4: Address -->
+          <div class="form-group" style="margin-bottom: 16px;">
+            <label for="charity-address-input" class="form-label">العنوان التفصيلي</label>
+            <input type="text" id="charity-address-input" class="form-input" placeholder="أدخل العنوان التفصيلي..." dir="rtl">
+          </div>
+
+          <!-- Field 5: Phone -->
+          <div class="form-group" style="margin-bottom: 18px;">
+            <label for="charity-phone-input" class="form-label">رقم الهاتف / للتواصل</label>
+            <input type="tel" id="charity-phone-input" class="form-input" placeholder="مثال: 01012345678" dir="ltr" maxlength="11">
+          </div>
+
+          <!-- Form Buttons -->
+          <div class="charity-form-actions" style="margin-top: 20px; display: flex; gap: 10px; align-items: center;">
+            <button type="submit" id="btn-save-charity" class="btn btn--primary" style="flex: 1; justify-content: center; padding: 12px 18px; font-weight: 800;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                <polyline points="7 3 7 8 15 8"></polyline>
+              </svg>
+              <span id="charity-submit-text">إضافة الجمعية</span>
+            </button>
+
+            <button type="button" id="btn-cancel-edit-charity" class="btn btn--secondary" style="display: none; padding: 12px 16px;">
+              <span>إلغاء التعديل</span>
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- 2. Table & Filter Panel -->
+      <div class="charities-table-panel glass-subcard">
+        <div class="charities-filter-bar">
+          <div class="input-with-icon" style="flex: 1;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <input type="text" id="charity-search-input" class="form-input" placeholder="ابحث باسم الجمعية، المركز، أو القرية..." dir="rtl">
+          </div>
+
+          <div class="charity-center-pills" id="charity-center-pills">
+            <button type="button" class="charity-center-pill charity-center-pill--active" data-center-filter="all">الكل</button>
+            <!-- Center pills injected dynamically -->
+          </div>
+        </div>
+
+        <!-- Table Container -->
+        <div class="charities-table-wrapper">
+          <table class="charities-table" id="charities-table">
+            <thead>
+              <tr>
+                <th style="width: 50px; text-align: center;">#</th>
+                <th>اسم الجمعية</th>
+                <th>المركز والقرية</th>
+                <th>رقم الهاتف والعنوان</th>
+              </tr>
+            </thead>
+            <tbody id="charities-table-body">
+              <!-- Dynamically rendered rows -->
+            </tbody>
+          </table>
+
+          <!-- Empty State -->
+          <div class="charities-empty-state" id="charities-empty-state" style="display: none;">
+            <div class="empty-state-icon">🏢</div>
+            <h4>لا توجد جمعيات مسجلة حالياً</h4>
+            <p>قم بإضافة جمعية جديدة من النموذج الجانبي لاختيار المركز والقرية المسحوبة من بني سويف.</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+</div>

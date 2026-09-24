@@ -1,0 +1,731 @@
+<div class="page-view page-view--hidden" id="view-reports">
+
+  <!-- Header Glass Card -->
+  <div class="glass-card reports-header-card">
+    <div class="reports-header-content">
+      <div class="reports-header-title-box">
+        <h1 class="reports-title">
+          <span class="reports-title-icon">📊</span>
+          مركز التقارير والتحليلات المؤسسية
+        </h1>
+        <p class="reports-subtitle">
+          منظومة متقدمة لتحليل بيانات الحالات الاجتماعية، مؤشرات الدعم، الرقابة على الأداء الميداني، واستخراج التقارير المخصصة
+        </p>
+      </div>
+
+      <div class="reports-header-actions">
+        <button type="button" class="btn btn--secondary" id="btn-refresh-reports" title="تحديث كافة بيانات التقارير">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="reports-btn-icon">
+            <polyline points="23 4 23 10 17 10"></polyline>
+            <polyline points="1 20 1 14 7 14"></polyline>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+          </svg>
+          تحديث
+        </button>
+
+        <button type="button" class="btn btn--secondary" id="btn-export-reports" title="تصدير ملف إكسل / CSV">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="reports-btn-icon">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+          تصدير CSV
+        </button>
+
+        <button type="button" class="btn btn--primary" id="btn-print-reports" title="طباعة الصفحة الحالية">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="reports-btn-icon">
+            <polyline points="6 9 6 2 18 2 18 9"></polyline>
+            <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+            <rect x="6" y="14" width="12" height="8"></rect>
+          </svg>
+          طباعة
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Global Filters & Date Range Bar -->
+  <div class="glass-card reports-filter-card">
+    <div class="reports-filter-flex">
+      <div class="reports-date-filter-group">
+        <label class="reports-filter-label">نطاق التاريخ:</label>
+        <div class="reports-date-inputs">
+          <input type="date" id="rep-filter-from" class="reports-date-input" title="من تاريخ">
+          <span class="reports-date-sep">إلى</span>
+          <input type="date" id="rep-filter-to" class="reports-date-input" title="إلى تاريخ">
+          <button type="button" class="btn btn--secondary btn--sm" id="btn-apply-date-filter">تطبيق</button>
+        </div>
+      </div>
+
+      <div class="reports-quick-dates">
+        <button type="button" class="btn-rep-preset btn-rep-preset--active" data-range="all">الكل</button>
+        <button type="button" class="btn-rep-preset" data-range="today">اليوم</button>
+        <button type="button" class="btn-rep-preset" data-range="week">هذا الأسبوع</button>
+        <button type="button" class="btn-rep-preset" data-range="month">هذا الشهر</button>
+        <button type="button" class="btn-rep-preset" data-range="90days">آخر 90 يوماً</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Navigation Sub-Tabs Bar -->
+  <div class="reports-tabs-bar">
+    <button type="button" class="rep-tab-btn rep-tab-btn--active" data-tab="executive">
+      <span class="rep-tab-icon">👑</span>
+      اللوحة التنفيذية
+    </button>
+    <button type="button" class="rep-tab-btn" data-tab="cases">
+      <span class="rep-tab-icon">📁</span>
+      الحالات وسير العمل
+    </button>
+    <button type="button" class="rep-tab-btn" data-tab="geographic">
+      <span class="rep-tab-icon">📍</span>
+      التوزيع الجغرافي
+    </button>
+    <button type="button" class="rep-tab-btn" data-tab="support">
+      <span class="rep-tab-icon">🤝</span>
+      الدعم والمساعدات
+    </button>
+    <button type="button" class="rep-tab-btn" data-tab="beneficiaries">
+      <span class="rep-tab-icon">👥</span>
+      المستفيدون والديموغرافيا
+    </button>
+    <button type="button" class="rep-tab-btn" data-tab="visits">
+      <span class="rep-tab-icon">🚗</span>
+      الزيارات الميدانية
+    </button>
+    <button type="button" class="rep-tab-btn" data-tab="employees">
+      <span class="rep-tab-icon">💼</span>
+      نشاط فريق العمل
+    </button>
+    <button type="button" class="rep-tab-btn" data-tab="quality">
+      <span class="rep-tab-icon">🛡️</span>
+      جودة وتغطية البيانات
+    </button>
+    <button type="button" class="rep-tab-btn" data-tab="financial" id="rep-tab-btn-financial" style="display: none;">
+      <span class="rep-tab-icon">💰</span>
+      الملخص المالي
+    </button>
+    <button type="button" class="rep-tab-btn" data-tab="comparison">
+      <span class="rep-tab-icon">⚖️</span>
+      المقارنة الزمنية
+    </button>
+    <button type="button" class="rep-tab-btn rep-tab-btn--special" data-tab="builder">
+      <span class="rep-tab-icon">⚡</span>
+      منشئ التقارير
+    </button>
+  </div>
+
+  <!-- ======================================================================
+       TAB 1: EXECUTIVE DASHBOARD
+       ====================================================================== -->
+  <div class="rep-tab-pane" id="pane-executive">
+    <div class="reports-kpi-grid">
+      <div class="reports-kpi-card reports-kpi--primary">
+        <div class="reports-kpi-body">
+          <span class="reports-kpi-label">إجمالي الحالات</span>
+          <span class="reports-kpi-val" id="exec-total-cases">0</span>
+          <span class="reports-kpi-sub">كافة الحالات المسجلة</span>
+        </div>
+        <div class="reports-kpi-icon-wrap">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+          </svg>
+        </div>
+      </div>
+
+      <div class="reports-kpi-card reports-kpi--success">
+        <div class="reports-kpi-body">
+          <span class="reports-kpi-label">حالات معتمدة ومقبولة</span>
+          <span class="reports-kpi-val" id="exec-approved-cases">0</span>
+          <span class="reports-kpi-sub">تمت الموافقة وصرف الدعم</span>
+        </div>
+        <div class="reports-kpi-icon-wrap">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+          </svg>
+        </div>
+      </div>
+
+      <div class="reports-kpi-card reports-kpi--warning">
+        <div class="reports-kpi-body">
+          <span class="reports-kpi-label">حالات قيد الإجراء والبحث</span>
+          <span class="reports-kpi-val" id="exec-pending-cases">0</span>
+          <span class="reports-kpi-sub">قيد المراجعة أو الاعتماد</span>
+        </div>
+        <div class="reports-kpi-icon-wrap">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polyline points="12 6 12 12 16 14"></polyline>
+          </svg>
+        </div>
+      </div>
+
+      <div class="reports-kpi-card reports-kpi--danger">
+        <div class="reports-kpi-body">
+          <span class="reports-kpi-label">حالات مرفوضة</span>
+          <span class="reports-kpi-val" id="exec-rejected-cases">0</span>
+          <span class="reports-kpi-sub">غير مستوفية للشروط</span>
+        </div>
+        <div class="reports-kpi-icon-wrap">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="15" y1="9" x2="9" y2="15"></line>
+            <line x1="9" y1="9" x2="15" y2="15"></line>
+          </svg>
+        </div>
+      </div>
+
+      <div class="reports-kpi-card reports-kpi--indigo">
+        <div class="reports-kpi-body">
+          <span class="reports-kpi-label">إجمالي الدعم المعتمد</span>
+          <span class="reports-kpi-val" id="exec-support-amount">0 ج.م</span>
+          <span class="reports-kpi-sub">المبالغ المقررة للحالات</span>
+        </div>
+        <div class="reports-kpi-icon-wrap">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="1" x2="12" y2="23"></line>
+            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+          </svg>
+        </div>
+      </div>
+
+      <div class="reports-kpi-card reports-kpi--info">
+        <div class="reports-kpi-body">
+          <span class="reports-kpi-label">زيارات آخر 30 يوماً</span>
+          <span class="reports-kpi-val" id="exec-visits-count">0</span>
+          <span class="reports-kpi-sub">زيارات وبحوث ميدانية منفذة</span>
+        </div>
+        <div class="reports-kpi-icon-wrap">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="1" y="3" width="15" height="13"></rect>
+            <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon>
+            <circle cx="5.5" cy="18.5" r="2.5"></circle>
+            <circle cx="18.5" cy="18.5" r="2.5"></circle>
+          </svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- Executive Trend Chart Card -->
+    <div class="glass-card reports-section-card">
+      <div class="reports-section-header">
+        <div class="reports-section-title-wrap">
+          <h2 class="reports-section-title">📈 وتيرة تسجيل الحالات (آخر 90 يوماً)</h2>
+          <span class="reports-section-meta">مؤشر تدفق الحالات وتوزيع التسجيل بالمنظومة</span>
+        </div>
+      </div>
+      <div id="exec-trend-chart" class="builder-chart-container">
+        <!-- Dynamic trend chart bars -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================================
+       TAB 2: CASES & AGING DASHBOARD
+       ====================================================================== -->
+  <div class="rep-tab-pane rep-tab-pane--hidden" id="pane-cases">
+    <div class="reports-sections-grid">
+      <!-- Status & Priority Breakdown -->
+      <div class="glass-card reports-section-card">
+        <div class="reports-section-header">
+          <div class="reports-section-title-wrap">
+            <h2 class="reports-section-title">⚖️ الحالات حسب مراحل القرار والأولوية</h2>
+            <span class="reports-section-meta">توزيع الحالات بحسب مرحلة دورة العمل</span>
+          </div>
+        </div>
+        <div id="cases-status-list" class="reports-pipeline-list">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+
+      <!-- Aging Buckets (0-7, 8-30, 31-90, 91-180, 180+) -->
+      <div class="glass-card reports-section-card">
+        <div class="reports-section-header">
+          <div class="reports-section-title-wrap">
+            <h2 class="reports-section-title">⏳ تحليل أعمار الحالات وسرعة الفحص (Aging)</h2>
+            <span class="reports-section-meta">المدة المنقضية منذ تاريخ تسجيل الحالة</span>
+          </div>
+        </div>
+        <div class="reports-table-responsive">
+          <table class="reports-table" id="cases-aging-table">
+            <thead>
+              <tr>
+                <th>الفترة الزمنية</th>
+                <th>عدد الحالات</th>
+                <th>النسبة</th>
+                <th>الرسم البياني</th>
+              </tr>
+            </thead>
+            <tbody id="cases-aging-tbody">
+              <!-- Populated dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================================
+       TAB 3: GEOGRAPHIC DASHBOARD
+       ====================================================================== -->
+  <div class="rep-tab-pane rep-tab-pane--hidden" id="pane-geographic">
+    <div class="glass-card reports-section-card">
+      <div class="reports-section-header">
+        <div class="reports-section-title-wrap">
+          <h2 class="reports-section-title">📍 التوزيع الجغرافي الشامل (المراكز والقرى)</h2>
+          <span class="reports-section-meta" id="geo-centers-meta">توزيع الحالات على مراكز وقرى محافظة بني سويف</span>
+        </div>
+      </div>
+      <div class="reports-table-responsive">
+        <table class="reports-table" id="geo-location-table">
+          <thead>
+            <tr>
+              <th>المركز</th>
+              <th>القرية / النطاق</th>
+              <th>إجمالي الحالات</th>
+              <th>النسبة من الإجمالي</th>
+            </tr>
+          </thead>
+          <tbody id="geo-location-tbody">
+            <!-- Populated dynamically -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================================
+       TAB 4: SUPPORT DASHBOARD
+       ====================================================================== -->
+  <div class="rep-tab-pane rep-tab-pane--hidden" id="pane-support">
+    <div id="support-coverage-warning" class="rep-warning-banner" style="display: none; margin-bottom: 20px;"></div>
+
+    <div class="reports-kpi-grid">
+      <div class="reports-kpi-card reports-kpi--primary">
+        <div class="reports-kpi-body">
+          <span class="reports-kpi-label">سجلات الدعم المعتمد</span>
+          <span class="reports-kpi-val" id="sup-stat-records">0</span>
+          <span class="reports-kpi-sub">قرارات دعم صادرة</span>
+        </div>
+      </div>
+      <div class="reports-kpi-card reports-kpi--success">
+        <div class="reports-kpi-body">
+          <span class="reports-kpi-label">إجمالي الدعم المعتمد</span>
+          <span class="reports-kpi-val" id="sup-stat-amount">0 ج.م</span>
+          <span class="reports-kpi-sub">المبلغ الكلي المقرر</span>
+        </div>
+      </div>
+      <div class="reports-kpi-card reports-kpi--indigo">
+        <div class="reports-kpi-body">
+          <span class="reports-kpi-label">متوسط دعم الحالة</span>
+          <span class="reports-kpi-val" id="sup-stat-avg">0 ج.م</span>
+          <span class="reports-kpi-sub">متوسط القيمة المعتمدة</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="glass-card reports-section-card">
+      <div class="reports-section-header">
+        <div class="reports-section-title-wrap">
+          <h2 class="reports-section-title">📦 توزيع المساعدات حسب نوع الدعم</h2>
+          <span class="reports-section-meta">تحليل بنود الدعم المالي، العيني، الطبي، والخدمي</span>
+        </div>
+      </div>
+      <div class="reports-table-responsive">
+        <table class="reports-table">
+          <thead>
+            <tr>
+              <th>نوع الدعم</th>
+              <th>عدد الحالات</th>
+              <th>إجمالي المبلغ</th>
+              <th>متوسط القيمة</th>
+            </tr>
+          </thead>
+          <tbody id="sup-by-type-tbody">
+            <!-- Populated dynamically -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================================
+       TAB 5: BENEFICIARIES & DEMOGRAPHICS
+       ====================================================================== -->
+  <div class="rep-tab-pane rep-tab-pane--hidden" id="pane-beneficiaries">
+    <div class="reports-kpi-grid">
+      <div class="reports-kpi-card reports-kpi--primary">
+        <div class="reports-kpi-body">
+          <span class="reports-kpi-label">إجمالي المستفيدين</span>
+          <span class="reports-kpi-val" id="ben-stat-total">0</span>
+          <span class="reports-kpi-sub">أرباب الأسر المسجلين</span>
+        </div>
+      </div>
+      <div class="reports-kpi-card reports-kpi--info">
+        <div class="reports-kpi-body">
+          <span class="reports-kpi-label">متوسط حجم الأسرة</span>
+          <span class="reports-kpi-val" id="ben-stat-family-size">0</span>
+          <span class="reports-kpi-sub">أفراد / أسرة</span>
+        </div>
+      </div>
+      <div class="reports-kpi-card reports-kpi--warning">
+        <div class="reports-kpi-body">
+          <span class="reports-kpi-label">متوسط الدخل الشهري</span>
+          <span class="reports-kpi-val" id="ben-stat-income">0 ج.م</span>
+          <span class="reports-kpi-sub">الدخل المسجل للأسرة</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="reports-sections-grid">
+      <div class="glass-card reports-section-card">
+        <div class="reports-section-header">
+          <h2 class="reports-section-title">🚻 التوزيع حسب النوع</h2>
+        </div>
+        <div id="ben-gender-list" class="reports-pipeline-list"></div>
+      </div>
+
+      <div class="glass-card reports-section-card">
+        <h2 class="reports-section-title" style="margin-bottom: 14px;">🎂 التوزيع حسب الفئات العمرية</h2>
+        <div id="ben-age-list" class="reports-pipeline-list"></div>
+      </div>
+
+      <div class="glass-card reports-section-card" style="grid-column: 1 / -1;">
+        <h2 class="reports-section-title" style="margin-bottom: 14px;">💼 التوزيع حسب الحالة المهنية والتشغيل</h2>
+        <div id="ben-employment-list" class="reports-pipeline-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================================
+       TAB 6: FIELD VISITS DASHBOARD
+       ====================================================================== -->
+  <div class="rep-tab-pane rep-tab-pane--hidden" id="pane-visits">
+    <div class="reports-kpi-grid">
+      <div class="reports-kpi-card reports-kpi--primary">
+        <div class="reports-kpi-body">
+          <span class="reports-kpi-label">إجمالي الزيارات</span>
+          <span class="reports-kpi-val" id="vis-stat-total">0</span>
+          <span class="reports-kpi-sub">نزول ميداني منفذ</span>
+        </div>
+      </div>
+      <div class="reports-kpi-card reports-kpi--indigo">
+        <div class="reports-kpi-body">
+          <span class="reports-kpi-label">معدل الزيارات لكل حالة</span>
+          <span class="reports-kpi-val" id="vis-stat-avg">0</span>
+          <span class="reports-kpi-sub">زيارة / ملف</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="reports-sections-grid">
+      <div class="glass-card reports-section-card">
+        <h2 class="reports-section-title" style="margin-bottom: 14px;">🎯 نتائج الزيارات الميدانية</h2>
+        <div id="vis-outcome-list" class="reports-pipeline-list"></div>
+      </div>
+      <div class="glass-card reports-section-card">
+        <h2 class="reports-section-title" style="margin-bottom: 14px;">📋 حالة مسار الزيارات</h2>
+        <div id="vis-status-list" class="reports-pipeline-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================================
+       TAB 7: EMPLOYEES ACTIVITY
+       ====================================================================== -->
+  <div class="rep-tab-pane rep-tab-pane--hidden" id="pane-employees">
+    <div class="glass-card reports-section-card">
+      <div class="reports-section-header">
+        <div class="reports-section-title-wrap">
+          <h2 class="reports-section-title">👥 سجل نشاط فريق العمل الميداني والإداري</h2>
+          <span class="reports-section-meta">إحصائيات إدخال الحالات، الزيارات الميدانية، وعمليات التدقيق المسجلة</span>
+        </div>
+      </div>
+      <div class="reports-table-responsive">
+        <table class="reports-table">
+          <thead>
+            <tr>
+              <th>اسم الموظف</th>
+              <th>الدور الوظيفي</th>
+              <th>الحالات المسجلة</th>
+              <th>الزيارات المنفذة</th>
+              <th>العمليات المدققة</th>
+            </tr>
+          </thead>
+          <tbody id="emp-activity-tbody">
+            <!-- Populated dynamically -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================================
+       TAB 8: DATA QUALITY & COVERAGE
+       ====================================================================== -->
+  <div class="rep-tab-pane rep-tab-pane--hidden" id="pane-quality">
+    <div class="reports-kpi-grid">
+      <div class="reports-kpi-card reports-kpi--danger">
+        <div class="reports-kpi-body">
+          <span class="reports-kpi-label">بدون رقم هاتف</span>
+          <span class="reports-kpi-val" id="dq-missing-phone">0</span>
+          <span class="reports-kpi-sub">حالات ينقصها هاتف تواصل</span>
+        </div>
+      </div>
+      <div class="reports-kpi-card reports-kpi--warning">
+        <div class="reports-kpi-body">
+          <span class="reports-kpi-label">بدون بيانات سكن</span>
+          <span class="reports-kpi-val" id="dq-missing-housing">0</span>
+          <span class="reports-kpi-sub">حالات لم يُستكمل سكنها</span>
+        </div>
+      </div>
+      <div class="reports-kpi-card reports-kpi--warning">
+        <div class="reports-kpi-body">
+          <span class="reports-kpi-label">بدون بنود دخل/مصروف</span>
+          <span class="reports-kpi-val" id="dq-missing-financial">0</span>
+          <span class="reports-kpi-sub">ينقصها البنود المالية</span>
+        </div>
+      </div>
+      <div class="reports-kpi-card reports-kpi--info">
+        <div class="reports-kpi-body">
+          <span class="reports-kpi-label">بدون أفراد أسرة</span>
+          <span class="reports-kpi-val" id="dq-zero-family">0</span>
+          <span class="reports-kpi-sub">مسجلة بمفردها فقط</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Coverage Report Bars -->
+    <div class="glass-card reports-section-card">
+      <h2 class="reports-section-title" style="margin-bottom: 18px;">🛡️ تقرير تغطية واكتمال البيانات التاريخية</h2>
+      <div class="reports-pipeline-list" id="dq-coverage-list">
+        <!-- Financial, Housing, and Support Coverage bars -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================================
+       TAB 9: FINANCIAL SUMMARY (Protected by view_financial_reports)
+       ====================================================================== -->
+  <div class="rep-tab-pane rep-tab-pane--hidden" id="pane-financial">
+    <div id="fin-coverage-warning" class="rep-warning-banner" style="display: none; margin-bottom: 20px;"></div>
+
+    <div class="reports-kpi-grid">
+      <div class="reports-kpi-card reports-kpi--success">
+        <div class="reports-kpi-body">
+          <span class="reports-kpi-label">إجمالي الدخل المسجل</span>
+          <span class="reports-kpi-val" id="fin-stat-income">0 ج.م</span>
+          <span class="reports-kpi-sub">مداخيل الحالات المستفيدة</span>
+        </div>
+      </div>
+      <div class="reports-kpi-card reports-kpi--danger">
+        <div class="reports-kpi-body">
+          <span class="reports-kpi-label">إجمالي المصروفات</span>
+          <span class="reports-kpi-val" id="fin-stat-expenses">0 ج.م</span>
+          <span class="reports-kpi-sub">التزامات وأعباء الحالات</span>
+        </div>
+      </div>
+      <div class="reports-kpi-card reports-kpi--primary">
+        <div class="reports-kpi-body">
+          <span class="reports-kpi-label">صافي العجز / الفائض المالي</span>
+          <span class="reports-kpi-val" id="fin-stat-balance">0 ج.م</span>
+          <span class="reports-kpi-sub">الفجوة المالية للأسر</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="reports-sections-grid">
+      <div class="glass-card reports-section-card">
+        <h2 class="reports-section-title" style="margin-bottom: 14px;">💵 مصادر الدخل الرئيسية</h2>
+        <div class="reports-table-responsive">
+          <table class="reports-table">
+            <thead><tr><th>البند</th><th>المبلغ</th></tr></thead>
+            <tbody id="fin-income-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="glass-card reports-section-card">
+        <h2 class="reports-section-title" style="margin-bottom: 14px;">💸 بنود المصروفات والالتزامات</h2>
+        <div class="reports-table-responsive">
+          <table class="reports-table">
+            <thead><tr><th>البند</th><th>المبلغ</th></tr></thead>
+            <tbody id="fin-expense-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================================
+       TAB 10: COMPARISON ENGINE
+       ====================================================================== -->
+  <div class="rep-tab-pane rep-tab-pane--hidden" id="pane-comparison">
+    <div class="glass-card reports-section-card">
+      <div class="reports-section-header">
+        <div class="reports-section-title-wrap">
+          <h2 class="reports-section-title">⚖️ مقارنة المؤشرات بين فترتين زمنيتين</h2>
+          <span class="reports-section-meta">تحليل ومقارنة معدلات تسجيل الحالات أو مبالغ الدعم عبر الفترات المختلفة</span>
+        </div>
+      </div>
+
+      <!-- Comparison Inputs -->
+      <div class="comparison-form-grid">
+        <div class="reports-filter-group">
+          <label class="reports-filter-label">المقياس المطلوب مقارنته:</label>
+          <select id="cmp-metric-select" class="reports-select">
+            <option value="Count">عدد الحالات المسجلة (Count)</option>
+            <option value="TotalAmount">إجمالي مبالغ الدعم المعتمد (TotalAmount)</option>
+          </select>
+        </div>
+
+        <div class="comparison-period-box">
+          <span class="comparison-period-title">الفترة الحالية:</span>
+          <input type="date" id="cmp-curr-from" class="reports-date-input">
+          <span>إلى</span>
+          <input type="date" id="cmp-curr-to" class="reports-date-input">
+        </div>
+
+        <div class="comparison-period-box">
+          <span class="comparison-period-title">الفترة السابقة للمقارنة:</span>
+          <input type="date" id="cmp-prev-from" class="reports-date-input">
+          <span>إلى</span>
+          <input type="date" id="cmp-prev-to" class="reports-date-input">
+        </div>
+
+        <div>
+          <button type="button" class="btn btn--primary" id="btn-run-comparison" style="height: 40px; margin-top: 24px;">
+            تنفيذ المقارنة 🚀
+          </button>
+        </div>
+      </div>
+
+      <!-- Comparison Output Tiles -->
+      <div id="cmp-results-box" class="comparison-results-grid" style="display: none; margin-top: 24px;">
+        <div class="reports-kpi-card reports-kpi--primary">
+          <div class="reports-kpi-body">
+            <span class="reports-kpi-label">قيمة الفترة الحالية</span>
+            <span class="reports-kpi-val" id="cmp-val-current">0</span>
+          </div>
+        </div>
+
+        <div class="reports-kpi-card reports-kpi--indigo">
+          <div class="reports-kpi-body">
+            <span class="reports-kpi-label">قيمة الفترة السابقة</span>
+            <span class="reports-kpi-val" id="cmp-val-previous">0</span>
+          </div>
+        </div>
+
+        <div class="reports-kpi-card reports-kpi--info">
+          <div class="reports-kpi-body">
+            <span class="reports-kpi-label">الفارق الرقمي (Delta)</span>
+            <span class="reports-kpi-val" id="cmp-val-delta">0</span>
+          </div>
+        </div>
+
+        <div class="reports-kpi-card reports-kpi--success">
+          <div class="reports-kpi-body">
+            <span class="reports-kpi-label">نسبة التغير (Percent Change)</span>
+            <span class="reports-kpi-val" id="cmp-val-pct">N/A</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================================
+       TAB 11: AD-HOC REPORT BUILDER
+       ====================================================================== -->
+  <div class="rep-tab-pane rep-tab-pane--hidden" id="pane-builder">
+    <div class="glass-card reports-section-card">
+      <div class="reports-section-header">
+        <div class="reports-section-title-wrap">
+          <h2 class="reports-section-title">⚡ منشئ التقارير التفاعلي والاستعلام المخصص (Report Builder)</h2>
+          <span class="reports-section-meta">استكشاف واستخراج البيانات بحسب المجموعات والأبعاد والمقاييس المعتمدة بالسيرفر</span>
+        </div>
+      </div>
+
+      <!-- Inline validation error banner -->
+      <div id="builder-error-box" class="rep-error-banner" style="display: none; margin-bottom: 16px;"></div>
+
+      <!-- Builder Configuration Grid -->
+      <div class="builder-controls-grid">
+        <div class="reports-filter-group">
+          <label class="reports-filter-label">مجموعة البيانات (Dataset):</label>
+          <select id="builder-dataset-select" class="reports-select"></select>
+        </div>
+
+        <div class="reports-filter-group">
+          <label class="reports-filter-label">بُعد التصنيف (Dimension):</label>
+          <select id="builder-dimension-select" class="reports-select"></select>
+        </div>
+
+        <div class="reports-filter-group">
+          <label class="reports-filter-label">المقياس الإحصائي (Metric):</label>
+          <select id="builder-metric-select" class="reports-select"></select>
+        </div>
+
+        <div class="reports-filter-group">
+          <label class="reports-filter-label">طريقة التجميع (Aggregation):</label>
+          <select id="builder-aggregation-select" class="reports-select">
+            <option value="Count">تعداد (Count)</option>
+            <option value="Sum">مجموع (Sum)</option>
+            <option value="Average">متوسط (Average)</option>
+            <option value="Min">أدنى قيمة (Min)</option>
+            <option value="Max">أعلى قيمة (Max)</option>
+          </select>
+        </div>
+
+        <div class="reports-filter-group">
+          <label class="reports-filter-label">اتجاه الترتيب:</label>
+          <select id="builder-sort-select" class="reports-select">
+            <option value="Descending">تنازلي (الأعلى أولاً)</option>
+            <option value="Ascending">تصاعدي (الأقل أولاً)</option>
+          </select>
+        </div>
+
+        <div class="reports-filter-group">
+          <label class="reports-filter-label">الحد الأقصى للنتائج:</label>
+          <input type="number" id="builder-max-rows" class="reports-search-input" value="100" min="1" max="5000">
+        </div>
+      </div>
+
+      <!-- Filters Section -->
+      <div class="builder-filters-section">
+        <div class="builder-filters-header">
+          <span class="reports-filter-label">فلاتر الاستعلام الإضافية:</span>
+          <button type="button" class="btn btn--secondary btn--sm" id="btn-builder-add-filter">
+            + إضافة فلتر
+          </button>
+        </div>
+        <div id="builder-filters-list" class="builder-filters-list"></div>
+      </div>
+
+      <!-- Builder Actions -->
+      <div class="builder-actions-bar">
+        <button type="button" class="btn btn--primary" id="btn-builder-run">
+          تشغيل الاستعلام 🚀
+        </button>
+        <button type="button" class="btn btn--secondary" id="btn-builder-export">
+          تصدير النتائج كـ CSV 📥
+        </button>
+        <button type="button" class="btn btn--secondary" id="btn-builder-toggle-view">
+          📊 عرض كرسم بياني
+        </button>
+      </div>
+
+      <!-- Truncated Notice Banner -->
+      <div id="builder-truncated-banner" style="display: none; margin-top: 16px;"></div>
+
+      <!-- Results View -->
+      <div id="builder-results-output" class="builder-results-wrapper" style="margin-top: 24px;">
+        <div class="reports-empty">
+          قم بتحديد المعايير والضغط على "تشغيل الاستعلام" لاستعراض النتائج.
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>

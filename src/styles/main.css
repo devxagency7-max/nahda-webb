@@ -1,0 +1,22 @@
+/* ==========================================================================
+   ENTERPRISE DASHBOARD UI SYSTEM (OFFICIAL ALMARAI & ALEXANDRIA EDITION)
+   Primary Font: Almarai + Alexandria & Cairo Fallback | Language: Arabic (RTL)
+   Authoritative, Institutional & Government Grade Typography
+
+   This file is split into focused partials, loaded in dependency order.
+   ========================================================================== */
+
+@import url('base.css');
+@import url('sidebar.css');
+@import url('layout.css');
+@import url('components.css');
+@import url('dashboard.css');
+@import url('login.css');
+@import url('charities.css');
+@import url('profile.css');
+@import url('all-cases.css');
+@import url('case-details.css');
+@import url('employees.css');
+@import url('reports.css');
+@import url('case-pdf.css');
+

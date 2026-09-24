@@ -1,0 +1,203 @@
+<!-- Connected Step Tabs Navigation (8 Interactive Workflow Steps) -->
+<section class="workflow-nav-card workflow-nav-card--expanded" id="workflow-nav-card">
+  <div class="workflow-nav-header">
+    <div class="workflow-nav-header__title">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
+      </svg>
+      <div>
+        <span style="font-weight: 800; font-size: var(--font-size-md); color: #000000;">مسار بيانات
+          الحالة</span>
+        <p style="font-size: var(--font-size-xs); color: var(--text-secondary); margin-top: 2px;">تتبع نسبة
+          اكتمال وإنجاز كافة البيانات لجميع مراحل منظومة المعاملات</p>
+      </div>
+    </div>
+
+    <!-- State Data Management Center Button & Toggle Button -->
+    <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+      <button type="button" class="btn btn--primary" id="btn-preview-case-details" style="padding: 8px 16px; font-size: 13px; border-radius: 12px;" title="معاينة الملف كما سيظهر للمراجع — الحقول غير المستوفاة تظهر كناقصة">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+          <circle cx="12" cy="12" r="3"></circle>
+        </svg>
+        <span>عرض تفاصيل الحالة</span>
+      </button>
+
+      <button type="button" class="workflow-toggle-btn" id="workflow-toggle-btn" aria-expanded="true"
+        title="عرض/طي جميع الخطوات">
+        <span class="workflow-toggle-btn__text" id="workflow-toggle-text">طي الخطوات</span>
+        <svg class="workflow-toggle-btn__arrow" width="18" height="18" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2.5">
+          <polyline points="6 9 12 15 18 9"></polyline>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="workflow-road-wrapper" id="workflow-road-wrapper">
+
+    <!-- DEVX Continuous Snake Journey Timeline Engine (8 Stations: 4 + 4) -->
+    <div class="case-journey" id="case-journey-container">
+
+      <!-- Unified SVG Track & Progress Overlay (dynamically rendered via JS Engine) -->
+      <svg class="case-journey__svg" id="case-journey-svg" aria-hidden="true">
+        <defs>
+          <linearGradient id="journeyProgressGrad" x1="100%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#2563eb" />
+            <stop offset="50%" stop-color="#0284c7" />
+            <stop offset="100%" stop-color="#10b981" />
+          </linearGradient>
+          <filter id="journeyGlow" x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#2563eb" flood-opacity="0.35"/>
+          </filter>
+        </defs>
+        <path class="case-journey__track" id="journey-track-path" />
+        <path class="case-journey__progress" id="journey-progress-path" />
+      </svg>
+
+      <!-- Stations Grid Container -->
+      <div class="case-journey__grid" id="case-journey-grid">
+
+        <!-- ROW 1: 4 Stations (1, 2, 3, 4) — Visual RTL (1 Right -> 4 Left) -->
+        <div class="case-journey__row case-journey__row--r1" data-row="1">
+
+          <!-- Station 1 -->
+          <button class="workflow-tab case-journey__station" data-step="1" id="step-node-1" type="button" aria-label="المحطة 1: البيانات الأساسية ومعلومات رب الأسرة" aria-current="step">
+            <div class="case-journey__node-box">
+              <svg class="case-journey__ring-svg" width="56" height="56" viewBox="0 0 56 56" aria-hidden="true">
+                <circle class="case-journey__ring-bg" cx="28" cy="28" r="23" />
+                <circle class="case-journey__ring-fill" id="ring-fill-1" cx="28" cy="28" r="23" />
+              </svg>
+              <div class="workflow-tab__node" id="step-pct-1">
+                <span class="workflow-tab__pct-text" id="node-pct-1">0%</span>
+              </div>
+            </div>
+            <div class="workflow-tab__label-group">
+              <span class="workflow-tab__label">1. الأساسية والأفراد</span>
+            </div>
+          </button>
+
+          <!-- Station 2 -->
+          <button class="workflow-tab case-journey__station" data-step="2" id="step-node-2" type="button" aria-label="المحطة 2: المرفقات والوثائق الرسمية">
+            <div class="case-journey__node-box">
+              <svg class="case-journey__ring-svg" width="56" height="56" viewBox="0 0 56 56" aria-hidden="true">
+                <circle class="case-journey__ring-bg" cx="28" cy="28" r="23" />
+                <circle class="case-journey__ring-fill" id="ring-fill-2" cx="28" cy="28" r="23" />
+              </svg>
+              <div class="workflow-tab__node" id="step-pct-2">
+                <span class="workflow-tab__pct-text" id="node-pct-2">0%</span>
+              </div>
+            </div>
+            <div class="workflow-tab__label-group">
+              <span class="workflow-tab__label">2. المرفقات والوثائق</span>
+            </div>
+          </button>
+
+          <!-- Station 3 -->
+          <button class="workflow-tab case-journey__station" data-step="3" id="step-node-3" type="button" aria-label="المحطة 3: بيانات السكن والظروف المعيشية">
+            <div class="case-journey__node-box">
+              <svg class="case-journey__ring-svg" width="56" height="56" viewBox="0 0 56 56" aria-hidden="true">
+                <circle class="case-journey__ring-bg" cx="28" cy="28" r="23" />
+                <circle class="case-journey__ring-fill" id="ring-fill-3" cx="28" cy="28" r="23" />
+              </svg>
+              <div class="workflow-tab__node" id="step-pct-3">
+                <span class="workflow-tab__pct-text" id="node-pct-3">0%</span>
+              </div>
+            </div>
+            <div class="workflow-tab__label-group">
+              <span class="workflow-tab__label">3. بيانات السكن</span>
+            </div>
+          </button>
+
+          <!-- Station 4 -->
+          <button class="workflow-tab case-journey__station" data-step="4" id="step-node-4" type="button" aria-label="المحطة 4: الخدمات والمرافق العامة">
+            <div class="case-journey__node-box">
+              <svg class="case-journey__ring-svg" width="56" height="56" viewBox="0 0 56 56" aria-hidden="true">
+                <circle class="case-journey__ring-bg" cx="28" cy="28" r="23" />
+                <circle class="case-journey__ring-fill" id="ring-fill-4" cx="28" cy="28" r="23" />
+              </svg>
+              <div class="workflow-tab__node" id="step-pct-4">
+                <span class="workflow-tab__pct-text" id="node-pct-4">0%</span>
+              </div>
+            </div>
+            <div class="workflow-tab__label-group">
+              <span class="workflow-tab__label">4. الخدمات والمرافق</span>
+            </div>
+          </button>
+
+        </div>
+
+        <!-- ROW 2: 4 Stations (5, 6, 7, 8) — Visual LTR (5 Left -> 8 Right) -->
+        <div class="case-journey__row case-journey__row--r2 case-journey__row--reversed" data-row="2">
+
+          <!-- Station 5 -->
+          <button class="workflow-tab case-journey__station" data-step="5" id="step-node-5" type="button" aria-label="المحطة 5: الحيازة الزراعية والمواشي">
+            <div class="case-journey__node-box">
+              <svg class="case-journey__ring-svg" width="56" height="56" viewBox="0 0 56 56" aria-hidden="true">
+                <circle class="case-journey__ring-bg" cx="28" cy="28" r="23" />
+                <circle class="case-journey__ring-fill" id="ring-fill-5" cx="28" cy="28" r="23" />
+              </svg>
+              <div class="workflow-tab__node" id="step-pct-5">
+                <span class="workflow-tab__pct-text" id="node-pct-5">0%</span>
+              </div>
+            </div>
+            <div class="workflow-tab__label-group">
+              <span class="workflow-tab__label">5. الحيازة الزراعية</span>
+            </div>
+          </button>
+
+          <!-- Station 6 -->
+          <button class="workflow-tab case-journey__station" data-step="6" id="step-node-6" type="button" aria-label="المحطة 6: الدخل والمصروفات والوضع المالي">
+            <div class="case-journey__node-box">
+              <svg class="case-journey__ring-svg" width="56" height="56" viewBox="0 0 56 56" aria-hidden="true">
+                <circle class="case-journey__ring-bg" cx="28" cy="28" r="23" />
+                <circle class="case-journey__ring-fill" id="ring-fill-6" cx="28" cy="28" r="23" />
+              </svg>
+              <div class="workflow-tab__node" id="step-pct-6">
+                <span class="workflow-tab__pct-text" id="node-pct-6">0%</span>
+              </div>
+            </div>
+            <div class="workflow-tab__label-group">
+              <span class="workflow-tab__label">6. الدخل والمصروفات</span>
+            </div>
+          </button>
+
+          <!-- Station 7 -->
+          <button class="workflow-tab case-journey__station" data-step="7" id="step-node-7" type="button" aria-label="المحطة 7: الدعم المقترح والتوصيات">
+            <div class="case-journey__node-box">
+              <svg class="case-journey__ring-svg" width="56" height="56" viewBox="0 0 56 56" aria-hidden="true">
+                <circle class="case-journey__ring-bg" cx="28" cy="28" r="23" />
+                <circle class="case-journey__ring-fill" id="ring-fill-7" cx="28" cy="28" r="23" />
+              </svg>
+              <div class="workflow-tab__node" id="step-pct-7">
+                <span class="workflow-tab__pct-text" id="node-pct-7">0%</span>
+              </div>
+            </div>
+            <div class="workflow-tab__label-group">
+              <span class="workflow-tab__label">7. الدعم والقرار</span>
+            </div>
+          </button>
+
+          <!-- Station 8 -->
+          <button class="workflow-tab case-journey__station" data-step="8" id="step-node-8" type="button" aria-label="المحطة 8: الرأي ورأي الباحث الميداني">
+            <div class="case-journey__node-box">
+              <svg class="case-journey__ring-svg" width="56" height="56" viewBox="0 0 56 56" aria-hidden="true">
+                <circle class="case-journey__ring-bg" cx="28" cy="28" r="23" />
+                <circle class="case-journey__ring-fill" id="ring-fill-8" cx="28" cy="28" r="23" />
+              </svg>
+              <div class="workflow-tab__node" id="step-pct-8">
+                <span class="workflow-tab__pct-text" id="node-pct-8">0%</span>
+              </div>
+            </div>
+            <div class="workflow-tab__label-group">
+              <span class="workflow-tab__label">8. الرأي</span>
+            </div>
+          </button>
+
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</section>

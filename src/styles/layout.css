@@ -1,0 +1,828 @@
+/* --------------------------------------------------------------------------
+   5. MAIN CONTENT WRAPPER
+   -------------------------------------------------------------------------- */
+.main-wrapper {
+  flex: 1 1 0%;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
+  margin-right: calc(var(--sidebar-width) + 24px);
+  padding: 24px 32px 48px 32px;
+  transition: margin-right var(--transition-smooth);
+  max-width: 1600px;
+}
+
+body.sidebar-is-collapsed .main-wrapper,
+.sidebar--collapsed + .main-wrapper,
+.sidebar--collapsed ~ .main-wrapper {
+  margin-right: calc(var(--sidebar-collapsed-width) + 24px);
+}
+
+/* Page View Switcher Containers */
+.page-view {
+  display: flex;
+  flex-direction: column;
+  gap: 36px;
+  animation: fadeInView 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.page-view--hidden {
+  display: none !important;
+}
+
+@keyframes fadeInView {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Top Header Bar */
+.top-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 28px;
+  padding: 14px 24px;
+  background: var(--glass-bg-gradient);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: var(--glass-border);
+  border-radius: var(--card-radius);
+  box-shadow: var(--glass-shadow);
+}
+
+body.is-dashboard-view .top-header {
+  display: none;
+}
+
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: var(--font-size-sm);
+  color: #334155;
+  font-weight: 700;
+}
+
+.breadcrumb__item--active {
+  color: #000000;
+  font-weight: 800;
+}
+
+.top-header__actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.search-input-wrapper {
+  position: relative;
+  width: 280px;
+}
+
+.search-input-wrapper svg {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 18px;
+  height: 18px;
+  stroke: #000000;
+}
+
+.search-input {
+  width: 100%;
+  padding: 10px 42px 10px 16px;
+  border-radius: var(--input-radius);
+  border: 1px solid var(--border-color);
+  background: rgba(255, 255, 255, 0.45);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  color: #000000;
+  transition: all var(--transition-fast);
+}
+
+.search-input::placeholder {
+  color: #475569;
+  font-weight: 500;
+}
+
+.search-input:focus {
+  outline: none;
+  background: rgba(255, 255, 255, 0.85);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 4px rgba(29, 78, 216, 0.18);
+}
+
+/* --------------------------------------------------------------------------
+   6. TOP WORKFLOW CONNECTED TABS NAVIGATION (SERPENTINE ROAD LAYOUT)
+   -------------------------------------------------------------------------- */
+.workflow-nav-card {
+  background: var(--glass-bg-gradient);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  border-radius: var(--card-radius);
+  padding: 18px 24px 24px 24px;
+  margin-bottom: 32px;
+  position: relative;
+  transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+}
+
+.workflow-nav-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.workflow-nav-header__title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: var(--font-size-md);
+  font-weight: 800;
+  color: var(--text-heading);
+}
+
+.workflow-nav-header__title svg {
+  color: #1d4ed8;
+}
+
+/* Expand / Collapse Arrow Toggle Button */
+.workflow-toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(10px);
+  border: 1.5px solid var(--border-color);
+  border-radius: 20px;
+  padding: 8px 16px;
+  font-size: var(--font-size-xs);
+  font-weight: 800;
+  color: var(--text-heading);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.workflow-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.9);
+  border-color: #1d4ed8;
+  color: #1d4ed8;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(29, 78, 216, 0.15);
+}
+
+.workflow-toggle-btn__arrow {
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.workflow-nav-card--expanded .workflow-toggle-btn__arrow {
+  transform: rotate(180deg);
+}
+
+/* Road Wrapper */
+.workflow-road-wrapper {
+  position: relative;
+  max-height: 720px;
+  overflow: hidden;
+  transition: max-height 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  padding: 24px 16px 16px;
+}
+
+.workflow-road-wrapper--collapsed {
+  max-height: 120px !important;
+}
+
+/* --------------------------------------------------------------------------
+   DEVX CASE JOURNEY TIMELINE ENGINE — SVG CONTINUOUS SNAKE SYSTEM
+   Supports 10 stations dynamically measured from DOM:
+   Row 1: 3 stations (RTL)
+   Row 2: 3 stations (LTR)
+   Row 3: 4 stations (RTL)
+   Features 2 G1-continuous 180° Bezier U-turns, independent circular
+   progress rings, continuous overall progress path, and mobile vertical stack.
+   -------------------------------------------------------------------------- */
+.case-journey {
+  position: relative;
+  width: 100%;
+  padding: 12px 8px;
+}
+
+/* Unified SVG Layer for Track and Progress */
+.case-journey__svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: visible;
+  z-index: 1;
+}
+
+.case-journey__track {
+  fill: none;
+  stroke: rgba(203, 213, 225, 0.65);
+  stroke-width: 8px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: stroke 0.3s ease;
+}
+
+.case-journey__progress {
+  fill: none;
+  stroke: url(#journeyProgressGrad);
+  stroke-width: 8.5px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: url(#journeyGlow);
+  transition: stroke-dashoffset 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Stations Grid Container */
+.case-journey__grid {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 52px;
+  width: 100%;
+}
+
+/* Row 1: 4 stations, RTL (1 right, 4 left) */
+.case-journey__row--r1 {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  width: 100%;
+  align-items: start;
+  direction: rtl;
+}
+
+/* Row 2: 4 stations, LTR visual (5 left, 8 right) */
+.case-journey__row--r2 {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  width: 100%;
+  align-items: start;
+  direction: ltr;
+}
+
+.case-journey__row--r2 .workflow-tab {
+  direction: rtl;
+}
+
+/* Station Interactive Button */
+.workflow-tab.case-journey__station {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 16px;
+  transition: all var(--transition-fast);
+  outline: none;
+  justify-self: center;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.workflow-tab.case-journey__station:hover {
+  transform: translateY(-3px);
+}
+
+.workflow-tab.case-journey__station:focus-visible {
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.4);
+}
+
+/* Node Box Wrapper for Ring and Circle */
+.case-journey__node-box {
+  position: relative;
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* Station Circular Progress Ring SVG */
+.case-journey__ring-svg {
+  position: absolute;
+  inset: 0;
+  width: 56px;
+  height: 56px;
+  transform: rotate(-90deg);
+  pointer-events: none;
+  z-index: 3;
+}
+
+.case-journey__ring-bg {
+  fill: none;
+  stroke: rgba(226, 232, 240, 0.85);
+  stroke-width: 3px;
+}
+
+.case-journey__ring-fill {
+  fill: none;
+  stroke: #2563eb;
+  stroke-width: 3.5px;
+  stroke-linecap: round;
+  stroke-dasharray: 144.51;
+  stroke-dashoffset: 144.51;
+  transition: stroke-dashoffset 0.5s cubic-bezier(0.16, 1, 0.3, 1), stroke 0.3s ease;
+}
+
+/* Inner Station Center Node (Sits over connectors) */
+.workflow-tab__node {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 2.5px solid #cbd5e1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.1);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  z-index: 2;
+}
+
+.workflow-tab__pct-text {
+  font-size: 12.5px;
+  font-weight: 800;
+  font-family: inherit;
+  color: #475569;
+  line-height: 1;
+  text-align: center;
+  transition: color 0.3s ease;
+}
+
+/* Hover State */
+.workflow-tab.case-journey__station:hover .workflow-tab__node {
+  border-color: var(--color-primary);
+  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.25);
+  transform: scale(1.06);
+}
+
+.workflow-tab.case-journey__station:hover .workflow-tab__pct-text {
+  color: var(--color-primary);
+}
+
+/* Partial Progress (1% to 99%) */
+.workflow-tab--partial .workflow-tab__node {
+  background: linear-gradient(135deg, #eff6ff, #dbeafe);
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18), 0 6px 16px rgba(37, 99, 235, 0.2);
+}
+
+.workflow-tab--partial .workflow-tab__pct-text {
+  color: #1d4ed8;
+}
+
+.workflow-tab--partial .case-journey__ring-fill {
+  stroke: #2563eb;
+}
+
+/* Completed Progress (100%) */
+.workflow-tab--completed .workflow-tab__node {
+  background: linear-gradient(135deg, #10b981, #059669);
+  border-color: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.22), 0 6px 18px rgba(16, 185, 129, 0.3);
+}
+
+.workflow-tab--completed .workflow-tab__pct-text {
+  color: #ffffff;
+}
+
+.workflow-tab--completed .case-journey__ring-fill {
+  stroke: #10b981;
+}
+
+/* Active Selected Tab Node Pulse */
+.workflow-tab--active .workflow-tab__node {
+  transform: scale(1.15);
+  border-color: #2563eb;
+  animation: journeyNodePulse 2.2s infinite ease-in-out;
+}
+
+@keyframes journeyNodePulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.4), 0 8px 20px rgba(37, 99, 235, 0.3);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(37, 99, 235, 0), 0 8px 20px rgba(37, 99, 235, 0.3);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(37, 99, 235, 0), 0 8px 20px rgba(37, 99, 235, 0.3);
+  }
+}
+
+/* Labels */
+.workflow-tab__label-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 4px;
+}
+
+.workflow-tab__label {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--text-heading);
+  text-align: center;
+  max-width: 100%;
+  line-height: 1.4;
+  margin-top: 0;
+  transition: color var(--transition-fast), transform var(--transition-fast);
+}
+
+.workflow-tab--active .workflow-tab__label {
+  color: var(--color-primary);
+  font-weight: 900;
+}
+
+.workflow-tab--completed .workflow-tab__pct-badge {
+  background: rgba(16, 185, 129, 0.15);
+  color: #047857;
+}
+
+.workflow-tab--partial .workflow-tab__pct-badge {
+  background: rgba(37, 99, 235, 0.12);
+  color: #1d4ed8;
+}
+
+/* --------------------------------------------------------------------------
+   RESPONSIVE BREAKPOINTS (TABLET & MOBILE)
+   Mobile (< 768px): Transforms into a vertical connected journey
+   -------------------------------------------------------------------------- */
+@media (max-width: 768px) {
+  .case-journey {
+    padding: 12px 4px;
+  }
+
+  .case-journey__grid {
+    gap: 16px;
+  }
+
+  .case-journey__row--r1,
+  .case-journey__row--r2 {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    width: 100%;
+    direction: rtl !important;
+  }
+
+  .workflow-tab.case-journey__station {
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px;
+    padding: 8px 12px;
+    width: 100%;
+    background: rgba(255, 255, 255, 0.6);
+    border: 1px solid rgba(226, 232, 240, 0.8);
+    border-radius: 14px;
+  }
+
+  .workflow-tab__label-group {
+    align-items: flex-start;
+    text-align: right;
+  }
+
+  .workflow-tab__label {
+    font-size: 13px;
+    text-align: right;
+  }
+}
+
+/* Reduced Motion Support */
+@media (prefers-reduced-motion: reduce) {
+  .case-journey__progress,
+  .case-journey__ring-fill,
+  .workflow-tab.case-journey__station,
+  .workflow-tab__node,
+  .step-float-btn,
+  .step-pane {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   STEP PANE TRANSITION ANIMATIONS
+   Silky smooth directional slide & fade transition between stages
+   -------------------------------------------------------------------------- */
+#view-personal-data {
+  overflow-x: clip;
+}
+
+.step-pane {
+  animation-duration: 0.38s;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  animation-fill-mode: both;
+  will-change: transform, opacity;
+}
+
+/* Moving Next (التالي): glides in with forward transition */
+.step-pane--enter-next {
+  animation-name: stepPaneSlideNext;
+}
+
+/* Moving Prev (السابق): glides in with backward transition */
+.step-pane--enter-prev {
+  animation-name: stepPaneSlidePrev;
+}
+
+@keyframes stepPaneSlideNext {
+  0% {
+    opacity: 0;
+    transform: translate3d(24px, 8px, 0);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes stepPaneSlidePrev {
+  0% {
+    opacity: 0;
+    transform: translate3d(-24px, 8px, 0);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   FLOATING STEP NAVIGATION (Personal Data Stepper)
+   Right: السابق (Previous), Left: التالي (Next)
+   -------------------------------------------------------------------------- */
+.step-floating-nav {
+  pointer-events: none;
+}
+
+.page-view--hidden .step-floating-nav,
+.page-view--hidden .step-float-btn {
+  display: none !important;
+}
+
+.step-float-btn {
+  position: fixed;
+  bottom: 28px;
+  z-index: 95;
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 24px;
+  border-radius: 50px;
+  cursor: pointer;
+  user-select: none;
+  font-family: inherit;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.25s ease,
+              background 0.25s ease,
+              opacity 0.25s ease,
+              border-color 0.25s ease;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  text-decoration: none;
+}
+
+/* Previous Button (اسفل اليمين - Bottom Right) */
+.step-float-btn--prev {
+  right: calc(var(--sidebar-width) + 36px);
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(203, 213, 225, 0.85);
+  color: #0f172a;
+  box-shadow: 0 10px 25px -4px rgba(0, 0, 0, 0.12),
+              0 4px 10px -2px rgba(0, 0, 0, 0.06);
+}
+
+body.sidebar-is-collapsed .step-float-btn--prev,
+.sidebar--collapsed + .main-wrapper .step-float-btn--prev,
+.sidebar--collapsed ~ .main-wrapper .step-float-btn--prev {
+  right: calc(var(--sidebar-collapsed-width) + 36px);
+}
+
+.step-float-btn--prev:hover:not(:disabled):not(.step-float-btn--disabled) {
+  transform: translateY(-4px) scale(1.02);
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 16px 32px -4px rgba(0, 0, 0, 0.18),
+              0 6px 14px -2px rgba(0, 0, 0, 0.08);
+  border-color: var(--color-primary);
+}
+
+.step-float-btn--prev:active:not(:disabled):not(.step-float-btn--disabled) {
+  transform: translateY(0) scale(0.98);
+}
+
+/* Left Actions Stack (اسفل اليسار - Bottom Left Stack) */
+.step-float-stack--left {
+  position: fixed;
+  left: 36px;
+  bottom: 28px;
+  z-index: 95;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  pointer-events: none;
+}
+
+.step-float-stack--left .step-float-btn {
+  position: static;
+  left: auto;
+  bottom: auto;
+  pointer-events: auto;
+}
+
+/* Next Button (التالي) */
+.step-float-btn--next {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #ffffff;
+  box-shadow: 0 12px 28px -4px rgba(37, 99, 235, 0.5),
+              0 4px 12px -2px rgba(0, 0, 0, 0.12);
+}
+
+.step-float-btn--next:hover:not(:disabled):not(.step-float-btn--disabled) {
+  transform: translateY(-4px) scale(1.02);
+  background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+  box-shadow: 0 18px 36px -4px rgba(37, 99, 235, 0.65),
+              0 8px 18px -2px rgba(0, 0, 0, 0.16);
+}
+
+.step-float-btn--next:active:not(:disabled):not(.step-float-btn--disabled) {
+  transform: translateY(0) scale(0.98);
+}
+
+/* Assign Specialist Button (إرسال لأخصائي - Step 10) */
+.step-float-btn--assign {
+  background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  color: #ffffff;
+  box-shadow: 0 10px 25px -4px rgba(13, 148, 136, 0.45),
+              0 4px 10px -2px rgba(0, 0, 0, 0.1);
+  animation: floatBtnSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.step-float-btn--assign .step-float-btn__icon {
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+}
+
+.step-float-btn--assign:hover:not(:disabled):not(.step-float-btn--disabled) {
+  transform: translateY(-4px) scale(1.02);
+  background: linear-gradient(135deg, #0f766e 0%, #115e59 100%);
+  box-shadow: 0 18px 36px -4px rgba(13, 148, 136, 0.65),
+              0 8px 18px -2px rgba(0, 0, 0, 0.16);
+}
+
+.step-float-btn--assign:active:not(:disabled):not(.step-float-btn--disabled) {
+  transform: translateY(0) scale(0.98);
+}
+
+/* Save Button Transformation in Step 10 (حفظ) */
+.step-float-btn--save {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%) !important;
+  border-color: rgba(255, 255, 255, 0.4) !important;
+  box-shadow: 0 12px 28px -4px rgba(5, 150, 105, 0.5),
+              0 4px 12px -2px rgba(0, 0, 0, 0.12) !important;
+}
+
+.step-float-btn--save:hover:not(:disabled):not(.step-float-btn--disabled) {
+  background: linear-gradient(135deg, #047857 0%, #065f46 100%) !important;
+  box-shadow: 0 18px 36px -4px rgba(5, 150, 105, 0.65),
+              0 8px 18px -2px rgba(0, 0, 0, 0.16) !important;
+}
+
+@keyframes floatBtnSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Internal text styling */
+.step-float-btn__content {
+  display: flex;
+  flex-direction: column;
+  text-align: right;
+  line-height: 1.25;
+}
+
+.step-float-btn--next .step-float-btn__content {
+  text-align: left;
+}
+
+.step-float-btn__title {
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.2px;
+}
+
+.step-float-btn__subtitle {
+  font-size: 11px;
+  font-weight: 600;
+  opacity: 0.82;
+  white-space: nowrap;
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.step-float-btn__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+.step-float-btn--prev .step-float-btn__icon {
+  background: rgba(37, 99, 235, 0.1);
+  color: #2563eb;
+}
+
+.step-float-btn--next .step-float-btn__icon {
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+}
+
+.step-float-btn--prev:hover:not(:disabled):not(.step-float-btn--disabled) .step-float-btn__icon {
+  transform: translateX(4px);
+}
+
+.step-float-btn--next:hover:not(:disabled):not(.step-float-btn--disabled) .step-float-btn__icon {
+  transform: translateX(-4px);
+}
+
+/* Disabled State */
+.step-float-btn:disabled,
+.step-float-btn--disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
+  pointer-events: none;
+}
+
+/* Responsive Breakpoints */
+@media (max-width: 1024px) {
+  .step-float-btn--prev {
+    right: 20px;
+    bottom: 20px;
+    padding: 10px 18px;
+  }
+
+  .step-float-stack--left {
+    left: 20px;
+    bottom: 20px;
+    gap: 8px;
+  }
+
+  .step-float-btn--next,
+  .step-float-btn--assign {
+    padding: 10px 18px;
+  }
+
+  .step-float-btn__subtitle {
+    display: none;
+  }
+}
+
+
+

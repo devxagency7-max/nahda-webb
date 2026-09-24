@@ -1,0 +1,92 @@
+<!-- TAB 8: الرأي -->
+<div class="step-pane" id="step-pane-8" style="display: none;">
+  <section class="glass-card" id="card-tab-8">
+    <div class="glass-card__header">
+      <div class="glass-card__title-group">
+        <div class="glass-card__icon" style="background: rgba(99, 102, 241, 0.15); color: #4f46e5;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path
+              d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3">
+            </path>
+          </svg>
+        </div>
+        <div>
+          <h2 class="glass-card__title">8. الرأي وتوصية الباحث الاجتماعي واللجنة</h2>
+          <p class="glass-card__subtitle">توصية الباحث، مشاهدات الزيارة الميدانية ورأي لجنة المراجعة</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-grid form-grid--2-col" style="margin-bottom: 16px;">
+      <div class="form-group">
+        <label class="form-label" for="researcher-brief-opinion"><span>الرأي المختصر للباحث
+            الاجتماعي</span></label>
+        <div class="form-select-wrapper">
+          <select id="researcher-brief-opinion" class="form-select" data-no-other="true">
+            <option value="" selected disabled>اختر الرأي المختصر...</option>
+            <option value="موافق">موافق على تقديم الدعم</option>
+            <option value="غير موافق">غير موافق / التوصية بالرفض</option>
+          </select>
+          <svg class="select-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-grid form-grid--full">
+      <div class="form-group form-group--full">
+        <label class="form-label" for="researcher-opinion"><span>التقرير والبحث التفصيلي للباحث
+            الاجتماعي</span></label>
+        <textarea id="researcher-opinion" class="form-input" rows="3"
+          placeholder="أدخل ملخص توصية الباحث الميداني والتقرير التفصيلي..."></textarea>
+      </div>
+    </div>
+  </section>
+
+  <!-- كارت رأي المراجع (View-only) -->
+  <section class="glass-card" style="margin-top: 24px; border: 1.5px solid rgba(245, 158, 11, 0.4);">
+    <div class="glass-card__header">
+      <div class="glass-card__title-group">
+        <div class="glass-card__icon" style="background: rgba(245, 158, 11, 0.15); color: #d97706;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+        </div>
+        <div>
+          <h3 class="glass-card__title">رأي المراجع والمفتش الاجتماعي (View-only)</h3>
+          <p class="glass-card__subtitle">المستند مراجَع ومنسّق من شاشة التفتيش والمراجعة</p>
+        </div>
+      </div>
+    </div>
+
+    <div
+      style="background: rgba(245, 158, 11, 0.06); padding: 14px; border-radius: 10px; color: #b45309; font-size: 13px; font-weight: 600;">
+      المراجعة الميدانية لسه محتاجة اعتماد مسؤول التفتيش — هتظهر هنا أول ما تتم.
+    </div>
+  </section>
+
+  <!-- كارت رأي مدير التنمية واللجنة (View-only) -->
+  <section class="glass-card" style="margin-top: 24px; border: 1.5px solid rgba(16, 185, 129, 0.4);">
+    <div class="glass-card__header">
+      <div class="glass-card__title-group">
+        <div class="glass-card__icon" style="background: rgba(16, 185, 129, 0.15); color: #059669;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+          </svg>
+        </div>
+        <div>
+          <h3 class="glass-card__title">قرار لجنة البت ومدير التنمية (View-only)</h3>
+          <p class="glass-card__subtitle">القرار النهائي للمؤسسة والجهة المانحة</p>
+        </div>
+      </div>
+    </div>
+
+    <div
+      style="background: rgba(16, 185, 129, 0.06); padding: 14px; border-radius: 10px; color: #047857; font-size: 13px; font-weight: 600;">
+      الملف في انتظار اجتماع لجنة البت لاعتماد وصرف الدعم المستحق.
+    </div>
+  </section>
+</div>

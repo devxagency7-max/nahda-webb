@@ -1,0 +1,646 @@
+<!-- TAB 1: البيانات الأساسية وأفراد الأسرة -->
+<div class="step-pane" id="step-pane-1" style="display: block;">
+  <section class="glass-card" id="card-tab-1">
+    <div class="glass-card__header">
+      <div class="glass-card__title-group">
+        <div class="glass-card__icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
+          </svg>
+        </div>
+        <div>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <h2 class="glass-card__title">1. البيانات الأساسية ومعلومات رب الأسرة</h2>
+            <span class="badge badge--primary">رب الأسرة</span>
+          </div>
+          <p class="glass-card__subtitle">بيانات التعريف والرمز القومي والعنوان وتفاصيل رب الأسرة</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-grid form-grid--3-col">
+      <div class="form-group">
+        <label class="form-label" for="case-name">
+          <span>الاسم</span>
+          <span class="form-label__required">*</span>
+        </label>
+        <div class="input-container">
+          <input type="text" id="case-name" class="form-input" placeholder="أدخل الاسم بالكامل...">
+        </div>
+        <div class="input-error-msg" id="case-name-error" style="display: none; color: #ef4444; font-size: 12px; font-weight: 700; margin-top: 6px;"></div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="national-id">
+          <span>الرقم القومي</span>
+          <span class="form-label__required">*</span>
+        </label>
+        <div class="input-container">
+          <input type="text" id="national-id" class="form-input" placeholder="أدخل الرقم القومي (14 رقم)..."
+            maxlength="14" dir="ltr" style="text-align: right;">
+        </div>
+        <div class="input-error-msg" id="national-id-error" style="display: none; color: #ef4444; font-size: 12px; font-weight: 700; margin-top: 6px;">الرقم القومي غير صحيح</div>
+        <div class="input-success-msg" id="national-id-success" style="display: none; color: #0d9488; font-size: 12px; font-weight: 700; margin-top: 6px;">✓ تم استخراج (السن، المحافظة، النوع) تلقائياً</div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="current-age"><span>السن</span></label>
+        <div class="input-container">
+          <input type="number" id="current-age" class="form-input" placeholder="أدخل السن بالسنوات..." min="1"
+            max="120" readonly style="background-color: rgba(241, 245, 249, 0.6); font-weight: 700;">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="gender"><span>النوع</span></label>
+        <div class="form-select-wrapper">
+          <select id="gender" class="form-select">
+            <option value="" selected disabled>اختر النوع...</option>
+            <option value="ذكر">ذكر</option>
+            <option value="أنثى">أنثى</option>
+          </select>
+          <svg class="select-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="religion"><span>الديانة</span></label>
+        <div class="form-select-wrapper">
+          <select id="religion" class="form-select" data-no-other="true">
+            <option value="" selected disabled>اختر الديانة...</option>
+            <option value="مسلم">مسلم</option>
+            <option value="مسيحي">مسيحي</option>
+          </select>
+          <svg class="select-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="head-relation"><span>صلة القرابة</span></label>
+        <div class="form-select-wrapper">
+          <select id="head-relation" class="form-select">
+            <option value="" selected disabled>اختر صلة القرابة...</option>
+            <option value="الأب">الأب</option>
+            <option value="الأم">الأم</option>
+            <option value="الأخ">الأخ</option>
+            <option value="الأخت">الأخت</option>
+            <option value="الجد">الجد</option>
+            <option value="الجدة">الجدة</option>
+            <option value="الزوج">الزوج</option>
+            <option value="الزوجة">الزوجة</option>
+            <option value="الابن">الابن</option>
+            <option value="الابنة">الابنة</option>
+            <option value="أخرى" data-is-other="true">أخرى</option>
+          </select>
+          <svg class="select-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="education-level">
+          <span>المرحلة التعليمية</span>
+        </label>
+        <div class="form-select-wrapper">
+          <select id="education-level" class="form-select">
+            <option value="" selected disabled>اختر المرحلة التعليمية...</option>
+            <option value="جامعي">مؤهل عالي / جامعي</option>
+            <option value="فوق متوسط">مؤهل فوق متوسط</option>
+            <option value="متوسط">مؤهل متوسط (ثانوي/دبلوم)</option>
+            <option value="إعدادي">إعدادية</option>
+            <option value="ابتدائي">ابتدائية</option>
+            <option value="أمي">أمي (بدون مؤهل)</option>
+            <option value="أخرى" data-is-other="true">أخرى</option>
+          </select>
+          <svg class="select-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </div>
+      </div>
+
+      <!-- 8. الهاتف 1 -->
+      <div class="form-group">
+        <label class="form-label" for="phone1"><span>الهاتف 1</span></label>
+        <div class="input-container">
+          <input type="tel" id="phone1" class="form-input"
+            placeholder="أدخل رقم الهاتف الأساسي (01XXXXXXXXX)...">
+        </div>
+      </div>
+
+      <!-- 9. الهاتف 2 -->
+      <div class="form-group">
+        <label class="form-label" for="phone2"><span>الهاتف 2</span></label>
+        <div class="input-container">
+          <input type="tel" id="phone2" class="form-input"
+            placeholder="أدخل رقم الهاتف الإضافي (01XXXXXXXXX)...">
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- كارت البيانات الخاصة بالجهة المحولة -->
+  <section class="glass-card" id="referral-info-card" style="margin-top: 24px;">
+    <div class="glass-card__header">
+      <div class="glass-card__title-group">
+        <div class="glass-card__icon" style="background: rgba(99, 102, 241, 0.15); color: #4f46e5;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+            <circle cx="9" cy="7" r="4"></circle>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+          </svg>
+        </div>
+        <div>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <h2 class="glass-card__title">الجمعية والنطاق الجغرافي</h2>
+          </div>
+          <p class="glass-card__subtitle">المركز والقرية، والجمعية المسؤولة عن متابعة الحالة</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-grid form-grid--3-col">
+
+      <!-- 2. المركز -->
+      <div class="form-group">
+        <label class="form-label" for="referral-district-select">
+          <span>المركز / المدينة</span>
+        </label>
+        <div class="form-select-wrapper">
+          <select id="referral-district-select" class="form-select">
+            <option value="" selected disabled>-- اختر المركز --</option>
+            <!-- Populated dynamically via JS -->
+          </select>
+          <svg class="select-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </div>
+      </div>
+
+      <!-- 3. القرية / المنطقة -->
+      <div class="form-group">
+        <label class="form-label" for="referral-village-select">
+          <span>القرية / المنطقة</span>
+        </label>
+        <div class="form-select-wrapper">
+          <select id="referral-village-select" class="form-select" disabled>
+            <option value="" selected disabled>-- اختر المركز أولاً --</option>
+            <!-- Populated dynamically via JS based on chosen center -->
+          </select>
+          <svg class="select-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </div>
+      </div>
+
+      <!-- 4. الجمعية -->
+      <div class="form-group">
+        <label class="form-label" for="referral-charity-select">
+          <span>الجمعية</span>
+        </label>
+        <div class="form-select-wrapper">
+          <select id="referral-charity-select" class="form-select">
+            <option value="" selected disabled>-- اختر الجمعية --</option>
+            <!-- Populated dynamically via JS from store.charities -->
+          </select>
+          <svg class="select-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- كارت بيانات العنوان والتواجد السكني لرب الأسرة -->
+  <section class="glass-card" id="address-info-card" style="margin-top: 24px;">
+    <div class="glass-card__header">
+      <div class="glass-card__title-group">
+        <div class="glass-card__icon" style="background: rgba(245, 158, 11, 0.15); color: #d97706;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+            <circle cx="12" cy="10" r="3"></circle>
+          </svg>
+        </div>
+        <div>
+          <h2 class="glass-card__title">بيانات العنوان والتواجد السكني</h2>
+          <p class="glass-card__subtitle">المركز، القرية، والعنوان التفصيلي لمحل سكن الأسرة</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-grid form-grid--3-col">
+      <div class="form-group">
+        <label class="form-label" for="governorate"><span>المحافظة</span></label>
+        <div class="form-select-wrapper">
+          <select id="governorate" class="form-select">
+            <option value="" disabled>-- اختر المحافظة --</option>
+            <option value="القاهرة">القاهرة</option>
+            <option value="الإسكندرية">الإسكندرية</option>
+            <option value="بورسعيد">بورسعيد</option>
+            <option value="السويس">السويس</option>
+            <option value="دمياط">دمياط</option>
+            <option value="الدقهلية">الدقهلية</option>
+            <option value="الشرقية">الشرقية</option>
+            <option value="القليوبية">القليوبية</option>
+            <option value="كفر الشيخ">كفر الشيخ</option>
+            <option value="الغربية">الغربية</option>
+            <option value="المنوفية">المنوفية</option>
+            <option value="البحيرة">البحيرة</option>
+            <option value="الإسماعيلية">الإسماعيلية</option>
+            <option value="الجيزة">الجيزة</option>
+            <option value="بني سويف" selected>بني سويف</option>
+            <option value="الفيوم">الفيوم</option>
+            <option value="المنيا">المنيا</option>
+            <option value="أسيوط">أسيوط</option>
+            <option value="سوهاج">سوهاج</option>
+            <option value="قنا">قنا</option>
+            <option value="أسوان">أسوان</option>
+            <option value="الأقصر">الأقصر</option>
+            <option value="البحر الأحمر">البحر الأحمر</option>
+            <option value="الوادي الجديد">الوادي الجديد</option>
+            <option value="مطروح">مطروح</option>
+            <option value="شمال سيناء">شمال سيناء</option>
+            <option value="جنوب سيناء">جنوب سيناء</option>
+            <option value="خارج الجمهورية">خارج الجمهورية</option>
+          </select>
+          <svg class="select-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="district">
+          <span>المركز / المدينة</span>
+        </label>
+        <div class="form-select-wrapper">
+          <select id="district" class="form-select">
+            <option value="" selected disabled>-- اختر المحافظة أو المركز --</option>
+            <option value="محافظة بني سويف">🏛️ محافظة بني سويف</option>
+            <optgroup label="مراكز ومدن المحافظة">
+              <option value="بني سويف">مدينة / مركز بني سويف</option>
+              <option value="الواسطى">مدينة / مركز الواسطى</option>
+              <option value="ناصر">مدينة / مركز ناصر</option>
+              <option value="إهناسيا">مدينة / مركز إهناسيا</option>
+              <option value="ببا">مدينة / مركز ببا</option>
+              <option value="سمسطا">مدينة / مركز سمسطا</option>
+              <option value="الفشن">مدينة / مركز الفشن</option>
+            </optgroup>
+          </select>
+          <svg class="select-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="village">
+          <span>القرية / الوحدة المحلية</span>
+        </label>
+        <div class="form-select-wrapper">
+          <select id="village" class="form-select">
+            <option value="" selected disabled>-- اختر القرية من القائمة --</option>
+          </select>
+          <svg class="select-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </div>
+      </div>
+
+      <div class="form-group form-group--full">
+        <label class="form-label" for="address"><span>العنوان بالتفصيل</span></label>
+        <div class="input-container">
+          <input type="text" id="address" class="form-input" placeholder="أدخل العنوان التفصيلي للسكن...">
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- كارت البيانات الوظيفية والدخل لرب الأسرة -->
+  <section class="glass-card" id="job-info-card" style="margin-top: 24px;">
+    <div class="glass-card__header">
+      <div class="glass-card__title-group">
+        <div class="glass-card__icon" style="background: rgba(59, 130, 246, 0.15); color: #2563eb;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
+            <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+          </svg>
+        </div>
+        <div>
+          <h2 class="glass-card__title">البيانات الوظيفية والدخل لرب الأسرة</h2>
+          <p class="glass-card__subtitle">المهنة الحالية، طبيعة العمل، ومستوى الدخل والتأمين الاجتماعي</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-grid form-grid--2-col">
+      <div class="form-group">
+        <label class="form-label" for="job-title"><span>المسمى الوظيفي / المهنة</span></label>
+        <div class="input-container">
+          <input type="text" id="job-title" class="form-input" placeholder="مثال: عامل يومية، موظف، متقاعد...">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="head-monthly-income"><span>الدخل الشهري لرب الأسرة (جنيه)</span></label>
+        <div class="input-container">
+          <input type="number" id="head-monthly-income" class="form-input"
+            placeholder="أدخل قيمة الدخل الشهري بالجنيه...">
+        </div>
+      </div>
+
+      <div class="form-group form-group--full"
+        style="display: flex; align-items: center; justify-content: flex-start; gap: 10px; text-align: right;">
+        <input type="checkbox" id="head-takaful-karama" style="width: 18px; height: 18px; cursor: pointer; flex-shrink: 0;">
+        <label for="head-takaful-karama" style="font-weight: 700; font-size: var(--font-size-sm); cursor: pointer;">
+          مستفيد من تكافل وكرامة
+        </label>
+      </div>
+
+      <div class="form-group" id="head-takaful-amount-group" style="display: none;">
+        <label class="form-label" for="head-takaful-amount"><span>مبلغ تكافل وكرامة (جنيه)</span></label>
+        <div class="input-container">
+          <input type="number" id="head-takaful-amount" class="form-input"
+            placeholder="أدخل مبلغ تكافل وكرامة بالجنيه...">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="work-type"><span>طبيعة العمل</span></label>
+        <div class="form-select-wrapper">
+          <select id="work-type" class="form-select">
+            <option value="" selected disabled>اختر طبيعة العمل...</option>
+            <option value="عمالة منتظمة">عمالة منتظمة</option>
+            <option value="عمالة غير منتظمة">عمالة غير منتظمة</option>
+            <option value="المعاش">المعاش</option>
+            <option value="غير قادر على العمل">غير قادر على العمل</option>
+            <option value="موظف حكومي">موظف حكومي</option>
+            <option value="موظف خاص">موظف خاص</option>
+            <option value="لا يعمل">لا يعمل</option>
+          </select>
+          <svg class="select-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="social-insurance"><span>التأمين الاجتماعي</span></label>
+        <div class="form-select-wrapper">
+          <select id="social-insurance" class="form-select">
+            <option value="" selected disabled>اختر موقف التأمين...</option>
+            <option value="مؤمن عليه">مؤمن عليه</option>
+            <option value="غير مؤمن">غير مؤمن عليه</option>
+            <option value="صاحب معاش">صاحب معاش تأميني</option>
+            <option value="معاش تكافل">معاش تكافل وكرامة</option>
+          </select>
+          <svg class="select-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- أفراد الأسرة التابعين -->
+  <section class="glass-card" id="family-members-card" style="margin-top: 24px;">
+    <div class="glass-card__header" style="justify-content: space-between; flex-wrap: wrap; gap: 14px;">
+      <div class="glass-card__title-group">
+        <div class="glass-card__icon" style="background: rgba(16, 185, 129, 0.15); color: #059669;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+            <circle cx="8.5" cy="7" r="4"></circle>
+            <line x1="20" y1="8" x2="20" y2="14"></line>
+            <line x1="17" y1="11" x2="23" y2="11"></line>
+          </svg>
+        </div>
+        <div>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <h2 class="glass-card__title">أفراد الأسرة التابعين لرب الأسرة</h2>
+            <span class="badge badge--primary" id="members-count-badge">عدد الأفراد: 0</span>
+          </div>
+          <p class="glass-card__subtitle">تسجيل وإدارة أفراد أسرة رب الأسرة والتفاصيل الخاصة بهم</p>
+        </div>
+      </div>
+
+      <button class="btn btn--primary" id="btn-open-add-member" type="button">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <line x1="12" y1="5" x2="12" y2="19"></line>
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+        <span>إضافة فرد</span>
+      </button>
+    </div>
+
+    <div class="inline-member-form" id="add-member-inline-form" style="display: none;">
+      <div class="inline-member-form__header">
+        <div class="glass-card__title-group">
+          <div class="glass-card__icon" style="background: rgba(16, 185, 129, 0.15); color: #059669;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+              <circle cx="8.5" cy="7" r="4"></circle>
+            </svg>
+          </div>
+          <div>
+            <h3 class="modal-card__title">إضافة فرد تابع جديد لرب الأسرة</h3>
+            <p class="modal-card__subtitle">تسجيل بيانات الفرد التابع وإضافته إلى قائمة أفراد الأسرة</p>
+          </div>
+        </div>
+        <button class="modal-card__close" id="btn-close-member-modal" aria-label="إغلاق النموذج" type="button">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <div class="inline-member-form__body">
+        <div class="form-grid form-grid--2-col">
+          <div class="form-group">
+            <label class="form-label" for="new-member-name"><span>اسم الفرد التابع الرباعي</span> <span
+                class="form-label__required">*</span></label>
+            <input type="text" id="new-member-name" class="form-input" placeholder="أدخل اسم الفرد بالكامل...">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="new-member-relation"><span>صلة القرابة برب الأسرة</span> <span
+                class="form-label__required">*</span></label>
+            <div class="form-select-wrapper">
+              <select id="new-member-relation" class="form-select">
+                <option value="" selected disabled>اختر صلة القرابة...</option>
+                <option value="الزوج">الزوج</option>
+                <option value="الزوجة">الزوجة</option>
+                <option value="الابن">الابن</option>
+                <option value="الابنة">الابنة</option>
+                <option value="الأخ">الأخ</option>
+                <option value="الأخت">الأخت</option>
+                <option value="الحفيد">الحفيد</option>
+                <option value="الحفيدة">الحفيدة</option>
+                <option value="الجد">الجد</option>
+                <option value="الجدة">الجدة</option>
+                <option value="أخرى" data-is-other="true">أخرى</option>
+              </select>
+              <svg class="select-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="new-member-id">الرقم القومي (14 رقم)</label>
+            <input type="text" id="new-member-id" class="form-input" placeholder="أدخل 14 رقم قومي..."
+              maxlength="14">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="new-member-age">السن الحالي</label>
+            <input type="number" id="new-member-age" class="form-input" placeholder="السن بالسنوات..." min="0"
+              max="120">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="new-member-gender">النوع</label>
+            <div class="form-select-wrapper">
+              <select id="new-member-gender" class="form-select" data-no-other="true">
+                <option value="" selected disabled>اختر النوع...</option>
+                <option value="ذكر">ذكر</option>
+                <option value="أنثى">أنثى</option>
+              </select>
+              <svg class="select-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="new-member-religion">الديانة</label>
+            <div class="form-select-wrapper">
+              <select id="new-member-religion" class="form-select" data-no-other="true">
+                <option value="" selected disabled>اختر الديانة...</option>
+                <option value="مسلم">مسلم</option>
+                <option value="مسيحي">مسيحي</option>
+              </select>
+              <svg class="select-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </div>
+          </div>
+
+          <div class="form-group form-group--full"
+            style="display: flex; align-items: center; gap: 10px; margin-top: 6px;">
+            <input type="checkbox" id="new-member-is-student"
+              style="width: 18px; height: 18px; cursor: pointer;">
+            <label for="new-member-is-student"
+              style="font-weight: 700; font-size: var(--font-size-sm); cursor: pointer;">🎓 هل الفرد طالب ملتحق
+              بالتعليم؟</label>
+          </div>
+
+          <div class="form-group" id="student-stage-group" style="display: none;">
+            <label class="form-label" for="new-member-education-stage">المرحلة التعليمية للفرد</label>
+            <div class="form-select-wrapper">
+              <select id="new-member-education-stage" class="form-select">
+                <option value="" selected disabled>اختر المرحلة التعليمية...</option>
+                <option value="حضانة">حضانة</option>
+                <option value="ابتدائي">ابتدائي</option>
+                <option value="إعدادي">إعدادي</option>
+                <option value="ثانوي">ثانوي</option>
+                <option value="جامعي / كلية">جامعي / كلية</option>
+                <option value="ماجستير / دراسات عليا">ماجستير / دراسات عليا</option>
+                <option value="أخرى">أخرى</option>
+              </select>
+              <svg class="select-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </div>
+          </div>
+
+          <div class="form-group" id="student-grade-group" style="display: none;">
+            <label class="form-label" id="student-grade-label" for="new-member-grade">الصف / السنة الدراسية</label>
+            <div class="form-select-wrapper">
+              <select id="new-member-grade" class="form-select">
+                <option value="" selected disabled>اختر الصف...</option>
+              </select>
+              <svg class="select-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </div>
+          </div>
+
+          <div class="form-group" id="student-uni-group" style="display: none;">
+            <label class="form-label" id="student-uni-label" for="new-member-university">اسم الكلية / التخصص / الجامعة</label>
+            <input type="text" id="new-member-university" class="form-input"
+              placeholder="أدخل اسم الكلية أو التخصص...">
+          </div>
+
+          <div class="form-group" id="non-student-qualification-group">
+            <label class="form-label" for="new-member-qualification">المؤهل الدراسي / المؤهل التعليمي</label>
+            <div class="form-select-wrapper">
+              <select id="new-member-qualification" class="form-select">
+                <option value="" selected disabled>اختر المؤهل الدراسي...</option>
+                <option value="مؤهل عالي / كلية (جامعي)">مؤهل عالي / كلية (جامعي)</option>
+                <option value="معهد عالي (4 سنوات)">معهد عالي (4 سنوات)</option>
+                <option value="معهد متوسط / فوق متوسط (سنتين)">معهد متوسط / فوق متوسط (سنتين)</option>
+                <option value="دبلوم فني / مؤهل متوسط">دبلوم فني / مؤهل متوسط</option>
+                <option value="ثانوية عامة / أزهرية">ثانوية عامة / أزهرية</option>
+                <option value="إعدادية">إعدادية</option>
+                <option value="ابتدائية">ابتدائية</option>
+                <option value="يجيد القراءة والكتابة">يجيد القراءة والكتابة</option>
+                <option value="أمي (بدون مؤهل)">أمي (بدون مؤهل)</option>
+                <option value="أخرى" data-is-other="true">أخرى</option>
+              </select>
+              <svg class="select-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="new-member-job">الوظيفة / العمل</label>
+            <input type="text" id="new-member-job" class="form-input" placeholder="الوظيفة إن وجدت...">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="new-member-income">الدخل الشهري (جنيه)</label>
+            <input type="number" id="new-member-income" class="form-input" placeholder="الدخل بالجنيه...">
+          </div>
+
+          <div class="form-group form-group--full"
+            style="display: flex; align-items: center; justify-content: flex-start; gap: 10px; text-align: right;">
+            <input type="checkbox" id="new-member-takaful-karama" style="width: 18px; height: 18px; cursor: pointer; flex-shrink: 0;">
+            <label for="new-member-takaful-karama" style="font-weight: 700; font-size: var(--font-size-sm); cursor: pointer;">
+              مستفيد من تكافل وكرامة
+            </label>
+          </div>
+
+          <div class="form-group" id="new-member-takaful-amount-group" style="display: none;">
+            <label class="form-label" for="new-member-takaful-amount"><span>مبلغ تكافل وكرامة (جنيه)</span></label>
+            <input type="number" id="new-member-takaful-amount" class="form-input" placeholder="أدخل مبلغ تكافل وكرامة بالجنيه...">
+          </div>
+
+          <div class="form-group form-group--full">
+            <label class="form-label" for="new-member-notes">ملاحظات عن الفرد</label>
+            <input type="text" id="new-member-notes" class="form-input" placeholder="أدخل أي ملاحظات إضافية...">
+          </div>
+        </div>
+      </div>
+
+      <div class="inline-member-form__footer">
+        <button class="btn btn--secondary" type="button" id="btn-cancel-add-member">إلغاء</button>
+        <button class="btn btn--primary" type="button" id="btn-save-member">تأكيد إضافة الفرد التابع</button>
+      </div>
+    </div>
+
+    <div class="members-cards-grid" id="members-list">
+      <div class="members-empty-state" id="members-empty-state"
+        style="text-align: center; padding: 20px; color: var(--text-muted); font-size: var(--font-size-sm); background: rgba(255,255,255,0.2); border-radius: 12px; border: 1px dashed rgba(0,0,0,0.1);">
+        لسه مفيش أفراد مسجّلين غير رب الأسرة. لو معاه أي فرد تابع، اضغط "إضافة فرد" وسجّله.
+      </div>
+    </div>
+  </section>
+</div>

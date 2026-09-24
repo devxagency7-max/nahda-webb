@@ -1,0 +1,93 @@
+<!-- PAGE VIEW 5: صفحة إدارة بيانات الحالة (الـ Dropdowns) -->
+<div class="page-view page-view--hidden" id="view-state-mgmt">
+  <section class="glass-card" id="state-mgmt-card">
+    <!-- Glass Card Header -->
+    <div class="glass-card__header" style="justify-content: space-between; flex-wrap: wrap; gap: 16px;">
+      <div class="glass-card__title-group">
+        <div class="glass-card__icon" style="background: rgba(37, 99, 235, 0.15); color: #2563eb;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 20h9"></path>
+            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+          </svg>
+        </div>
+        <div>
+          <h2 class="glass-card__title">إدارة بيانات الحالة (الـ Dropdowns)</h2>
+          <p class="glass-card__subtitle">الصفحة المركزية لإدارة وتعديل وإضافة وحذف كافة خيارات القوائم المنسدلة في السيستم</p>
+        </div>
+      </div>
+
+      <button class="btn btn--secondary" data-view-target="personal-data" title="الرجوع للبيانات الأساسية">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="9 18 15 12 9 6"></polyline>
+        </svg>
+        <span>العودة للبيانات الأساسية</span>
+      </button>
+    </div>
+
+    <!-- Search Toolbar -->
+    <div style="margin-bottom: 24px;">
+      <div class="input-container" style="width: 100%;">
+        <input type="text" id="state-mgmt-search" class="form-input" placeholder="ابحث باسم الحقل أو الخيارات المنسدلة..." dir="rtl" style="font-size: 15px; padding: 14px 20px;">
+      </div>
+    </div>
+
+    <!-- Enhanced Step Category Filter Tabs -->
+    <div class="state-mgmt-tabs-wrapper" style="margin-bottom: 28px;">
+      <div class="state-mgmt-tabs" id="state-mgmt-tabs">
+        <button class="state-mgmt-tab state-mgmt-tab--active" data-step-filter="all" type="button">
+          <span class="tab-icon">🌐</span>
+          <span>الكل</span>
+        </button>
+        <button class="state-mgmt-tab" data-step-filter="locations" type="button" style="background: rgba(16, 185, 129, 0.12); color: #059669; border-color: rgba(16, 185, 129, 0.3);">
+          <span class="tab-icon">📍</span>
+          <span>المناطق والقرى (بني سويف)</span>
+        </button>
+        <button class="state-mgmt-tab" data-step-filter="1" type="button">
+          <span class="tab-num">1</span>
+          <span>الأساسية والأفراد</span>
+        </button>
+        <button class="state-mgmt-tab" data-step-filter="2" type="button">
+          <span class="tab-num">2</span>
+          <span>المرفقات</span>
+        </button>
+        <button class="state-mgmt-tab" data-step-filter="3" type="button">
+          <span class="tab-num">3</span>
+          <span>السكن</span>
+        </button>
+        <button class="state-mgmt-tab" data-step-filter="4" type="button">
+          <span class="tab-num">4</span>
+          <span>المرافق والتجهيزات</span>
+        </button>
+        <button class="state-mgmt-tab" data-step-filter="5" type="button">
+          <span class="tab-num">5</span>
+          <span>الحيازة الزراعية</span>
+        </button>
+        <button class="state-mgmt-tab" data-step-filter="6" type="button">
+          <span class="tab-num">6</span>
+          <span>الدخل والمصروفات</span>
+        </button>
+        <button class="state-mgmt-tab" data-step-filter="7" type="button">
+          <span class="tab-num">7</span>
+          <span>التصنيف</span>
+        </button>
+        <button class="state-mgmt-tab" data-step-filter="8" type="button">
+          <span class="tab-num">8</span>
+          <span>الاحتياجات</span>
+        </button>
+        <button class="state-mgmt-tab" data-step-filter="9" type="button">
+          <span class="tab-num">9</span>
+          <span>التقييمات</span>
+        </button>
+        <button class="state-mgmt-tab" data-step-filter="10" type="button">
+          <span class="tab-num">10</span>
+          <span>الدعم</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Dynamic Field Cards Grid Container -->
+    <div class="state-mgmt-page-grid" id="state-mgmt-grid">
+      <!-- Dynamic Field Cards rendered via JS -->
+    </div>
+  </section>
+</div>

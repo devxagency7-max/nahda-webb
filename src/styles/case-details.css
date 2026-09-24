@@ -1,0 +1,740 @@
+/* ==========================================================================
+   CASE DETAILS PAGE VIEW & REVIEWER DECISION PANEL STYLES
+   ========================================================================== */
+
+.case-details-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin-bottom: 40px;
+}
+
+.case-page-card {
+  padding: 22px 26px;
+  direction: rtl;
+  text-align: right;
+  transition: transform 0.2s ease;
+  /* الـ glass شفاف، والصفحة بخلفية داكنة — فالبطاقة بتفرض أرضية فاتحة
+     عشان نص الأقسام يفضل مقروء بدل ما كل بطاقة تحط لونها inline. */
+  background: rgba(255, 255, 255, 0.94);
+}
+
+.case-page-card__title {
+  font-size: 16px;
+  font-weight: 800;
+  color: #0f172a;
+  margin-bottom: 14px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  padding-bottom: 10px;
+}
+
+.case-page-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px 20px;
+  font-size: 14px;
+  color: #334155;
+}
+
+.case-page-attachments {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.case-page-att-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.75);
+  border-radius: 12px;
+  font-size: 13px;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+}
+
+/* Reviewer Decision Options Cards */
+.reviewer-option-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1.5px solid rgba(203, 213, 225, 0.8);
+  background: #ffffff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.reviewer-option-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+}
+
+.reviewer-option-card input[type="radio"] {
+  margin-top: 4px;
+  accent-color: #2563eb;
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+.reviewer-option-card .option-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.reviewer-option-card .option-title {
+  font-size: 13px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.reviewer-option-card .option-desc {
+  font-size: 11px;
+  color: #64748b;
+  line-height: 1.3;
+}
+
+.reviewer-option-card--accept:has(input:checked) {
+  border-color: #10b981;
+  background: rgba(236, 253, 245, 0.9);
+}
+
+.reviewer-option-card--reject:has(input:checked) {
+  border-color: #e11d48;
+  background: rgba(255, 241, 242, 0.9);
+}
+
+.reviewer-option-card--return:has(input:checked) {
+  border-color: #d97706;
+  background: rgba(254, 243, 199, 0.9);
+}
+
+
+/* ==========================================================================
+   CASE DETAILS — أقسام NEHDA_CASE_MA.md الثمانية
+   ========================================================================== */
+
+/* عنوان فرعي داخل البطاقة يفصل مجموعات الحقول */
+.case-page-subtitle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: 'Alexandria', 'Almarai', sans-serif;
+  font-size: 13.5px;
+  font-weight: 800;
+  color: #0f766e;
+  margin: 20px 0 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px dashed rgba(13, 148, 136, 0.28);
+}
+
+.case-page-card > .case-page-subtitle:first-of-type {
+  margin-top: 14px;
+}
+
+.case-page-count {
+  background: rgba(13, 148, 136, 0.14);
+  color: #0f766e;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.case-page-note {
+  margin: 0 0 12px;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.72);
+  border-radius: 12px;
+  font-size: 14px;
+  line-height: 1.75;
+  color: #334155;
+  font-weight: 600;
+}
+
+.case-page-empty {
+  margin: 8px 0 0;
+  padding: 16px;
+  text-align: center;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #64748b;
+  background: rgba(241, 245, 249, 0.75);
+  border: 1px dashed rgba(100, 116, 139, 0.35);
+  border-radius: 12px;
+}
+
+.case-nid {
+  font-family: monospace;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+}
+
+/* ---------- الأفراد التابعين ---------- */
+.case-members-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 12px;
+}
+
+.case-member-card {
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(13, 148, 136, 0.25);
+  border-radius: 14px;
+  padding: 14px 16px;
+}
+
+.case-member-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(100, 116, 139, 0.15);
+  font-size: 14.5px;
+  color: #0f172a;
+}
+
+.case-member-relation {
+  background: rgba(37, 99, 235, 0.14);
+  color: #1d4ed8;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.case-member-card__body {
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px 14px;
+  font-size: 13.5px;
+}
+
+/* ---------- المرفقات ---------- */
+.case-att-main {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.case-att-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.case-att-type {
+  background: rgba(139, 92, 246, 0.14);
+  color: #6d28d9;
+  font-size: 11.5px;
+  font-weight: 800;
+}
+
+.case-att-status {
+  background: rgba(255, 255, 255, 0.9);
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+/* ---------- المواشي ---------- */
+.case-livestock-chip {
+  background: rgba(217, 119, 6, 0.14);
+  color: #b45309;
+  font-weight: 800;
+  font-size: 12.5px;
+  margin-left: 6px;
+}
+
+/* ---------- الدخل والمصروفات ---------- */
+.case-fin-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.case-fin-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(100, 116, 139, 0.16);
+  border-radius: 11px;
+  font-size: 14px;
+}
+
+.case-fin-row__label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-weight: 700;
+  color: #334155;
+  min-width: 0;
+}
+
+.case-fin-source {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #64748b;
+  background: rgba(100, 116, 139, 0.12);
+  padding: 2px 8px;
+  border-radius: 8px;
+}
+
+.case-fin-row__amount {
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.case-fin-period {
+  font-size: 12px;
+  font-weight: 700;
+  color: #64748b;
+}
+
+.case-fin-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.case-fin-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 16px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(100, 116, 139, 0.18);
+  border-radius: 13px;
+}
+
+.case-fin-stat__label {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #64748b;
+}
+
+.case-fin-stat__val {
+  font-family: 'Alexandria', 'Almarai', sans-serif;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+/* ---------- الدعم ---------- */
+.case-support-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.case-support-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px 16px;
+  background: #ffffff;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-radius: 13px;
+}
+
+.case-support-item__title {
+  display: block;
+  font-size: 14.5px;
+  color: #065f46;
+  margin-bottom: 4px;
+}
+
+.case-support-option,
+.case-support-amount {
+  display: inline-block;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #047857;
+  margin-left: 10px;
+}
+
+.case-support-option::before {
+  content: '• ';
+}
+
+.case-support-urgency {
+  background: rgba(16, 185, 129, 0.18);
+  color: #065f46;
+  font-weight: 800;
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+
+.case-approved-support {
+  margin-top: 16px;
+  padding: 16px;
+  background: linear-gradient(135deg, rgba(236, 253, 245, 0.95) 0%, rgba(209, 250, 229, 0.85) 100%);
+  border: 1.5px solid rgba(16, 185, 129, 0.45);
+  border-radius: 14px;
+}
+
+.case-approved-support__title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-family: 'Alexandria', 'Almarai', sans-serif;
+  font-size: 15px;
+  font-weight: 800;
+  color: #047857;
+  margin-bottom: 12px;
+}
+
+.case-readonly-badge {
+  background: rgba(100, 116, 139, 0.16);
+  color: #475569;
+  font-size: 11.5px;
+  font-weight: 800;
+}
+
+@media (max-width: 640px) {
+  .case-members-list,
+  .case-fin-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .case-fin-row,
+  .case-support-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+/* شارة توفّر جهاز/مرفق — تباين كافٍ في الحالتين */
+.case-availability-chip {
+  display: inline-block;
+  margin: 0 0 6px 6px;
+  font-size: 12.5px;
+  font-weight: 700;
+  background: rgba(100, 116, 139, 0.14);
+  color: #475569;
+}
+
+.case-availability-chip--on {
+  background: rgba(16, 185, 129, 0.16);
+  color: #047857;
+}
+
+/* ==========================================================================
+   FLOATING CASE ACTIONS — أزرار إجراء المراجع والمدير
+   ========================================================================== */
+.case-float-actions {
+  position: fixed;
+  bottom: 24px;
+  left: 32px;
+  right: calc(var(--sidebar-width) + 32px);
+  z-index: 95;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+  flex-wrap: wrap-reverse;
+  pointer-events: none;
+}
+
+body.sidebar-is-collapsed .case-float-actions {
+  right: calc(var(--sidebar-collapsed-width) + 32px);
+}
+
+/* تختفي مع الصفحة نفسها */
+.page-view--hidden .case-float-actions {
+  display: none !important;
+}
+
+.case-float-btn {
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 13px 24px;
+  border-radius: 50px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-family: 'Alexandria', 'Almarai', sans-serif;
+  font-size: 14.5px;
+  font-weight: 800;
+  user-select: none;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.25s ease, background 0.25s ease, opacity 0.2s ease;
+}
+
+.case-float-btn__icon {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.case-float-btn:hover:not(:disabled) {
+  transform: translateY(-3px) scale(1.02);
+}
+
+.case-float-btn:active:not(:disabled) {
+  transform: translateY(0) scale(0.98);
+}
+
+.case-float-btn--disabled,
+.case-float-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* حفظ كمسودة — ثانوي */
+.case-float-btn--save {
+  background: rgba(255, 255, 255, 0.94);
+  border-color: rgba(203, 213, 225, 0.9);
+  color: #0f172a;
+  box-shadow: 0 10px 24px -6px rgba(0, 0, 0, 0.16);
+}
+
+.case-float-btn--save:hover:not(:disabled) {
+  background: #ffffff;
+  border-color: #2563eb;
+}
+
+/* إرسال للمدير — أساسي */
+.case-float-btn--send {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  color: #ffffff;
+  box-shadow: 0 12px 28px -6px rgba(37, 99, 235, 0.55);
+}
+
+.case-float-btn--send:hover:not(:disabled) {
+  box-shadow: 0 18px 34px -6px rgba(37, 99, 235, 0.65);
+}
+
+/* اعتماد المدير */
+.case-float-btn--approve {
+  background: linear-gradient(135deg, #10b981 0%, #047857 100%);
+  color: #ffffff;
+  box-shadow: 0 12px 28px -6px rgba(16, 185, 129, 0.55);
+}
+
+.case-float-btn--approve:hover:not(:disabled) {
+  box-shadow: 0 18px 34px -6px rgba(16, 185, 129, 0.65);
+}
+
+/* رفض نهائي */
+.case-float-btn--reject {
+  background: rgba(255, 255, 255, 0.94);
+  border-color: rgba(225, 29, 72, 0.5);
+  color: #be123c;
+  box-shadow: 0 10px 24px -6px rgba(0, 0, 0, 0.16);
+}
+
+.case-float-btn--reject:hover:not(:disabled) {
+  background: #fff1f2;
+  border-color: #e11d48;
+}
+
+/* سبب القفل بجوار الأزرار المعطّلة */
+.case-float-hint {
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  padding: 10px 16px;
+  border-radius: 50px;
+  background: rgba(15, 23, 42, 0.88);
+  color: #e2e8f0;
+  font-size: 12.5px;
+  font-weight: 700;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* مساحة أسفل البطاقات حتى لا تغطي الأزرار آخر بطاقة */
+#view-case-details .case-details-stack {
+  padding-bottom: 88px;
+}
+
+@media (max-width: 768px) {
+  .case-float-actions {
+    left: 16px;
+    right: 16px;
+    bottom: 16px;
+    justify-content: stretch;
+  }
+
+  .case-float-btn {
+    flex: 1 1 auto;
+    justify-content: center;
+    padding: 12px 16px;
+    font-size: 13.5px;
+  }
+
+  .case-float-hint {
+    flex: 1 1 100%;
+    justify-content: center;
+  }
+}
+
+/* ==========================================================================
+   DRAFT PREVIEW — مؤشرات البيانات الناقصة
+   ========================================================================== */
+.case-draft-banner {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 14px 20px;
+  border-radius: 14px;
+  background: rgba(254, 243, 199, 0.96);
+  border: 1.5px solid rgba(217, 119, 6, 0.45);
+  color: #92400e;
+  font-size: 13.5px;
+  font-weight: 700;
+}
+
+.case-draft-banner strong {
+  font-family: 'Alexandria', 'Almarai', sans-serif;
+  font-size: 14.5px;
+  font-weight: 800;
+}
+
+.case-draft-banner--ok {
+  background: rgba(236, 253, 245, 0.96);
+  border-color: rgba(16, 185, 129, 0.45);
+  color: #065f46;
+}
+
+/* شارة «ناقص» بجوار عنوان القسم */
+.case-missing-flag {
+  background: rgba(217, 119, 6, 0.16);
+  color: #b45309;
+  font-size: 11.5px;
+  font-weight: 800;
+  margin-right: 8px;
+}
+
+/* قيمة غير مستوفاة داخل الشبكة */
+.case-missing {
+  color: #b45309;
+  font-weight: 700;
+  opacity: 0.85;
+}
+
+/* زر الإعادة للأخصائي */
+.case-float-btn--return {
+  background: rgba(255, 255, 255, 0.94);
+  border-color: rgba(217, 119, 6, 0.55);
+  color: #b45309;
+  box-shadow: 0 10px 24px -6px rgba(0, 0, 0, 0.16);
+}
+
+.case-float-btn--return:hover:not(:disabled) {
+  background: #fffbeb;
+  border-color: #d97706;
+}
+
+/* ==========================================================================
+   RETURN-TO-WORKER MODAL
+   ========================================================================== */
+.case-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  animation: caseModalFade 0.18s ease-out;
+}
+
+@keyframes caseModalFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.case-modal {
+  width: 100%;
+  max-width: 520px;
+  direction: rtl;
+  text-align: right;
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 26px 28px;
+  box-shadow: 0 30px 70px rgba(0, 0, 0, 0.3);
+  animation: caseModalRise 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes caseModalRise {
+  from { opacity: 0; transform: translateY(16px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.case-modal__title {
+  font-family: 'Alexandria', 'Almarai', sans-serif;
+  font-size: 18px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 6px;
+}
+
+.case-modal__desc {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #64748b;
+  line-height: 1.7;
+  margin: 0 0 16px;
+}
+
+.case-modal__input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1.5px solid rgba(203, 213, 225, 0.9);
+  background: rgba(248, 250, 252, 0.8);
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.7;
+  color: #0f172a;
+  resize: vertical;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.case-modal__input:focus {
+  outline: none;
+  border-color: #d97706;
+  background: #ffffff;
+  box-shadow: 0 0 0 4px rgba(217, 119, 6, 0.12);
+}
+
+.case-modal__error {
+  margin: 8px 0 0;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #be123c;
+}
+
+.case-modal__actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.case-modal__actions .case-float-btn {
+  position: static;
+}

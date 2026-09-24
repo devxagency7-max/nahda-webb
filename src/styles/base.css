@@ -1,0 +1,215 @@
+/* ==========================================================================
+   ENTERPRISE DASHBOARD UI SYSTEM (OFFICIAL ALMARAI & ALEXANDRIA EDITION)
+   Primary Font: Almarai + Alexandria & Cairo Fallback | Language: Arabic (RTL)
+   Authoritative, Institutional & Government Grade Typography
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. DESIGN TOKENS & CSS CUSTOM PROPERTIES
+   -------------------------------------------------------------------------- */
+:root {
+  /* High Transparency Glass Parameters */
+  --bg-overlay: rgba(248, 250, 252, 0.22);
+  /* Ultra-light 22% overlay for background clarity */
+  --glass-bg: rgba(255, 255, 255, 0.22);
+  /* 22% Glass Opacity */
+  --glass-bg-hover: rgba(255, 255, 255, 0.38);
+  --glass-bg-subtle: rgba(255, 255, 255, 0.16);
+  --glass-bg-gradient: linear-gradient(135deg, rgba(255, 255, 255, 0.38) 0%, rgba(255, 255, 255, 0.16) 100%);
+
+  --color-surface: rgba(255, 255, 255, 0.85);
+  --color-surface-translucent: rgba(255, 255, 255, 0.50);
+
+  /* Primary & Accent Colors */
+  --color-primary: #1d4ed8;
+  /* Deep Enterprise Blue */
+  --color-primary-hover: #1e40af;
+  --color-primary-light: rgba(29, 78, 216, 0.15);
+  --color-primary-border: rgba(29, 78, 216, 0.40);
+
+  --color-success: #047857;
+  --color-success-bg: rgba(209, 250, 229, 0.8);
+  --color-warning: #b45309;
+  --color-warning-bg: rgba(254, 243, 199, 0.8);
+
+  /* Precise Readable Text Hierarchy */
+  --text-primary: #000000;
+  /* Deep Pure Black for Headers & Labels */
+  --text-body: #09090b;
+  /* Crisp Off-Black for Input Content */
+  --text-secondary: #334155;
+  /* Dark Slate Charcoal for Subtitles & Hints */
+  --text-muted: #64748b;
+  /* Muted Gray */
+  --text-inverse: #ffffff;
+
+  /* Borders & Highlights */
+  --border-color: rgba(255, 255, 255, 0.45);
+  --border-color-strong: rgba(255, 255, 255, 0.70);
+  --border-focus: #1d4ed8;
+
+  /* Glassmorphism Specs (36px Blur) */
+  --glass-blur: blur(36px) saturate(125%) brightness(105%) contrast(102%);
+  --glass-border: 1px solid rgba(255, 255, 255, 0.50);
+  --glass-shadow: 0 14px 44px 0 rgba(15, 23, 42, 0.18), inset 0 1px 1px 0 rgba(255, 255, 255, 0.75);
+  --glass-shadow-hover: 0 22px 52px 0 rgba(15, 23, 42, 0.26), inset 0 1px 2px 0 rgba(255, 255, 255, 0.95);
+  --card-radius: 24px;
+  --btn-radius: 14px;
+  --input-radius: 12px;
+
+  /* Layout Dimensions */
+  --sidebar-width: 290px;
+  --sidebar-collapsed-width: 84px;
+  --topnav-height: 72px;
+  --header-height: 64px;
+
+  /* Official Government & Enterprise Font Stack: Almarai + Alexandria */
+  --font-family: 'Almarai', 'Alexandria', 'Cairo', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-size-xs: 0.75rem;
+  /* 12px */
+  --font-size-sm: 0.875rem;
+  /* 14px */
+  --font-size-md: 0.9375rem;
+  /* 15px */
+  --font-size-lg: 1.125rem;
+  /* 18px */
+  --font-size-xl: 1.25rem;
+  /* 20px */
+  --font-size-2xl: 1.5rem;
+  /* 24px */
+
+  /* Transitions */
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-smooth: 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* --------------------------------------------------------------------------
+   2. RESET & BASE STYLES
+   -------------------------------------------------------------------------- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 17px;
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+  overflow-x: hidden;
+  width: 100%;
+  max-width: 100%;
+}
+
+body {
+  font-family: var(--font-family);
+  color: var(--text-body);
+  line-height: 1.6;
+  direction: rtl;
+  text-align: right;
+  min-height: 100vh;
+  overflow-x: hidden;
+  width: 100%;
+  max-width: 100%;
+  position: relative;
+  background-color: #0f172a;
+}
+
+/* Dynamic Background Layer with Adjustable Blur Filter */
+.bg-layer {
+  position: fixed;
+  top: -12px;
+  left: -12px;
+  right: -12px;
+  bottom: -12px;
+  background-image: url('/assets/background.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  z-index: -2;
+  filter: blur(20px) brightness(89%) contrast(98%) saturate(140%);
+  transform: scale(1.03);
+  transition: filter var(--transition-normal), background-image 0.6s ease, background-color 0.6s ease;
+}
+
+/* Soft White Overlay Filter */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--bg-overlay);
+  z-index: -1;
+  pointer-events: none;
+  transition: background-color var(--transition-fast);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.35);
+  border-radius: 99px;
+  backdrop-filter: blur(8px);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.6);
+}
+
+/* Authoritative Institutional Typography Rules - Prominent Bold Headings */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-weight: 800;
+  /* Bold Official Headings */
+  color: #000000;
+  /* Crisp Pure Black */
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+}
+
+a {
+  color: var(--color-primary);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+  font-size: inherit;
+  color: var(--text-body);
+}
+
+/* --------------------------------------------------------------------------
+   3. MAIN LAYOUT CONTAINER
+   -------------------------------------------------------------------------- */
+.app-layout {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  min-height: 100vh;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+

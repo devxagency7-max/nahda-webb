@@ -1,0 +1,112 @@
+<!-- EDIT PROFILE PAGE VIEW -->
+<div class="page-view page-view--hidden" id="view-profile">
+  <section class="glass-card profile-page-card">
+    <!-- Page Header -->
+    <div class="glass-card__header" style="padding-bottom: 18px; margin-bottom: 24px; border-bottom: 1px solid rgba(0, 0, 0, 0.06);">
+      <div style="display: flex; align-items: center; gap: 14px;">
+        <div style="width: 48px; height: 48px; border-radius: 14px; background: linear-gradient(135deg, #2563eb, #1d4ed8); color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; box-shadow: 0 6px 16px rgba(37, 99, 235, 0.3);">
+          👤
+        </div>
+        <div>
+          <h2 class="glass-card__title" style="font-size: 20px; font-weight: 800; margin: 0; color: #0f172a;">تعديل الملف الشخصي</h2>
+          <p style="font-size: 13px; color: var(--text-secondary); margin: 4px 0 0; font-weight: 600;">إدارة وتحديث البيانات الشخصية وصورة الحساب بالمنظومة</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Profile Main Form Grid -->
+    <form id="profile-form" class="profile-main-grid" novalidate>
+      
+      <!-- Column 1: Avatar Upload Card -->
+      <div class="glass-subcard profile-avatar-card">
+        <div class="profile-avatar-preview-wrapper">
+          <img id="profile-avatar-preview" src="" alt="الصورة الشخصية" class="profile-avatar-img">
+          
+          <!-- Avatar Upload Spinner / Progress Overlay -->
+          <div id="profile-avatar-loading" class="profile-avatar-loading" style="display: none;">
+            <div class="avatar-spinner"></div>
+            <span id="profile-avatar-stage">جاري الرفع...</span>
+          </div>
+
+          <label for="profile-avatar-file-input" class="btn-change-avatar-badge" title="رفع صورة جديدة">
+            📷
+          </label>
+        </div>
+        <input type="file" id="profile-avatar-file-input" accept="image/jpeg,image/png,image/webp" style="display: none;">
+
+        <div style="display: flex; gap: 8px; margin-top: 14px; justify-content: center;">
+          <button type="button" id="btn-delete-avatar" class="btn-delete-avatar" style="display: none;" title="حذف الصورة الشخصية">
+            🗑️ <span>حذف الصورة</span>
+          </button>
+        </div>
+
+        <p style="font-size: 11.5px; color: var(--text-secondary); margin-top: 14px; line-height: 1.5; text-align: center;">
+          اضغط على أيقونة الكاميرا 📷 لرفع صورة من الجهاز<br>الصيغ المدعومة: JPG, PNG, WEBP (أقصى 5 ميجابايت)
+        </p>
+      </div>
+
+      <!-- Column 2: Personal Info Form Card -->
+      <div class="glass-subcard profile-info-card">
+        <input type="hidden" id="profile-row-version" value="0">
+        
+        <!-- Row 1: Name & Phone -->
+        <div class="form-row form-row--2col" style="margin-bottom: 18px;">
+          <div class="form-group">
+            <label for="profile-name-input" class="form-label">
+              <span>الاسم الكامل</span>
+              <span class="required-star">*</span>
+            </label>
+            <input type="text" id="profile-name-input" class="form-input" placeholder="أدخل اسمك الكامل..." required dir="rtl">
+          </div>
+
+          <div class="form-group">
+            <label for="profile-phone-input" class="form-label">
+              <span>رقم الهاتف</span>
+            </label>
+            <input type="tel" id="profile-phone-input" class="form-input" placeholder="مثال: 01012345678" dir="ltr" maxlength="11">
+          </div>
+        </div>
+
+        <!-- Row 2: Email & Gender -->
+        <div class="form-row form-row--2col" style="margin-bottom: 18px;">
+          <div class="form-group">
+            <label for="profile-email-input" class="form-label">
+              <span>البريد الإلكتروني</span>
+            </label>
+            <input type="email" id="profile-email-input" class="form-input" placeholder="name@domain.com" disabled dir="ltr" style="background: rgba(0, 0, 0, 0.04); color: #475569; cursor: not-allowed;">
+            <span style="font-size: 11px; color: var(--text-secondary); margin-top: 4px; display: block;">البريد الإلكتروني مُدار من النظام ولا يمكن تغييره هنا</span>
+          </div>
+
+          <div class="form-group">
+            <label for="profile-gender-select" class="form-label">
+              <span>النوع</span>
+            </label>
+            <select id="profile-gender-select" class="form-select" dir="rtl">
+              <option value="male">ذكر 👨</option>
+              <option value="female">أنثى 👩</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Row 3: Role / Position -->
+        <div class="form-group" style="margin-bottom: 24px;">
+          <label for="profile-role-input" class="form-label">الدور الوظيفي / الصلاحية</label>
+          <input type="text" id="profile-role-input" class="form-input" value="" placeholder="الدور الوظيفي" disabled dir="rtl" style="background: rgba(0, 0, 0, 0.04); color: #475569; font-weight: 700; cursor: not-allowed;">
+        </div>
+
+        <!-- Form Actions -->
+        <div style="display: flex; align-items: center; justify-content: flex-end; gap: 12px; margin-top: 24px; padding-top: 18px; border-top: 1px solid rgba(0, 0, 0, 0.06);">
+          <button type="button" id="btn-cancel-profile" class="btn btn--secondary" data-view-target="dashboard" style="padding: 11px 22px; font-weight: 700;">
+            إلغاء
+          </button>
+          <button type="submit" id="btn-save-profile" class="btn btn--primary" style="padding: 11px 26px; font-weight: 800;">
+            <span id="profile-save-spinner" style="display: none; margin-left: 6px;">⏳</span>
+            <span>💾 حفظ التغييرات</span>
+          </button>
+        </div>
+
+      </div>
+
+    </form>
+  </section>
+</div>

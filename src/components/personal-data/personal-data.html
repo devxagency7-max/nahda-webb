@@ -1,0 +1,115 @@
+<div class="page-view page-view--hidden" id="view-personal-data">
+  <div id="workflow-nav-mount"></div>
+  <div id="step-pane-1-mount"></div>
+  <div id="step-pane-2-mount"></div>
+  <div id="step-pane-3-mount"></div>
+  <div id="step-pane-4-mount"></div>
+  <div id="step-pane-5-mount"></div>
+  <div id="step-pane-6-mount"></div>
+  <div id="step-pane-7-mount"></div>
+  <div id="step-pane-8-mount"></div>
+
+  <!-- Floating Step Navigation Buttons (Prev on Right, Next on Left) -->
+  <div class="step-floating-nav" id="step-floating-nav" aria-label="أزرار التنقل السريع بين المراحل">
+    <!-- Right: السابق (Previous) -->
+    <button type="button" class="step-float-btn step-float-btn--prev" id="btn-floating-prev" aria-label="المرحلة السابقة" title="الرجوع للمرحلة السابقة">
+      <span class="step-float-btn__icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="9 18 15 12 9 6"></polyline>
+        </svg>
+      </span>
+      <div class="step-float-btn__content">
+        <span class="step-float-btn__title">السابق</span>
+        <span class="step-float-btn__subtitle" id="floating-prev-label">المرحلة السابقة</span>
+      </div>
+    </button>
+
+    <!-- Left Actions: إرسال لأخصائي (المرحلة 10) + التالي / حفظ -->
+    <div class="step-float-stack--left" id="step-float-left-stack">
+      <!-- Upper: إرسال لأخصائي (Step 10 only) -->
+      <button type="button" class="step-float-btn step-float-btn--assign" id="btn-floating-assign-specialist" aria-label="إرسال لأخصائي" title="إرسال وتكليف الحالة لأخصائي اجتماعي" style="display: none;">
+        <span class="step-float-btn__icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+            <circle cx="9" cy="7" r="4"></circle>
+            <line x1="19" y1="8" x2="19" y2="14"></line>
+            <line x1="22" y1="11" x2="16" y2="11"></line>
+          </svg>
+        </span>
+        <div class="step-float-btn__content">
+          <span class="step-float-btn__title">إرسال لأخصائي</span>
+          <span class="step-float-btn__subtitle" id="floating-assign-label">تكليف بالبحث الميداني</span>
+        </div>
+      </button>
+
+      <!-- Lower: التالي (Next) / حفظ (Save) -->
+      <button type="button" class="step-float-btn step-float-btn--next" id="btn-floating-next" aria-label="المرحلة التالية" title="الانتقال للمرحلة التالية">
+        <div class="step-float-btn__content">
+          <span class="step-float-btn__title" id="floating-next-title">الحفظ و التالي</span>
+          <span class="step-float-btn__subtitle" id="floating-next-label">المرحلة التالية</span>
+        </div>
+        <span class="step-float-btn__icon" id="floating-next-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="15 18 9 12 15 6"></polyline>
+          </svg>
+        </span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Modal: إرسال وتكليف الحالة لأخصائي اجتماعي -->
+  <div class="modal-overlay specialist-modal-overlay" id="modal-assign-specialist" style="display: none;" aria-hidden="true" role="dialog" aria-labelledby="specialist-modal-title">
+    <div class="modal-card specialist-modal-card">
+      <!-- Modal Header -->
+      <div class="modal-card__header">
+        <div class="specialist-modal-header-info">
+          <div class="specialist-modal-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+              <circle cx="9" cy="7" r="4"></circle>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+            </svg>
+          </div>
+          <div>
+            <h3 class="modal-card__title" id="specialist-modal-title">إرسال وتكليف الحالة لأخصائي اجتماعي</h3>
+            <p class="modal-card__subtitle">اختيار الأخصائي الميداني لإسناد الزيارة الميدانية واستكمال دراسة الحالة</p>
+          </div>
+        </div>
+        <button class="modal-card__close" id="btn-close-specialist-modal" type="button" aria-label="إغلاق النافذة">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="specialist-modal-body">
+        <!-- Search Toolbar -->
+        <div class="specialist-search-box">
+          <div class="specialist-search-input-wrap">
+            <span class="specialist-search-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+            </span>
+            <input type="text" id="specialist-modal-search" class="specialist-search-input" placeholder="ابحث باسم الأخصائي، المركز، أو رقم الهاتف..." autocomplete="off">
+            <button type="button" id="btn-clear-specialist-search" class="specialist-search-clear" style="display: none;" title="مسح البحث">✕</button>
+          </div>
+        </div>
+
+        <!-- Specialists List -->
+        <div class="specialist-list-container" id="specialist-modal-list">
+          <!-- Populated dynamically via workflow.component.js -->
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="specialist-modal-footer">
+        <button type="button" class="btn btn--secondary" id="btn-cancel-specialist-modal">إلغاء</button>
+      </div>
+    </div>
+  </div>
+</div>
