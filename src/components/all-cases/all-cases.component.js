@@ -5,10 +5,13 @@
    Real API-backed: search goes through CasesService.search() ->
    GET /api/v1/search/cases (server-side, cross-worker — see cases.service.js).
    That endpoint has no `status` param, so the status filter tabs stay
-   client-side over whatever page of results came back. The "open full case"
-   button hands off to case-details.component.js's openCaseDetailsPage(),
-   which fetches the rest (GET /cases/{id}, family-members, support,
-   attachments) by the real server GUID.
+   client-side over whatever page of results came back. The one exception is
+   the "حالاتي" tab (data_entry only), which goes through CasesService.list()
+   -> GET /api/v1/cases?createdByMe=true instead, since /search/cases has no
+   such param. The "open full case" button hands off to
+   case-details.component.js's openCaseDetailsPage(), which fetches the rest
+   (GET /cases/{id}, family-members, support, attachments) by the real
+   server GUID.
    -------------------------------------------------------------------------- */
 import { DOM } from '../../utils/dom.js';
 import { showToast } from '../../utils/toast.js';
@@ -92,15 +95,16 @@ export function initAllCasesComponent() {
     awaitingApprovalBtn.style.display = isRole(ROLES.MANAGER) ? '' : 'none';
   }
 
+  // "حالاتي" (GET /cases?createdByMe=true) only makes sense for data_entry —
+  // it's their own intake work, mirrored from the "حالات أدخلتها" KPI card.
+  const mineBtn = DOM.qs('#btn-filter-mine');
+  if (mineBtn) {
+    mineBtn.style.display = isRole(ROLES.DATA_ENTRY) ? '' : 'none';
+  }
+
   if (filterBtns.length > 0) {
     filterBtns.forEach(btn => {
-      btn.addEventListener('click', () => {
-        filterBtns.forEach(b => b.classList.remove('btn-case-filter--active'));
-        btn.classList.add('btn-case-filter--active');
-
-        activeFilter = btn.getAttribute('data-filter') || 'all';
-        renderAllCasesGrid();
-      });
+      btn.addEventListener('click', () => setCasesFilter(btn.getAttribute('data-filter') || 'all'));
     });
   }
 
@@ -117,29 +121,45 @@ export function initAllCasesComponent() {
 }
 
 export function setCasesFilter(filterName) {
+  const previousFilter = activeFilter;
   activeFilter = filterName || 'all';
   const filterBtns = DOM.qsa('.btn-case-filter');
   filterBtns.forEach(btn => {
     const f = btn.getAttribute('data-filter');
     btn.classList.toggle('btn-case-filter--active', f === activeFilter);
   });
+  // 'mine' (GET /cases?createdByMe=true) and 'all' (/search/cases) load from
+  // different endpoints — casesList from one isn't valid for the other, so a
+  // switch between them needs a real re-fetch, not just a client re-filter.
+  if (activeFilter === 'mine' || previousFilter === 'mine') {
+    loadCases();
+    return;
+  }
   renderAllCasesGrid();
+}
+
+/**
+ * فلتر "حالاتي" (`mine`) بيمر بـ GET /cases?createdByMe=true بدل /search/cases،
+ * لأن الأخيرة مالهاش createdByMe. باقي الفلاتر (all/pending/accepted/...)
+ * فاضلة على /search/cases زي ما هي.
+ */
+function fetchCasesPage(page) {
+  if (activeFilter === 'mine') {
+    return CasesService.list({ createdByMe: true, page, limit: PAGE_SIZE });
+  }
+  const trimmedQuery = searchQuery.trim();
+  const q = trimmedQuery.length >= 2 ? trimmedQuery : undefined;
+  return CasesService.search({ q, page, limit: PAGE_SIZE });
 }
 
 /** Loads page 1 from the real API, applying the free-text search. Status stays client-side (see header note). */
 async function loadCases() {
-  // A query under 2 chars 422s server-side for the contains-fields (q/name/
-  // charity/region) — rather than surface that as an error, just skip the
-  // network call and show everything until the user types enough to search.
-  const trimmedQuery = searchQuery.trim();
-  const q = trimmedQuery.length >= 2 ? trimmedQuery : undefined;
-
   isLoading = true;
   currentPage = 1;
   hasMore = false;
   renderAllCasesGrid();
   try {
-    const result = await CasesService.search({ q, page: 1, limit: PAGE_SIZE });
+    const result = await fetchCasesPage(1);
     const items = (result && result.items) || [];
     casesList = items.map(normalizeCase);
     hasMore = Boolean(result && result.hasNext);
@@ -156,25 +176,30 @@ async function loadCases() {
 /** Appends the next page to the currently loaded list — same query, same status filtering rules as loadCases(). */
 async function loadMoreCases() {
   if (isLoadingMore || !hasMore) return;
-  const trimmedQuery = searchQuery.trim();
-  const q = trimmedQuery.length >= 2 ? trimmedQuery : undefined;
   const nextPage = currentPage + 1;
 
   isLoadingMore = true;
   renderAllCasesGrid();
   try {
-    const result = await CasesService.search({ q, page: nextPage, limit: PAGE_SIZE });
+    const result = await fetchCasesPage(nextPage);
     const items = (result && result.items) || [];
-    casesList = casesList.concat(items.map(normalizeCase));
+    const newCases = items.map(normalizeCase);
+    casesList = casesList.concat(newCases);
     currentPage = nextPage;
     hasMore = Boolean(result && result.hasNext);
+    updateFilterCountsFromLoadedPage();
+    // Append-only: avoids rebuilding every previously-rendered card's HTML
+    // just to add one more page — matters once casesList grows into the
+    // hundreds, where a full re-render means re-creating hundreds of DOM nodes.
+    renderAllCasesGrid({ appendCases: newCases });
+    return;
   } catch (err) {
     showToast(`تعذر تحميل المزيد من الحالات: ${messageFromError(err)} ⚠️`);
   } finally {
     isLoadingMore = false;
-    updateFilterCountsFromLoadedPage();
-    renderAllCasesGrid();
   }
+  updateFilterCountsFromLoadedPage();
+  renderAllCasesGrid();
 }
 
 function setFilterCount(key, value) {
@@ -208,6 +233,11 @@ async function refreshFilterCountsFromStats() {
       setFilterCount('pending', stats.pendingReview);
       pendingCountFromStatsAvailable = true;
     }
+    // data_entry's "حالاتي" tab count — same field as the dashboard's
+    // "حالات أدخلتها" KPI card.
+    if (typeof stats.createdByMe === 'number') {
+      setFilterCount('mine', stats.createdByMe);
+    }
     // Same field the dashboard's "بانتظار اعتمادك" KPI card reads — manager only.
     if (typeof stats.awaitingMyApproval === 'number') {
       setFilterCount('awaiting_approval', stats.awaitingMyApproval);
@@ -239,9 +269,123 @@ function updateFilterCountsFromLoadedPage() {
   }
 }
 
-export function renderAllCasesGrid() {
+/** Builds one case card's HTML — shared by the full render and the append-only path. */
+function caseCardHTML(c) {
+  return `
+    <div class="glass-card case-item-card">
+      <div class="case-item-card__header">
+        <div>
+          <span class="dash-status-pill ${c.statusClass}" style="margin-bottom: 6px; display: inline-block;">${c.statusLabel}</span>
+          <h3 class="case-item-card__name">${DOM.escapeHTML(c.name)}</h3>
+        </div>
+        <span class="badge" style="background: rgba(255,255,255,0.7); color: var(--color-primary); font-weight: 800;">${c.id}</span>
+      </div>
+
+      <!-- Outer Card Properties (الاسم - الرقم القومي - عدد أفراد الأسرة) -->
+      <div class="case-item-card__details">
+        <div class="case-item-detail-row">
+          <span class="detail-label">🪪 الرقم القومي:</span>
+          <span class="detail-val" style="font-family: monospace; font-weight: 800; font-size: 14px;">${c.nid}</span>
+        </div>
+        <div class="case-item-detail-row">
+          <span class="detail-label">👨‍👩‍👧‍👦 عدد أفراد الأسرة:</span>
+          <span class="detail-val" style="font-weight: 800;">${c.familyMembersCount} أفراد</span>
+        </div>
+        <div class="case-item-detail-row">
+          <span class="detail-label">🏢 الجمعية والموقع:</span>
+          <span class="detail-val" style="font-size: 12px;">${DOM.escapeHTML(c.charity)} (${c.center} — ${c.village})</span>
+        </div>
+        <div class="case-item-detail-row">
+          <span class="detail-label">📞 الهاتف:</span>
+          <span class="detail-val" style="font-family: monospace;">${DOM.escapeHTML(c.phone || '—')}</span>
+        </div>
+      </div>
+
+      <button type="button" class="btn btn--primary btn--full btn-open-case-detail" data-case-id="${c.rawId}" style="margin-top: 16px; font-weight: 800;">
+        <span>فتح فحص وتقييم الحالة بالكامل 📂</span>
+      </button>
+    </div>
+  `;
+}
+
+/** Builds the "load more" footer card, or '' when there's no next page. */
+function loadMoreFooterHTML() {
+  if (!hasMore) return '';
+  return `
+    <div class="glass-card load-more-footer" style="padding: 24px; text-align: center; grid-column: 1 / -1;">
+      <button type="button" class="btn btn--secondary btn-load-more-cases" ${isLoadingMore ? 'disabled' : ''} style="font-weight: 800;">
+        ${isLoadingMore ? '⏳ جاري التحميل...' : `تحميل المزيد من الحالات (عرض ${casesList.length}) ⬇️`}
+      </button>
+    </div>
+  `;
+}
+
+function attachCaseCardListeners(root) {
+  // case-details.component.js is now API-backed (fetches GET /cases/{id} +
+  // family-members/support/attachments by the real server GUID) — open it
+  // directly instead of the old "coming soon" placeholder.
+  root.querySelectorAll('.btn-open-case-detail').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const caseId = btn.getAttribute('data-case-id');
+      if (caseId && window.openCaseDetailsPage) window.openCaseDetailsPage(caseId);
+    });
+  });
+}
+
+/**
+ * Appends newly-loaded-page cases straight to the existing DOM instead of
+ * re-rendering the whole grid. Only valid right after loadMoreCases() —
+ * requires the grid to already be showing the non-empty, filtered list from
+ * the previous render (activeFilter/searchQuery unchanged since then).
+ */
+function appendCasesToGrid(casesGrid, appendCases) {
+  const trimmedQuery = searchQuery.trim().toLowerCase();
+  const newlyVisible = appendCases.filter(c => {
+    // 'mine' is already server-scoped (GET /cases?createdByMe=true) — no
+    // extra status filtering on top, same as 'all'.
+    const matchesFilter = activeFilter === 'all' || activeFilter === 'mine'
+      || (activeFilter === 'awaiting_approval' ? c.rawStatus === 'pending_approval' : c.status === activeFilter);
+    const matchesSearch = !trimmedQuery ||
+      c.name.toLowerCase().includes(trimmedQuery) ||
+      c.nid.includes(trimmedQuery) ||
+      c.village.toLowerCase().includes(trimmedQuery) ||
+      c.center.toLowerCase().includes(trimmedQuery);
+    return matchesFilter && matchesSearch;
+  });
+
+  const oldFooter = casesGrid.querySelector('.load-more-footer');
+  if (oldFooter) oldFooter.remove();
+
+  if (newlyVisible.length > 0) {
+    const wrapper = document.createElement('div');
+    wrapper.innerHTML = newlyVisible.map(caseCardHTML).join('');
+    const newCards = Array.from(wrapper.children);
+    newCards.forEach(node => casesGrid.appendChild(node));
+    attachCaseCardListeners(casesGrid);
+  }
+
+  const footerHTML = loadMoreFooterHTML();
+  if (footerHTML) {
+    const wrapper = document.createElement('div');
+    wrapper.innerHTML = footerHTML;
+    const footerNode = wrapper.firstElementChild;
+    casesGrid.appendChild(footerNode);
+    const loadMoreBtn = footerNode.querySelector('.btn-load-more-cases');
+    if (loadMoreBtn) loadMoreBtn.addEventListener('click', loadMoreCases);
+  }
+}
+
+export function renderAllCasesGrid({ appendCases } = {}) {
   const casesGrid = DOM.qs('#all-cases-grid');
   if (!casesGrid) return;
+
+  // Only safe once the grid is already showing real case cards — if the
+  // previous render was the loading state or the "no results" empty state,
+  // there's nothing to append onto, so fall through to a full render.
+  if (appendCases && casesGrid.querySelector('.case-item-card')) {
+    appendCasesToGrid(casesGrid, appendCases);
+    return;
+  }
 
   if (isLoading) {
     casesGrid.innerHTML = `
@@ -257,7 +401,9 @@ export function renderAllCasesGrid() {
   // be in-flight/debounced for very short queries.
   const trimmedQuery = searchQuery.trim().toLowerCase();
   const filtered = casesList.filter(c => {
-    const matchesFilter = activeFilter === 'all'
+    // 'mine' is already server-scoped (GET /cases?createdByMe=true) — no
+    // extra status filtering on top, same as 'all'.
+    const matchesFilter = activeFilter === 'all' || activeFilter === 'mine'
       || (activeFilter === 'awaiting_approval' ? c.rawStatus === 'pending_approval' : c.status === activeFilter);
     const matchesSearch = !trimmedQuery ||
       c.name.toLowerCase().includes(trimmedQuery) ||
@@ -323,57 +469,9 @@ export function renderAllCasesGrid() {
     return;
   }
 
-  casesGrid.innerHTML = filtered.map(c => `
-    <div class="glass-card case-item-card">
-      <div class="case-item-card__header">
-        <div>
-          <span class="dash-status-pill ${c.statusClass}" style="margin-bottom: 6px; display: inline-block;">${c.statusLabel}</span>
-          <h3 class="case-item-card__name">${DOM.escapeHTML(c.name)}</h3>
-        </div>
-        <span class="badge" style="background: rgba(255,255,255,0.7); color: var(--color-primary); font-weight: 800;">${c.id}</span>
-      </div>
+  casesGrid.innerHTML = filtered.map(caseCardHTML).join('') + loadMoreFooterHTML();
 
-      <!-- Outer Card Properties (الاسم - الرقم القومي - عدد أفراد الأسرة) -->
-      <div class="case-item-card__details">
-        <div class="case-item-detail-row">
-          <span class="detail-label">🪪 الرقم القومي:</span>
-          <span class="detail-val" style="font-family: monospace; font-weight: 800; font-size: 14px;">${c.nid}</span>
-        </div>
-        <div class="case-item-detail-row">
-          <span class="detail-label">👨‍👩‍👧‍👦 عدد أفراد الأسرة:</span>
-          <span class="detail-val" style="font-weight: 800;">${c.familyMembersCount} أفراد</span>
-        </div>
-        <div class="case-item-detail-row">
-          <span class="detail-label">🏢 الجمعية والموقع:</span>
-          <span class="detail-val" style="font-size: 12px;">${DOM.escapeHTML(c.charity)} (${c.center} — ${c.village})</span>
-        </div>
-        <div class="case-item-detail-row">
-          <span class="detail-label">📞 الهاتف:</span>
-          <span class="detail-val" style="font-family: monospace;">${DOM.escapeHTML(c.phone || '—')}</span>
-        </div>
-      </div>
-
-      <button type="button" class="btn btn--primary btn--full btn-open-case-detail" data-case-id="${c.rawId}" style="margin-top: 16px; font-weight: 800;">
-        <span>فتح فحص وتقييم الحالة بالكامل 📂</span>
-      </button>
-    </div>
-  `).join('') + (hasMore ? `
-    <div class="glass-card" style="padding: 24px; text-align: center; grid-column: 1 / -1;">
-      <button type="button" class="btn btn--secondary btn-load-more-cases" ${isLoadingMore ? 'disabled' : ''} style="font-weight: 800;">
-        ${isLoadingMore ? '⏳ جاري التحميل...' : `تحميل المزيد من الحالات (عرض ${casesList.length}) ⬇️`}
-      </button>
-    </div>
-  ` : '');
-
-  // case-details.component.js is now API-backed (fetches GET /cases/{id} +
-  // family-members/support/attachments by the real server GUID) — open it
-  // directly instead of the old "coming soon" placeholder.
-  casesGrid.querySelectorAll('.btn-open-case-detail').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const caseId = btn.getAttribute('data-case-id');
-      if (caseId && window.openCaseDetailsPage) window.openCaseDetailsPage(caseId);
-    });
-  });
+  attachCaseCardListeners(casesGrid);
 
   const loadMoreBtn = casesGrid.querySelector('.btn-load-more-cases');
   if (loadMoreBtn) loadMoreBtn.addEventListener('click', loadMoreCases);

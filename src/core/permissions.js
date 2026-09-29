@@ -59,7 +59,12 @@ export const PERMISSIONS = {
   // "ضبط بيانات الحالة" — dropdown-configs/options admin. data_entry-only
   // on the server as of the 2026-09-22 permissions change (was manager-only
   // in the original docs) — never assume the old table without re-checking.
-  MANAGE_CONFIGURATIONS: 'manage_configurations'
+  MANAGE_CONFIGURATIONS: 'manage_configurations',
+
+  // "فلترة الحالات حسب الجمعية والدعم" — manager-only by product decision,
+  // client-side gate only (view_cases still backs the underlying /search/cases
+  // call server-side, same as every other case list screen).
+  VIEW_CASE_SUPPORT_FILTER: 'view_case_support_filter'
 };
 
 /* --------------------------------------------------------------------------
@@ -103,7 +108,8 @@ const ROLE_PERMISSIONS = {
     PERMISSIONS.MANAGE_EMPLOYEES,
     PERMISSIONS.VIEW_REPORTS,
     PERMISSIONS.VIEW_FINANCIAL_REPORTS,
-    PERMISSIONS.EXPORT_REPORTS
+    PERMISSIONS.EXPORT_REPORTS,
+    PERMISSIONS.VIEW_CASE_SUPPORT_FILTER
   ]
 };
 
@@ -115,6 +121,7 @@ const ROLE_PERMISSIONS = {
 const VIEW_PERMISSIONS = {
   employees: PERMISSIONS.VIEW_EMPLOYEES,
   reports: PERMISSIONS.VIEW_REPORTS,
+  'case-support-filter': PERMISSIONS.VIEW_CASE_SUPPORT_FILTER,
   charities: PERMISSIONS.MANAGE_CHARITIES,
   // Gates the whole page by its locations card (every role has this).
   // The dropdown-protocol CRUD card inside the same page is gated
@@ -155,6 +162,9 @@ export function can(permission) {
   if (Array.isArray(serverGranted)) {
     if (serverGranted.includes(permission)) return true;
     const role = currentRole();
+    if (role === ROLES.MANAGER) {
+      if (permission === PERMISSIONS.VIEW_CASE_SUPPORT_FILTER) return true;
+    }
     if (role === ROLES.MANAGER || role === ROLES.REVIEWER) {
       if (permission === PERMISSIONS.VIEW_REPORTS || permission === PERMISSIONS.VIEW_FINANCIAL_REPORTS || permission === PERMISSIONS.EXPORT_REPORTS) {
         return true;

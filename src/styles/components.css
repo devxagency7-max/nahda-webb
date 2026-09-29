@@ -521,8 +521,8 @@
 
 .toast {
   position: fixed;
-  bottom: 28px;
-  left: 28px;
+  top: 28px;
+  left: 50%;
   background: #000000;
   backdrop-filter: blur(16px);
   color: #ffffff;
@@ -536,14 +536,14 @@
   align-items: center;
   gap: 12px;
   opacity: 0;
-  transform: translateY(20px);
+  transform: translate(-50%, -20px);
   transition: all var(--transition-normal);
   pointer-events: none;
 }
 
 .toast--visible {
   opacity: 1;
-  transform: translateY(0);
+  transform: translate(-50%, 0);
   pointer-events: auto;
 }
 

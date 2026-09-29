@@ -34,61 +34,30 @@ function isChecked(id) {
   return Boolean(el && el.checked);
 }
 
-/** Resolves a center/village display name to its server GUID via the map store.js builds from GET /locations. */
-function resolveLocationIds(centerName, villageName) {
-  const ids = store.locationIds;
-  const centerId = ids.centers?.[centerName] || null;
-  const villageId = ids.villages?.[centerName]?.[villageName] || null;
-  return { centerId, villageId };
-}
-
-/**
- * حارس قبل الإرسال: المركز والقرية اختياريان فعليًا عند السيرفر (تم تأكيده مع
- * الباك إند — centerId/villageId بقوا nullable في POST /cases وPUT
- * /beneficiary، وإرسالهم null بيمر عادي؛ الإجباري الوحيد فعليًا هو fullName
- * وnationalId، راجع validateStep1).
- *
- * الحارس ده بيغطي حالة مختلفة تمامًا: المستخدم اختار اسم مركز/قرية من
- * القائمة فعلاً لكنهم مش موجودين في خريطة store.locationIds (يعني القرية دي
- * مسجّلة بالاسم في الفورم لكن مش موجودة فعليًا في بيانات المواقع اللي
- * السيرفر رجّعها من GET /locations) — ده خطأ بيانات حقيقي محتاج تدخل يدوي
- * (إضافة القرية من "إدارة المواقع")، مش مجرد حقل فاضي، وبالتالي مفيش داعي
- * نتعب المستخدم برحلة حفظ كاملة عشان يكتشفه.
- *
- * لو المستخدم سايب الحقلين فاضيين تمامًا، الطلب بيعدي زي ما هو (centerId/
- * villageId: null) والسيرفر بيقبله عادي.
- */
-function requireLocationIds(centerId, villageId, centerName, villageName) {
-  if (!centerName || !villageName) return true;
-  if (centerId && villageId) return true;
-
-  showToast(
-    `"${villageName}" (${centerName}) لسه مش مسجّلة في بيانات المواقع على النظام — ` +
-    'لازم تتضاف الأول من شاشة "إدارة المواقع"، أو اختَر قرية تانية مسجّلة بالفعل، أو سيب الحقلين فاضيين وكمّلهم بعدين.',
-    'warning'
-  );
-  return false;
-}
-
 function currentCaseId() {
   return store.currentCase?.id || null;
 }
 
 /**
- * يضمن وجود caseRowVersion قبل أي PUT من نوع "قوائم" (utilities/financial/
- * support-recommendations) — الحقل uint غير nullable عند السيرفر، وإرساله
- * null بيرجّع 400 فاضي تمامًا (نفس عائلة باگ centerId/villageId/roomsCount،
- * اتأكد فعليًا على السيرفر الحي). بيحصل عمليًا لو المستخدم قفز لمرحلة
- * "قائمة" (زي step4) مباشرة بعد step1 من غير ما يعدّي على قسم حدّث
- * caseRowVersion قبل كده.
+ * يجيب caseRowVersion طازة من السيرفر دايمًا قبل أي PUT من نوع "قوائم"
+ * (utilities/financial/support-recommendations) — مش بس لو كانت null.
+ *
+ * caseRowVersion عداد واحد مشترك على مستوى الحالة كلها (اتأكد فعليًا من رد
+ * GET /cases/{id} الحي: أي قسم بيتحفظ — بما فيهم أقسام عندها rowVersion خاص
+ * بيها زي housing/agriculture، وكمان رفع مرفقات — بيرفع نفس الرقم ده). قبل
+ * كده كنا بنجيبها مرة واحدة بس (لو null) ونعتمد على كل مسار حفظ إنه يحدّثها
+ * صح بعد كده، لكن أي مسار كتابة تاني (مرفقات، أو أي قسم مستقبلي) ينساها
+ * بيسيب النسخة المحلية قديمة، فالسيرفر يرفض PUT التالي بـ 409 "تم تعديل هذه
+ * البيانات من مستخدم آخر" رغم إن محدش تاني لمس الحالة فعليًا. جلب طازة دايمًا
+ * هنا (طلب GET إضافي بسيط لكل حفظ) بيقفل الثغرة دي نهائيًا بدل ما نطارد كل
+ * نقطة كتابة ممكنة واحدة واحدة.
  *
  * خلافًا لحارس المواقع (اللي بيوقف المستخدم لأن الحل يدوي)، هنا الاسترجاع
- * تلقائي بالكامل — مجرد GET /cases/{id} طازة — فمفيش داعي نزعج المستخدم.
+ * تلقائي بالكامل ومايظهرش للمستخدم أي حاجة.
  */
 async function ensureCaseRowVersion(caseId) {
-  if (sectionVersion('caseRowVersion') != null) return;
   const fresh = await CasesService.getById(caseId);
-  store.setSectionVersion('caseRowVersion', fresh?.rowVersion);
+  store.setSectionVersion('caseRowVersion', fresh?.rowVersion ?? sectionVersion('caseRowVersion'));
 }
 
 function sectionVersion(key) {
@@ -130,7 +99,6 @@ async function runSave(promiseFactory, { onConflict, onValidationDetails } = {})
  * ومُتحقّق منها فعليًا على السيرفر الحي. تُستخدم لتحديث حالة موجودة بالفعل.
  */
 function collectBeneficiaryPayload() {
-  const { centerId, villageId } = resolveLocationIds(val('district'), val('village'));
   return {
     fullName: val('case-name'),
     phonePrimary: val('phone1'),
@@ -144,13 +112,39 @@ function collectBeneficiaryPayload() {
     monthlyIncome: num('head-monthly-income'),
     takafulBeneficiary: isChecked('head-takaful-karama'),
     takafulAmount: isChecked('head-takaful-karama') ? num('head-takaful-amount') : null,
-    centerId,
-    villageId,
     address: val('address'),
     headRelation: val('head-relation')
     // age/gender/birthGovernorate intentionally omitted — server-derived
     // from nationalId (§19 Frontend Must NOT #1).
   };
+}
+
+/**
+ * يحوّل أفراد الأسرة من شكل الكارت المحلي (store.familyMembers، نفس بنية
+ * card.dataset) إلى شكل PUT /cases/{id}/family-members — عكس تمامًا
+ * mapMembersFromApi في case-edit.loader.js.
+ */
+function collectFamilyMembersPayload() {
+  return (store.familyMembers || []).map(m => ({
+    name: m.name || '',
+    relation: m.relation || '',
+    nationalId: m.idNum || null,
+    age: m.age ? Number(m.age) : null,
+    gender: m.gender || null,
+    isStudent: m.isStudent === 'true' || m.isStudent === true,
+    educationStage: m.stage || null,
+    grade: m.grade || null,
+    university: m.university || null,
+    education: m.qualification || null,
+    job: m.job && m.job !== 'غير محدد' ? m.job : null,
+    monthlyIncome: m.income ? Number(m.income) : null,
+    notes: m.notes || null,
+    // فاضي لازم يتبعت "" (مش null) — الباك-إند بيفرّق بينهم فعليًا لـ diseases:
+    // null/محذوف = سيبها زي ما هي، "" = امسحها فعليًا (راجع رد الباك-إند).
+    diseases: m.diseases ?? '',
+    takafulBeneficiary: m.takafulKarama === 'true' || m.takafulKarama === true,
+    takafulAmount: m.takafulKaramaAmount ? Number(m.takafulKaramaAmount) : null
+  }));
 }
 
 /**
@@ -161,14 +155,11 @@ function collectBeneficiaryPayload() {
  * @see WEB_API_DOCUMENTATION.md §"POST /api/v1/cases" (نموذج beneficiary/charityId/priority)
  */
 function collectCreateCasePayload() {
-  const { centerId, villageId } = resolveLocationIds(val('district'), val('village'));
   return {
     beneficiary: {
       fullName: val('case-name'),
       nationalId: val('national-id'),
       phonePrimary: val('phone1') || null,
-      centerId,
-      villageId,
       address: val('address') || null
     },
     charityId: null,
@@ -237,8 +228,6 @@ const STEP1_SERVER_FIELD_MAP = {
   nationalid: { elId: 'national-id', errElId: 'national-id-error', label: 'الرقم القومي' },
   phoneprimary: { elId: 'phone1', label: 'الهاتف الأول' },
   phonesecondary: { elId: 'phone2', label: 'الهاتف الثاني' },
-  centerid: { elId: 'district', label: 'المركز' },
-  villageid: { elId: 'village', label: 'القرية' },
   address: { elId: 'address', label: 'العنوان' },
   religion: { elId: 'religion', label: 'الديانة' },
   education: { elId: 'education-level', label: 'المرحلة التعليمية' },
@@ -302,11 +291,6 @@ export function applyStep1ServerValidationErrors(details) {
  *   caller should stay on step 1 (validation/conflict already toasted).
  */
 export async function saveStep1() {
-  const centerName = val('district');
-  const villageName = val('village');
-  const { centerId, villageId } = resolveLocationIds(centerName, villageName);
-  if (!requireLocationIds(centerId, villageId, centerName, villageName)) return false;
-
   // store.currentCase بقى in-memory بس (مش متخزن في localStorage) — بيتصفّر
   // لوحده مع أي تحديث/فتح جديد للصفحة. الحارس ده لسه لازم داخل نفس الجلسة:
   // لو المستخدم سجّل حالة، وبعدين من غير ريفرش بدأ يكتب بيانات شخص تاني
@@ -352,6 +336,19 @@ export async function saveStep1() {
         rowVersion: fresh?.beneficiary?.rowVersion
       });
       store.setSectionVersion('beneficiary', updated?.rowVersion ?? fresh?.beneficiary?.rowVersion);
+      store.setSectionVersion('caseRowVersion', updated?.rowVersion ?? fresh?.rowVersion);
+
+      if (store.familyMembers && store.familyMembers.length > 0) {
+        // نفس ملحوظة مسار التحديث تحت: نجيب caseRowVersion طازة قبل PUT
+        // family-members بدل الاعتماد على رد updateBeneficiary مباشرة.
+        await ensureCaseRowVersion(created.id);
+        const familyResult = await CasesService.updateFamilyMembers(
+          created.id,
+          collectFamilyMembersPayload(),
+          sectionVersion('caseRowVersion')
+        );
+        store.setSectionVersion('caseRowVersion', familyResult?.caseRowVersion ?? sectionVersion('caseRowVersion'));
+      }
 
       // مدة أطول من التوست العادي (6 ثانية بدل 3.2) — دي لحظة مهمة للمستخدم
       // (رقم الحالة بيظهر لأول مرة) وعايزينها تفضل ظاهرة وقت كافي يقرأها.
@@ -368,12 +365,31 @@ export async function saveStep1() {
       rowVersion: sectionVersion('beneficiary')
     });
     store.setSectionVersion('beneficiary', updated?.rowVersion ?? sectionVersion('beneficiary'));
+    // beneficiary.rowVersion وrowVersion الحالة نفس العداد المشترك (نفس ملحوظة
+    // saveStep3/saveStep5) — لازم يتحدّث هنا كمان، وإلا أي خطوة تانية تحتاج
+    // caseRowVersion بعد تعديل بيانات رب الأسرة هترجع 409 وهمي.
+    store.setSectionVersion('caseRowVersion', updated?.rowVersion ?? sectionVersion('caseRowVersion'));
+
+    // family-members هو PUT من نوع "قوائم" (زي utilities/financial/support) —
+    // بنفس فلسفة ensureCaseRowVersion، بنجيب caseRowVersion طازة بقراءة GET
+    // مباشرة قبله بدل الاعتماد على رد updateBeneficiary، عشان لو
+    // beneficiary.rowVersion مش نفس عداد caseRowVersion المشترك فعليًا (أو
+    // اختلفوا لأي سبب) الطلب ميترفضش بـ 409 وهمي.
+    await ensureCaseRowVersion(currentCaseId());
+    const familyResult = await CasesService.updateFamilyMembers(
+      currentCaseId(),
+      collectFamilyMembersPayload(),
+      sectionVersion('caseRowVersion')
+    );
+    store.setSectionVersion('caseRowVersion', familyResult?.caseRowVersion ?? sectionVersion('caseRowVersion'));
+
     showToast('تم حفظ بيانات رب الأسرة بنجاح ✅', 'success');
     return true;
   }, {
     onConflict: async () => {
       const fresh = await CasesService.getById(currentCaseId());
       store.setSectionVersion('beneficiary', fresh?.beneficiary?.rowVersion);
+      store.setSectionVersion('caseRowVersion', fresh?.rowVersion);
     },
     onValidationDetails: applyStep1ServerValidationErrors
   }).then(() => true, () => false);
@@ -490,11 +506,19 @@ export async function saveStep3() {
   return runSave(async () => {
     const updated = await CasesService.updateHousing(caseId, collectHousingPayload());
     store.setSectionVersion('housing', updated?.rowVersion);
+    // housing.rowVersion وrowVersion الحالة نفسها مصدرهم عداد واحد مشترك على
+    // مستوى الحالة كلها (اتأكد فعليًا من GET /cases/{id} الحي: أي قسم بيتحفظ
+    // بيرفع نفس الرقم، مش عداد منفصل لكل قسم) — قبل كده كان saveStep3 بيحدّث
+    // housing بس ومايلمسش caseRowVersion، فلو المستخدم مر على step3 قبل ما
+    // يوصل step4/6/7، كانت النسخة المحلية بتفضل قديمة والسيرفر يرفضها بـ 409
+    // "تم تعديل هذه البيانات من مستخدم آخر" حتى لو محدش تاني لمس الحالة فعليًا.
+    store.setSectionVersion('caseRowVersion', updated?.rowVersion ?? sectionVersion('caseRowVersion'));
     return true;
   }, {
     onConflict: async () => {
       const fresh = await CasesService.getById(caseId);
       store.setSectionVersion('housing', fresh?.housing?.rowVersion);
+      store.setSectionVersion('caseRowVersion', fresh?.rowVersion);
     }
   }).then(() => true, () => false);
 }
@@ -587,6 +611,11 @@ export async function saveStep5(readAgricultureData) {
     // Server may have nulled dependent fields per §12.4 — re-fetch so the
     // UI doesn't keep showing values the backend just discarded.
     const fresh = await CasesService.getById(caseId);
+    // rowVersion الحالة نفسها عداد واحد مشترك بين كل الأقسام (اتأكد فعليًا
+    // من رد GET /cases/{id} الحي) — نفس باگ saveStep3: لو مش اتحدّث هنا،
+    // أي خطوة بعدها بتحتاج caseRowVersion (utilities/financial/support)
+    // هتبعت رقم قديم وترجع 409 وهمي حتى لو محدش تاني لمس الحالة.
+    store.setSectionVersion('caseRowVersion', fresh?.rowVersion ?? sectionVersion('caseRowVersion'));
     if (fresh?.agriculture) {
       store.setAgriculture({
         hasLand: fresh.agriculture.hasLand,
@@ -606,17 +635,38 @@ export async function saveStep5(readAgricultureData) {
     onConflict: async () => {
       const fresh = await CasesService.getById(caseId);
       store.setSectionVersion('agriculture', fresh?.agriculture?.rowVersion);
+      store.setSectionVersion('caseRowVersion', fresh?.rowVersion);
     }
   }).then(() => true, () => false);
 }
 
 /* ---------------------------- Step 6 — Financial ---------------------------- */
 
-function readFinancialRows(selector) {
-  return [...DOM.qsa(selector)].map(row => ({
-    label: (row.querySelector('[data-item-label]')?.textContent || '').trim(),
-    amount: Number(row.querySelector('[data-item-amount]')?.textContent.replace(/[^\d.-]/g, '') || 0),
-    period: (row.querySelector('[data-item-period]')?.textContent || '').trim() || null
+/**
+ * بيانات مرحلة 6 مصدرها الحقيقي store.incomeItems/expenseItems — بيتحدّثوا
+ * لحظيًا من financial-ledger.component.js (recalculateBudget ->
+ * store.setFinancialItems) مع كل إضافة/حذف/تعديل. الكود القديم هنا كان
+ * بيحاول يقرأ العناصر من selectors زي '#income-items-list .financial-item'
+ * — دول مش موجودين خالص في الفورم الفعلي (الفورم الحقيقي بيستخدم
+ * '#income-list-container'/'#expense-list-container' مع class member-card،
+ * راجع financial-ledger.component.js) فكان دايمًا بيرجّع مصفوفة فاضية،
+ * يعني الحفظ الفعلي للسيرفر كان بيبعت دخل/مصروفات صفر حتى لو المستخدم كتب
+ * أرقام حقيقية على الشاشة. بنقرأ من الـ store مباشرة بدل ما نحاول نعيد قراءة
+ * DOM بايت.
+ */
+function readIncomeRows() {
+  return (store.incomeItems || []).map(item => ({
+    label: item.type || '',
+    amount: Number(item.amount) || 0,
+    period: item.frequency || null
+  })).filter(r => r.label);
+}
+
+function readExpenseRows() {
+  return (store.expenseItems || []).map(item => ({
+    label: item.type || '',
+    amount: Number(item.amount) || 0,
+    period: item.frequency || null
   })).filter(r => r.label);
 }
 
@@ -652,7 +702,7 @@ const EXPENSE_LABEL_TO_FIXED_CATEGORY = {
  * متسجلتش بتتبعت بصفر (السيرفر بيرفض مجموعة غير مكتملة).
  */
 function collectFixedExpenseItems() {
-  const rawRows = readFinancialRows('#expense-items-list .financial-item');
+  const rawRows = readExpenseRows();
   const totals = Object.fromEntries(FIXED_EXPENSE_CATEGORIES.map(c => [c, 0]));
   let period = 'شهري';
 
@@ -675,8 +725,8 @@ function collectFixedExpenseItems() {
  * أي بند قبل ما يعدّي، بنفس فلسفة "تحذير مرة واحدة" المستخدمة في المرحلة 5.
  */
 export function validateStep6() {
-  const hasIncome = DOM.qsa('#income-items-list .financial-item').length > 0;
-  const hasExpense = DOM.qsa('#expense-items-list .financial-item').length > 0;
+  const hasIncome = readIncomeRows().length > 0;
+  const hasExpense = readExpenseRows().length > 0;
   if (hasIncome || hasExpense) return [];
   return [{
     el: null,
@@ -692,7 +742,7 @@ export async function saveStep6() {
   }
   await ensureCaseRowVersion(caseId);
   const payload = {
-    incomeItems: readFinancialRows('#income-items-list .financial-item'),
+    incomeItems: readIncomeRows(),
     expenseItems: collectFixedExpenseItems(),
     caseRowVersion: sectionVersion('caseRowVersion')
   };
@@ -711,43 +761,27 @@ export async function saveStep6() {
 
 /* ---------------------------- Step 7 — Support ---------------------------- */
 
-function collectSupportRecommendations() {
+// كل checkbox متعلّم عليه في تاب "الدعم" بيتحوّل لاحتياج مُقيَّم (assessed
+// need) — القسم ده أصلاً بيمثّل احتياجات الأسرة، مش دعمًا منفصلاً، فبنبعته
+// لـ PUT /cases/{id}/assessed-needs بدل support-recommendations (source/status
+// اتشالوا من العقد، priorityLevel بقى optional — راجع رسالة الباك-إند).
+function collectAssessedNeeds() {
   const checked = [...DOM.qsa('.support-type-checkbox:checked')];
   return checked.map(cb => {
     const tile = cb.closest('.support-type-tile');
-    const supportType = tile?.dataset.supportType || 'دعم';
-    // بعض أنواع الدعم لها فئات فرعية (chip-btn جوه .support-type-tile__subs)
+    const needType = tile?.dataset.supportType || 'دعم';
+    // بعض الاحتياجات ليها فئات فرعية (chip-btn جوه .support-type-tile__subs)
     // — مثال: "لحوم" -> "نص كيلو"/"كيلو". بناخد أول فئة مفعّلة لو موجودة.
-    const subCategory = tile?.querySelector('.support-type-tile__subs .chip-btn--active')?.dataset.value || null;
-    // beneficiary/reason/justification كلها NotEmpty عند السيرفر (اتحقق منه
-    // فعليًا: justification فاضي رجّع 422) — نضمن قيمة افتراضية دايمًا بدل
-    // ما نترك الحفظ يفشل بصمت لمجرد إن حقل الملاحظات فاضي.
+    const category = tile?.querySelector('.support-type-tile__subs .chip-btn--active')?.dataset.value || null;
     return {
-      supportType,
-      supportCategory: subCategory,
-      beneficiary: val('case-name') || 'الأسرة',
-      proposedAmount: 0,
-      frequency: null,
-      duration: null,
-      reason: supportType,
-      justification: val('support-notes') || 'بناءً على تقييم الحالة',
-      priorityLevel: 'medium',
+      needType,
+      category,
+      description: null,
+      priorityLevel: 'متوسط',
+      reason: null,
       notes: val('support-notes') || null
     };
   });
-}
-
-/**
- * تحقق تنبيهي (مش إجباري) للمرحلة السابعة — بننبّه لو محدش نوع دعم اتحدد
- * قبل المتابعة، بس بنسمح بالمرور لو المستخدم قرر يحدد الدعم بعدين.
- */
-export function validateStep7() {
-  const hasSupportType = DOM.qsa('.support-type-checkbox:checked').length > 0;
-  if (hasSupportType) return [];
-  return [{
-    el: null,
-    message: 'لسه مفيش نوع دعم متحدد للحالة — اختَر نوع واحد على الأقل يعكس احتياج الأسرة، أو كمّل لو هتحدده بعدين.'
-  }];
 }
 
 export async function saveStep7() {
@@ -758,12 +792,58 @@ export async function saveStep7() {
   }
   await ensureCaseRowVersion(caseId);
   return runSave(async () => {
-    const updated = await CasesService.updateSupportRecommendations(
+    const updated = await CasesService.updateAssessedNeeds(
       caseId,
-      collectSupportRecommendations(),
+      collectAssessedNeeds(),
       sectionVersion('caseRowVersion')
     );
     store.setSectionVersion('caseRowVersion', updated?.caseRowVersion ?? sectionVersion('caseRowVersion'));
+    return true;
+  }, {
+    onConflict: async () => {
+      const fresh = await CasesService.getById(caseId);
+      store.setSectionVersion('caseRowVersion', fresh?.rowVersion);
+    }
+  }).then(() => true, () => false);
+}
+
+/* ---------------------------- Step 8 — Assessment ---------------------------- */
+
+/**
+ * §8: يحفظ رأي الباحث الاجتماعي (المرحلة 8) عبر PUT
+ * /cases/{id}/opinions/social-worker-assessment — الرد بيرجّع الحالة الجديدة
+ * (draft/pending_assignment -> pending_assignment) فبنحدّث store.currentCase
+ * هنا زي ما بتعمل شاشة "إرسال لأخصائي" بعد assign، عشان أي UI تانية معتمدة
+ * على status (زرار الإسناد، تسمية الحالة، ...) تتزامن فورًا من غير حاجة
+ * لـ refresh يدوي.
+ *
+ * الرأي بالكامل اختياري (لو الحقلين فاضيين، الحالة برضه بتتحول لـ
+ * pending_assignment من غير رأي مسجّل) — الاستثناء الوحيد اللي السيرفر
+ * بيرفضه 422 هو detailedReport من غير briefOpinion، فبنمنعه هنا قبل الطلب.
+ */
+export async function saveStep8() {
+  const caseId = currentCaseId();
+  if (!caseId) {
+    showToast('كمّل بيانات المرحلة الأولى (اسم ورقم قومي رب الأسرة) الأول، وبعدين ارجع هنا 🙏', 'warning');
+    return false;
+  }
+  const briefOpinion = val('researcher-brief-opinion') || null;
+  const detailedReport = val('researcher-opinion') || null;
+  if (detailedReport && !briefOpinion) {
+    showToast('اختار الرأي المختصر للباحث الاجتماعي الأول قبل كتابة التقرير التفصيلي 🙏', 'warning');
+    return false;
+  }
+  await ensureCaseRowVersion(caseId);
+  return runSave(async () => {
+    const updated = await CasesService.submitSocialWorkerAssessment(caseId, {
+      briefOpinion,
+      detailedReport,
+      caseRowVersion: sectionVersion('caseRowVersion')
+    });
+    store.setSectionVersion('caseRowVersion', updated?.caseRowVersion ?? sectionVersion('caseRowVersion'));
+    if (updated?.status) {
+      store.setCurrentCase({ ...store.currentCase, status: updated.status });
+    }
     return true;
   }, {
     onConflict: async () => {
@@ -777,9 +857,7 @@ export async function saveStep7() {
 
 /**
  * Step -> save function map, consumed by workflow.component.js's
- * "التالي" handler. Step 8 is intentionally absent — its backend contract
- * (`POST /opinions/worker` is web-blocked per §2.2) is still an open
- * question with the backend team; wire it once that's resolved.
+ * "التالي" handler.
  */
 export const STEP_SAVE_HANDLERS = {
   1: saveStep1,
@@ -788,5 +866,6 @@ export const STEP_SAVE_HANDLERS = {
   4: saveStep4,
   // 5 is wired specially in workflow.component.js (needs readAgricultureData)
   6: saveStep6,
-  7: saveStep7
+  7: saveStep7,
+  8: saveStep8
 };

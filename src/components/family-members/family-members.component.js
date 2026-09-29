@@ -9,6 +9,28 @@ import { store } from '../../state/store.js';
 import { DOM } from '../../utils/dom.js';
 import { parseEgyptianNationalId, normalizeNumerals } from '../../utils/nationalId.js';
 
+// initFamilyMembersManager() بيتنادى مرة واحدة بس عند فتح التطبيق — قائمة
+// الأفراد وuseCount بتاعتها closures محلية، فمفيش طريقة توصلهم من برّه غير
+// callback بيتسجّل هنا، يستخدمه resetFamilyMembersManager تحت.
+let _resetCallback = null;
+
+/** يمسح كل الأفراد التابعين المعروضين — بيتنادى لما المستخدم يبدأ حالة جديدة. */
+export function resetFamilyMembersManager() {
+  if (_resetCallback) _resetCallback();
+}
+
+let _loadCallback = null;
+
+/**
+ * يعرض أفراد أسرة حالة محفوظة سابقًا — بيتنادى لما المستخدم يفتح حالة
+ * موجودة للتعديل. `members` بنفس شكل بيانات الكارت (dataset): name, relation,
+ * idNum, age, gender, religion, job, income, notes, isStudent, stage, grade,
+ * university, qualification, takafulKarama, takafulKaramaAmount.
+ */
+export function loadFamilyMembersManager(members) {
+  if (_loadCallback) _loadCallback(members || []);
+}
+
 export function initFamilyMembersManager() {
   const btnOpenModal = DOM.qs('#btn-open-add-member');
   const btnCloseModal = DOM.qs('#btn-close-member-modal');
@@ -63,6 +85,9 @@ export function initFamilyMembersManager() {
   const takafulCheckbox = DOM.qs('#new-member-takaful-karama');
   const takafulAmountGroup = DOM.qs('#new-member-takaful-amount-group');
   const takafulAmountInput = DOM.qs('#new-member-takaful-amount');
+
+  // الأمراض (نص حر) للفرد التابع
+  const diseasesInput = DOM.qs('#new-member-diseases');
 
   let editingCard = null;
   // مكان أصلي فاضي (placeholder) بيحجز موضع الفورم في الـ DOM لما يتقفل —
@@ -161,6 +186,7 @@ export function initFamilyMembersManager() {
     if (jobInput) jobInput.value = '';
     if (incomeInput) incomeInput.value = '';
     if (notesInput) notesInput.value = '';
+    if (diseasesInput) diseasesInput.value = '';
     if (memberGenderSelect) memberGenderSelect.value = '';
     if (memberReligionSelect) memberReligionSelect.value = '';
     if (isStudentCheckbox) isStudentCheckbox.checked = false;
@@ -194,6 +220,7 @@ export function initFamilyMembersManager() {
     if (jobInput) jobInput.value = d.job === 'غير محدد' ? '' : (d.job || '');
     if (incomeInput) incomeInput.value = d.income || '';
     if (notesInput) notesInput.value = d.notes || '';
+    if (diseasesInput) diseasesInput.value = d.diseases || '';
     if (memberGenderSelect) memberGenderSelect.value = d.gender || '';
     if (memberReligionSelect) memberReligionSelect.value = d.religion || '';
 
@@ -332,7 +359,7 @@ export function initFamilyMembersManager() {
   }
 
   function applyMemberDataToCard(card, data) {
-    const { name, relation, idNum, age, gender, religion, job, income, notes, isStudent, stage, grade, university, qualification, takafulKarama, takafulKaramaAmount, eduDisplay } = data;
+    const { name, relation, idNum, age, gender, religion, job, income, notes, diseases, isStudent, stage, grade, university, qualification, takafulKarama, takafulKaramaAmount, eduDisplay } = data;
     const finalEduDisplay = eduDisplay || computeEduDisplay(isStudent, stage, grade, university, qualification);
 
     card.dataset.name = name;
@@ -344,6 +371,7 @@ export function initFamilyMembersManager() {
     card.dataset.job = job || 'غير محدد';
     card.dataset.income = income || '';
     card.dataset.notes = notes || '';
+    card.dataset.diseases = diseases || '';
     card.dataset.isStudent = String(isStudent);
     card.dataset.stage = stage || '';
     card.dataset.grade = grade || '';
@@ -375,6 +403,7 @@ export function initFamilyMembersManager() {
             <div>🏫 <strong>التعليم:</strong> ${DOM.escapeHTML(finalEduDisplay)}</div>
             <div>💼 <strong>الوظيفة / العمل:</strong> ${DOM.escapeHTML(job || 'غير محدد')} ${income ? ` • 💵 <strong>الدخل:</strong> <span style="color: #059669; font-weight: 800;">${DOM.escapeHTML(income)} جنيه/شهرياً</span>` : ''}</div>
             ${takafulKarama === true || takafulKarama === 'true' ? `<div>🤝 <strong>تكافل وكرامة:</strong> <span style="color: #7c3aed; font-weight: 800;">مستفيد${takafulKaramaAmount ? ` — ${DOM.escapeHTML(takafulKaramaAmount)} جنيه` : ''}</span></div>` : ''}
+            ${diseases ? `<div>🩺 <strong>الأمراض:</strong> ${DOM.escapeHTML(diseases)}</div>` : ''}
             ${notes ? `<div style="color: #2563eb; font-weight: 700; margin-top: 2px;">📝 <strong>ملاحظات:</strong> ${DOM.escapeHTML(notes)}</div>` : ''}
           </div>
         </div>
@@ -409,6 +438,7 @@ export function initFamilyMembersManager() {
       const job = jobInput ? jobInput.value.trim() : 'غير محدد';
       const income = incomeInput ? incomeInput.value.trim() : '';
       const notes = notesInput ? notesInput.value.trim() : '';
+      const diseases = diseasesInput ? diseasesInput.value.trim() : '';
 
       const isStudent = isStudentCheckbox ? isStudentCheckbox.checked : false;
       const stage = isStudent && stageSelect ? stageSelect.value : '';
@@ -438,7 +468,7 @@ export function initFamilyMembersManager() {
         return;
       }
 
-      const memberData = { name, relation, idNum, age, gender, religion, job, income, notes, isStudent, stage, grade, university, qualification, takafulKarama, takafulKaramaAmount, eduDisplay };
+      const memberData = { name, relation, idNum, age, gender, religion, job, income, notes, diseases, isStudent, stage, grade, university, qualification, takafulKarama, takafulKaramaAmount, eduDisplay };
 
       if (editingCard) {
         applyMemberDataToCard(editingCard, memberData);
@@ -474,9 +504,9 @@ export function initFamilyMembersManager() {
 
   function loadMembersFromStore() {
     if (!membersList) return;
+    DOM.qsa('.member-card', membersList).forEach(c => c.remove());
     const list = store.familyMembers;
-    if (Array.isArray(list) && list.length > 0) {
-      DOM.qsa('.member-card', membersList).forEach(c => c.remove());
+    if (Array.isArray(list)) {
       list.forEach(m => {
         const card = document.createElement('div');
         card.className = 'member-card';
@@ -502,4 +532,18 @@ export function initFamilyMembersManager() {
 
   loadMembersFromStore();
   updateMembersCount();
+
+  _resetCallback = () => {
+    if (membersList) {
+      DOM.qsa('.member-card', membersList).forEach(c => c.remove());
+    }
+    store.setFamilyMembers([]);
+    updateMembersCount();
+  };
+
+  _loadCallback = (members) => {
+    store.setFamilyMembers(members);
+    loadMembersFromStore();
+    updateMembersCount();
+  };
 }

@@ -40,6 +40,27 @@ function writeCache(map) {
 
 const consumptionCache = readCache();
 
+// Admin routes ("ضبط بيانات الحالة") hit their own sessionStorage cache, kept
+// separate from consumptionCache since it holds inactive options too and is
+// invalidated on every admin mutation (createOption/updateOption).
+const ADMIN_CACHE_KEY = 'nahda_dropdown_admin_cache';
+const adminOptionsCache = (() => {
+  try {
+    const raw = sessionStorage.getItem(ADMIN_CACHE_KEY);
+    return raw ? new Map(Object.entries(JSON.parse(raw))) : new Map();
+  } catch {
+    return new Map();
+  }
+})();
+
+function writeAdminCache() {
+  try {
+    sessionStorage.setItem(ADMIN_CACHE_KEY, JSON.stringify(Object.fromEntries(adminOptionsCache)));
+  } catch {
+    // Best-effort — a full/unavailable sessionStorage just means no cache.
+  }
+}
+
 export const DropdownsService = {
   /**
    * Consumption route — every role, auth only. Used to populate an actual
@@ -95,9 +116,25 @@ export const DropdownsService = {
     return HttpClient.get(`/dropdown-configs/${id}`);
   },
 
-  /** Admin listing for one config BY KEY (not id) — includes inactive options, unlike getOptions(). */
-  async getConfigOptions(key) {
-    return HttpClient.get(`/dropdown-configs/${encodeURIComponent(key)}/options`);
+  /**
+   * Admin listing for one config BY KEY (not id) — includes inactive options,
+   * unlike getOptions(). Cached per tab session; cleared by any admin
+   * mutation below since options can change from this same screen.
+   */
+  async getConfigOptions(key, forceRefresh = false) {
+    if (!forceRefresh && adminOptionsCache.has(key)) {
+      return adminOptionsCache.get(key);
+    }
+    const data = await HttpClient.get(`/dropdown-configs/${encodeURIComponent(key)}/options`);
+    adminOptionsCache.set(key, data);
+    writeAdminCache();
+    return data;
+  },
+
+  clearAdminCache(key) {
+    if (key) adminOptionsCache.delete(key);
+    else adminOptionsCache.clear();
+    writeAdminCache();
   },
 
   /**
@@ -109,6 +146,7 @@ export const DropdownsService = {
   async createOption(configId, option) {
     const created = await HttpClient.post(`/dropdown-configs/${configId}/options`, { body: option });
     DropdownsService.clearCache(); // we don't know the config's key here — safest to drop the whole cache
+    DropdownsService.clearAdminCache();
     return created;
   },
 
@@ -122,6 +160,7 @@ export const DropdownsService = {
   async updateOption(optionId, patch) {
     const updated = await HttpClient.patch(`/dropdown-options/${optionId}`, { body: patch });
     DropdownsService.clearCache();
+    DropdownsService.clearAdminCache();
     return updated;
   },
 

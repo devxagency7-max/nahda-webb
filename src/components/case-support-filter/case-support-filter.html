@@ -1,0 +1,144 @@
+<!-- PAGE VIEW: فلترة الحالات حسب الجمعية ونوع الدعم (خاص بالمدير) -->
+<div class="page-view page-view--hidden" id="view-case-support-filter">
+  <section class="glass-card csf-page-card">
+    <!-- Header -->
+    <div class="glass-card__header" style="justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 24px;">
+      <div class="glass-card__title-group">
+        <div class="glass-card__icon" style="background: linear-gradient(135deg, rgba(37, 99, 235, 0.15), rgba(29, 78, 216, 0.25)); color: #1d4ed8;">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+          </svg>
+        </div>
+        <div>
+          <h2 class="glass-card__title">فلترة الحالات حسب الجمعية ونوع الدعم</h2>
+          <p class="glass-card__subtitle">اعرض فقط الحالات المرتبطة بجمعية معيّنة والتي استلمت فعليًا نوع/أنواع دعم محددة</p>
+        </div>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+        <button type="button" class="btn btn--secondary" data-view-target="dashboard" title="الرجوع للرئيسية">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="9 18 15 12 9 6"></polyline>
+          </svg>
+          <span>لوحة التحكم الرئيسية</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Filter Panel -->
+    <div class="glass-subcard" style="margin-bottom: 24px;">
+      <div class="glass-subcard__header">
+        <div class="glass-subcard__title-row">
+          <h3 class="glass-subcard__title">معايير الفلترة</h3>
+        </div>
+        <p class="glass-subcard__desc">حدد الجمعية و/أو نوع الدعم (يمكن اختيار أكثر من نوع دعم في نفس الوقت)</p>
+      </div>
+
+      <!-- الجمعية والنطاق الجغرافي: نفس نمط كارت "الجمعية والنطاق الجغرافي" في البيانات الأساسية —
+           المركز والقرية يساعدوا في تضييق قائمة الجمعية، ومربوط بحث حر يظل يشوف كل الجمعيات دايمًا. -->
+      <div class="csf-filter-grid csf-filter-grid--geo">
+        <div class="form-group">
+          <label for="csf-district-select" class="form-label">المركز / المدينة</label>
+          <select id="csf-district-select" class="form-select" dir="rtl">
+            <option value="" selected>-- كل المراكز --</option>
+            <!-- Populated dynamically via LocationsService -->
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="csf-village-select" class="form-label">القرية / المنطقة</label>
+          <select id="csf-village-select" class="form-select" dir="rtl" disabled>
+            <option value="" selected>-- اختر المركز أولاً --</option>
+            <!-- Populated dynamically based on chosen center -->
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="csf-charity-search-input" class="form-label">بحث عن جمعية (كل الجمعيات)</label>
+          <div class="input-with-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <input type="text" id="csf-charity-search-input" class="form-input" placeholder="ابحث باسم الجمعية..." dir="rtl">
+          </div>
+        </div>
+      </div>
+
+      <div class="csf-filter-grid">
+        <div class="form-group">
+          <label for="csf-charity-select" class="form-label">الجمعية</label>
+          <select id="csf-charity-select" class="form-select" dir="rtl">
+            <option value="">-- جميع الجمعيات --</option>
+            <!-- Populated dynamically from GET /charities, narrowed by المركز/القرية and/or the search box above -->
+          </select>
+        </div>
+
+        <div class="form-group csf-filter-grid__support">
+          <label class="form-label">نوع الدعم (استلمته الحالة فعليًا)</label>
+          <div class="csf-support-chips" id="csf-support-chips">
+            <!-- Populated dynamically with checkbox chips -->
+          </div>
+        </div>
+      </div>
+
+      <div class="csf-filter-actions">
+        <button type="button" class="btn btn--primary" id="btn-csf-apply">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <span>تطبيق الفلتر</span>
+        </button>
+        <button type="button" class="btn btn--secondary" id="btn-csf-reset">إعادة تعيين</button>
+        <button type="button" class="btn btn--secondary" id="btn-csf-export-pdf" disabled>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+          </svg>
+          <span>تصدير PDF</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Results Panel -->
+    <div class="glass-subcard">
+      <div class="glass-subcard__header" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+        <div class="glass-subcard__title-row">
+          <h3 class="glass-subcard__title">النتائج</h3>
+        </div>
+        <span class="badge" id="csf-results-count" style="background: rgba(37, 99, 235, 0.12); color: #1d4ed8; font-weight: 800;">0 حالة</span>
+      </div>
+
+      <div class="csf-table-wrapper">
+        <table class="charities-table" id="csf-results-table">
+          <thead>
+            <tr>
+              <th style="width: 40px; text-align: center;">#</th>
+              <th>الاسم / الرقم القومي</th>
+              <th>الجمعية</th>
+              <th>المركز / القرية</th>
+              <th>الحالة</th>
+              <th>الكمية</th>
+            </tr>
+          </thead>
+          <tbody id="csf-results-body">
+            <!-- Dynamically rendered rows -->
+          </tbody>
+        </table>
+
+        <div class="charities-empty-state" id="csf-empty-state" style="display: none;">
+          <div class="empty-state-icon">🔍</div>
+          <h4>لا توجد حالات مطابقة</h4>
+          <p>جرب تغيير الجمعية أو نوع الدعم المحدد.</p>
+        </div>
+
+        <div class="charities-empty-state" id="csf-initial-state">
+          <div class="empty-state-icon">🎯</div>
+          <h4>اختر معايير الفلترة ثم اضغط "تطبيق الفلتر"</h4>
+          <p>يمكنك تحديد جمعية، نوع دعم واحد أو أكثر، أو الاثنين معًا.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>

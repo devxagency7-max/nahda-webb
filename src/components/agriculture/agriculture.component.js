@@ -18,6 +18,17 @@ import { normalizeDecimalNumerals } from '../../utils/nationalId.js';
 const OTHER_OPTION = 'أخرى';
 const NUMERIC_FIELD_IDS = ['agri-area', 'agri-rent-amount', 'agri-annual-income'];
 
+// initAgricultureManager() بيتنادى مرة واحدة بس عند فتح التطبيق، وrestore()
+// جوه الـ closure بتاعته بتقرا store.agriculture مرة واحدة بس وقت الفتح ده —
+// لو حد عدّل store.agriculture بعد كده (زي فتح حالة موجودة للتعديل)، مفيش
+// طريقة تخلي الفورم يعرض القيم الجديدة غير عن طريق callback بيتسجّل هنا.
+let _restoreCallback = null;
+
+/** يعيد ملى فورم الزراعة من store.agriculture الحالي — بيتنادى بعد تحميل حالة للتعديل. */
+export function restoreAgricultureManager() {
+  if (_restoreCallback) _restoreCallback();
+}
+
 /* ---------- Helpers مشتركة بين القراءة والتحقق ---------- */
 
 function landAnswer() {
@@ -85,9 +96,7 @@ export function validateAgriculture() {
   const issues = [];
   const data = readAgricultureData();
 
-  if (data.hasLand === '') {
-    issues.push({ el: DOM.qs('#agri-land-yesno'), group: true, message: 'من فضلك جاوب على سؤال الأرض الزراعية (نعم / لا).' });
-  } else if (data.hasLand === 'yes') {
+  if (data.hasLand === 'yes') {
     if (data.landType === '') {
       issues.push({ el: DOM.qs('#agri-land-type'), message: 'اختر طبيعة حيازة الأرض (تمليك / إيجار).' });
     }
@@ -104,9 +113,7 @@ export function validateAgriculture() {
     }
   }
 
-  if (data.hasLivestock === '') {
-    issues.push({ el: DOM.qs('#agri-livestock-yesno'), group: true, message: 'من فضلك جاوب على سؤال المواشي (نعم / لا).' });
-  } else if (data.hasLivestock === 'yes') {
+  if (data.hasLivestock === 'yes') {
     if (data.livestockTypes.length === 0) {
       issues.push({ el: livestockChipField(), chip: true, message: 'اختر نوعًا واحدًا على الأقل من المواشي.' });
     } else if (data.livestockTypes.includes(OTHER_OPTION) && data.livestockOther === '') {
@@ -374,4 +381,9 @@ export function initAgricultureManager() {
   restore();
   // إبلاغ المرحلة 6 وشريط التقدّم بالقيم المستعادة.
   triggerWorkflowRecalc();
+
+  _restoreCallback = () => {
+    restore();
+    triggerWorkflowRecalc();
+  };
 }

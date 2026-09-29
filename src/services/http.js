@@ -28,6 +28,15 @@ function buildUrl(path, query) {
   if (query) {
     Object.entries(query).forEach(([key, value]) => {
       if (value === undefined || value === null || value === '') return;
+      // Array values append as repeated params (?key=a&key=b) — the backend
+      // combines repeated `supportType` with OR (§ /search/cases charity+support filter).
+      if (Array.isArray(value)) {
+        value.forEach(v => {
+          if (v === undefined || v === null || v === '') return;
+          url.searchParams.append(key, v);
+        });
+        return;
+      }
       url.searchParams.set(key, value);
     });
   }

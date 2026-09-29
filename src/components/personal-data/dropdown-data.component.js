@@ -25,7 +25,6 @@ const KEY_TO_SELECT_ID = {
   'religion': 'religion',
   'head-relation': 'head-relation',
   'education-level': 'education-level',
-  'governorate': 'governorate',
   'work-type': 'work-type',
   'social-insurance': 'social-insurance',
   'new-member-relation': 'new-member-relation',

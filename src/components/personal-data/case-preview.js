@@ -60,12 +60,20 @@ function chipHas(fieldName, value) {
   return [...field.querySelectorAll('.chip-btn--active')].some(b => b.dataset.value === value);
 }
 
-/** بنود الدخل والمصروفات كما هي معروضة في المحطة 6. */
-function readFinancialRows(selector) {
-  return [...DOM.qsa(selector)].map(row => ({
-    label: (row.querySelector('[data-item-label]')?.textContent || '').trim(),
-    amount: Number(row.querySelector('[data-item-amount]')?.textContent.replace(/[^\d.-]/g, '') || 0),
-    period: (row.querySelector('[data-item-period]')?.textContent || '').trim()
+/**
+ * بنود الدخل والمصروفات كما هي معروضة فعليًا في المحطة 6. مصدرها الحقيقي
+ * store.incomeItems/expenseItems — financial-ledger.component.js بيحدّثهم
+ * لحظيًا مع كل إضافة/حذف (راجع recalculateBudget -> setFinancialItems).
+ * قراءة قديمة كانت بتحاول تدور على عناصر DOM بـ selector مش موجود خالص في
+ * الفورم الفعلي (زي '#income-items-list .financial-item')، فكانت دايمًا
+ * بترجّع مصفوفة فاضية والمعاينة المحلية بتفضل تعرض صفر حتى لو المستخدم كتب
+ * أرقام حقيقية.
+ */
+function readFinancialRows(items) {
+  return (items || []).map(item => ({
+    label: item.type || '',
+    amount: Number(item.amount) || 0,
+    period: item.frequency || ''
   })).filter(r => r.label);
 }
 
@@ -77,8 +85,8 @@ export function collectCaseFromForm() {
   const members = store.familyMembers || [];
   const agri = store.agriculture || {};
 
-  const incomeItems = readFinancialRows('#income-items-list .financial-item');
-  const expenseItems = readFinancialRows('#expense-items-list .financial-item');
+  const incomeItems = readFinancialRows(store.incomeItems);
+  const expenseItems = readFinancialRows(store.expenseItems);
   const totalIncome = incomeItems.reduce((s, i) => s + i.amount, 0);
   const totalExpenses = expenseItems.reduce((s, i) => s + i.amount, 0);
 
@@ -98,8 +106,8 @@ export function collectCaseFromForm() {
     familyMembersCount: members.length + 1,
     phone: val('phone1'),
     charity: DOM.qs('#referral-charity-select')?.selectedOptions?.[0]?.textContent.trim() || '',
-    center: val('district'),
-    village: val('village'),
+    center: val('referral-district-select'),
+    village: val('referral-village-select'),
     status: 'pending',
     statusLabel: '📝 مسودة — قيد الإدخال',
     statusClass: 'dash-status-pill--warning',
@@ -109,7 +117,6 @@ export function collectCaseFromForm() {
       age: num('current-age'),
       gender: val('gender'),
       religion: val('religion'),
-      birthGovernorate: val('governorate'),
       phonePrimary: val('phone1'),
       phoneSecondary: val('phone2'),
       job: val('job-title'),
@@ -351,7 +358,7 @@ function mapServerCaseToViewModel(serverCase, { support, attachments } = {}) {
     workerOpinion: serverCase.workerOpinion || null,
     reviewerOpinion: serverCase.reviewerOpinion || null,
     managerApproval: serverCase.managerApproval || null,
-    assessedNeeds: serverCase.assessedNeeds || []
+    assessedNeeds: (serverCase.assessedNeeds && serverCase.assessedNeeds.needs) || []
   };
 }
 

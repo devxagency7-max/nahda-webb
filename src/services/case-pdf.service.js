@@ -37,6 +37,29 @@ function yesNo(v) {
   return '—';
 }
 
+/** Arabic gender label — API returns "male"/"female" for the head of household. */
+function genderLabel(v) {
+  const s = String(v || '').trim().toLowerCase();
+  if (s === 'male' || s === 'm' || s === 'ذكر') return 'ذكر';
+  if (s === 'female' || s === 'f' || s === 'أنثى' || s === 'انثى') return 'أنثى';
+  return val(v);
+}
+
+/** Arabic label + color for a workflow decision enum (accepted/rejected/approved/returned_to_worker). */
+const DECISION_META = {
+  accepted: { label: 'مقبول', color: '#047857' },
+  approved: { label: 'مقبول', color: '#047857' },
+  rejected: { label: 'مرفوض', color: '#be123c' },
+  returned_to_worker: { label: 'معاد للأخصائي', color: '#b45309' }
+};
+
+/** Renders a decision enum as a colored Arabic <span>, or a muted fallback if not recorded. */
+function decisionHtml(decision, fallback = 'مسجل') {
+  const meta = DECISION_META[decision];
+  if (!meta) return DOM.escapeHTML(val(decision, fallback));
+  return `<span style="color: ${meta.color}; font-weight: 800;">${meta.label}</span>`;
+}
+
 /** Sanitize file name for filesystem safety */
 function sanitizeFileName(caseId, name) {
   const safeId = String(caseId || 'CASE').replace(/[/\\?%*:|"<>]/g, '-').trim();
@@ -84,8 +107,8 @@ function buildHeaderHtml(c, exportTime) {
     <div class="pdf-header">
       <div class="pdf-header__top">
         <div class="pdf-header__org">
-          <h1 class="pdf-header__org-title">مؤسسة النهضة للعمل الخيري</h1>
-          <p class="pdf-header__doc-title">ملف حالة مستفيد — استمارة بحث اجتماعي رسمي</p>
+          <h1 class="pdf-header__org-title">مؤسسه نهضة بني سويف</h1>
+          <p class="pdf-header__license">المشهرة برقم 1079 لسنة 2009</p>
         </div>
         <img src="/assets/logo.png" alt="Logo" class="pdf-header__logo" onerror="this.style.display='none'">
       </div>
@@ -111,11 +134,378 @@ function buildHeaderHtml(c, exportTime) {
 function buildFooterHtml(pageNum, totalPages, exportTime) {
   return `
     <div class="pdf-footer">
-      <span class="pdf-footer__org">مؤسسة النهضة للعمل الخيري — تقرير رسمي صادر من النظام الآلي</span>
-      <span class="pdf-footer__page-num">صفحة ${pageNum} من ${totalPages}</span>
-      <span>${exportTime}</span>
+      <div class="pdf-footer__info">
+        <span class="pdf-footer__org">مؤسسه نهضة بني سويف</span>
+        <span class="pdf-footer__page-num">صفحة ${pageNum} من ${totalPages}</span>
+        <span>${exportTime}</span>
+      </div>
+      <div class="pdf-footer__partners">
+        <img src="/assets/devx_logo.jpg" alt="DevX" class="pdf-footer__partner-logo" onerror="this.style.display='none'">
+        <span class="pdf-footer__partners-amp">&amp;</span>
+        <img src="/assets/delmon_logo.jpeg" alt="Delmon" class="pdf-footer__partner-logo pdf-footer__partner-logo--round" onerror="this.style.display='none'">
+      </div>
     </div>
   `;
+}
+
+/**
+ * Doc title for the delivery roster ("كشف ...") — driven by the selected
+ * support type(s). Falls back to a generic title when no single support
+ * type was picked (e.g. charity-only filter, or several types at once).
+ */
+function deliveryRosterTitle(meta) {
+  const types = Array.isArray(meta.supportTypes) ? meta.supportTypes.filter(Boolean) : [];
+  if (types.length === 1) return `كشف ${types[0]}`;
+  if (types.length > 1) return `كشف ${types.join(' / ')}`;
+  return 'كشف الدعم';
+}
+
+/**
+ * Header for the "كشف تسليم/استلام دعم" roster — official layout matching
+ * the charity's printed delivery-roster convention:
+ *   - top-right: institution name + registration number + mission line
+ *   - top-left: charity seal placeholder stacked above مركز/قرية labels+values
+ *   - a centered doc title driven by the selected support type(s)
+ */
+function buildListHeaderHtml(meta) {
+  return `
+    <div class="pdf-header pdf-header--roster">
+      <div class="pdf-header__top">
+        <div class="pdf-header__org" style="text-align: right;">
+          <h1 class="pdf-header__org-title">مؤسسة نهضة بني سويف</h1>
+          <p class="pdf-header__license">المشهرة برقم 1079 لسنة 2009</p>
+          <p class="pdf-header__mission">التنمية الشاملة المستدامة</p>
+        </div>
+        <div class="pdf-header__roster-left">
+          <img src="/assets/logo.png" alt="ختم الجمعية" class="pdf-header__seal" onerror="this.style.display='none'">
+          <div class="pdf-header__roster-left-meta">
+            <div class="pdf-header__meta-item">
+              <span>المركز:</span>
+              <strong>${DOM.escapeHTML(val(meta.centerLabel, '—'))}</strong>
+            </div>
+            <div class="pdf-header__meta-item">
+              <span>القرية:</span>
+              <strong>${DOM.escapeHTML(val(meta.villageLabel, '—'))}</strong>
+            </div>
+            <div class="pdf-header__meta-item">
+              <span>الجمعية:</span>
+              <strong>${DOM.escapeHTML(val(meta.charityLabel, 'جميع الجمعيات'))}</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="pdf-header__roster-title">
+        <h2>${DOM.escapeHTML(deliveryRosterTitle(meta))}</h2>
+        <span class="pdf-header__roster-count">إجمالي الحالات: ${DOM.escapeHTML(String(meta.total ?? 0))}</span>
+      </div>
+    </div>
+  `;
+}
+
+/**
+ * One <tr> for the delivery roster table — الكود، الاسم، المحمول، الرقم القومي، القرية، الكمية، التوقيع.
+ * A null `row` renders a blank filler line (the last page is padded to a full 20 lines).
+ */
+function caseListRowHtml(row, index, heightPx) {
+  const heightStyle = heightPx ? ` style="height: ${heightPx.toFixed(2)}px;"` : '';
+
+  if (!row) {
+    return `<tr${heightStyle}>${'<td>&nbsp;</td>'.repeat(8)}</tr>`;
+  }
+
+  const matched = Array.isArray(row.matchedSupport) ? row.matchedSupport : [];
+  const quantity = matched.length
+    ? matched.map(m => m.totalCount ?? 0).reduce((a, b) => a + b, 0)
+    : '—';
+
+  return `
+    <tr${heightStyle}>
+      <td style="text-align: center;">${index + 1}</td>
+      <td>${DOM.escapeHTML(val(row.displayId || row.caseNumber || row.id))}</td>
+      <td>${DOM.escapeHTML(val(row.beneficiaryFullName))}</td>
+      <td style="font-family: monospace;">${DOM.escapeHTML(val(row.phonePrimary))}</td>
+      <td style="font-family: monospace;">${DOM.escapeHTML(val(row.nationalId))}</td>
+      <td>${DOM.escapeHTML(val(row.villageName))}</td>
+      <td style="text-align: center;">${DOM.escapeHTML(String(quantity))}</td>
+      <td></td>
+    </tr>
+  `;
+}
+
+// Fixed page size (product requirement) — the table shrinks to fit this
+// many rows, rather than the row count adapting to available space.
+const ROSTER_ROWS_PER_PAGE = 20;
+const ROSTER_DEFAULT_FONT_PX = 12.5;
+const ROSTER_DEFAULT_PADDING = { v: 6, h: 8 };
+const ROSTER_MIN_FONT_PX = 8; // floor — below this the roster stops shrinking and may overflow rather than become unreadable.
+// Sub-pixel rounding across 20 rows adds up; this cushion keeps the last row
+// from being clipped by the page's overflow: hidden.
+const ROSTER_FIT_SAFETY_PX = 6;
+
+function rosterTableStyle(fontPx, padV) {
+  return `--roster-font-size: ${fontPx}px; --roster-cell-padding: ${padV}px ${ROSTER_DEFAULT_PADDING.h}px;`;
+}
+
+/**
+ * Splits rows into fixed 20-line pages (the last one padded with blank
+ * lines) and sizes every line so the table exactly fills the space between
+ * the header and the acknowledgement block — no empty band left above the
+ * pinned footer. Measured on real roster pages, so wrapped names are
+ * accounted for; the table font only shrinks when 20 natural-height lines
+ * can't fit at all.
+ */
+function packRosterRows(rows, meta) {
+  const stage = document.createElement('div');
+  stage.className = 'pdf-export-stage';
+  stage.style.visibility = 'hidden';
+  document.body.appendChild(stage);
+
+  const headerHtml = buildListHeaderHtml({ ...meta, total: meta.total ?? rows.length });
+
+  function mountMeasurePage(tableRows, tableStyle) {
+    const pageEl = document.createElement('div');
+    pageEl.className = 'pdf-page pdf-page--roster';
+    pageEl.innerHTML = `
+      ${headerHtml}
+      <div class="pdf-body">${listReportTableHtml(tableRows, 0, tableStyle)}</div>
+      ${rosterAcknowledgementHtml()}
+      ${buildFooterHtml(1, 1, '')}
+    `;
+    stage.appendChild(pageEl);
+    return pageEl;
+  }
+
+  function measureAt(fontPx, padV) {
+    const tableStyle = rosterTableStyle(fontPx, padV);
+
+    // Room for tbody lines = the gap between the ack block and the pinned
+    // footer on a page whose table has no rows at all.
+    const emptyPage = mountMeasurePage([], tableStyle);
+    const ack = emptyPage.querySelector('.pdf-roster-ack');
+    const footer = emptyPage.querySelector('.pdf-footer');
+    const rowSpace = footer.offsetTop - (ack.offsetTop + ack.offsetHeight) - ROSTER_FIT_SAFETY_PX;
+    emptyPage.remove();
+
+    // Natural height of every real row plus one blank filler (last entry).
+    // The roster table uses fixed column widths, so a row wraps here exactly
+    // as it will on its real page.
+    const fullPage = mountMeasurePage([...rows, null], tableStyle);
+    const heights = [...fullPage.querySelectorAll('tbody tr')].map(tr => tr.offsetHeight);
+    fullPage.remove();
+
+    return { tableStyle, rowSpace, rowHeights: heights.slice(0, rows.length), blankHeight: heights[heights.length - 1] };
+  }
+
+  const chunks = [];
+  for (let i = 0; i < rows.length; i += ROSTER_ROWS_PER_PAGE) {
+    chunks.push({ start: i, count: Math.min(ROSTER_ROWS_PER_PAGE, rows.length - i) });
+  }
+  if (chunks.length === 0) chunks.push({ start: 0, count: 0 });
+
+  const naturalPageHeight = (m, { start, count }) => {
+    let sum = (ROSTER_ROWS_PER_PAGE - count) * m.blankHeight;
+    for (let i = start; i < start + count; i++) sum += m.rowHeights[i];
+    return sum;
+  };
+
+  let fontPx = ROSTER_DEFAULT_FONT_PX;
+  let padV = ROSTER_DEFAULT_PADDING.v;
+  let m = measureAt(fontPx, padV);
+
+  while (Math.max(...chunks.map(c => naturalPageHeight(m, c))) > m.rowSpace && fontPx > ROSTER_MIN_FONT_PX) {
+    fontPx = Math.max(ROSTER_MIN_FONT_PX, fontPx - 0.5);
+    padV = Math.max(2, padV - 0.25);
+    m = measureAt(fontPx, padV);
+  }
+
+  stage.remove();
+
+  const pages = chunks.map(chunk => {
+    const pageRows = rows.slice(chunk.start, chunk.start + chunk.count);
+    while (pageRows.length < ROSTER_ROWS_PER_PAGE) pageRows.push(null);
+
+    const extraPerRow = Math.max(0, m.rowSpace - naturalPageHeight(m, chunk)) / ROSTER_ROWS_PER_PAGE;
+    const heights = pageRows.map((row, i) =>
+      (row ? m.rowHeights[chunk.start + i] : m.blankHeight) + extraPerRow
+    );
+
+    return { rows: pageRows, heights, dataCount: chunk.count };
+  });
+
+  return { pages, tableStyle: m.tableStyle };
+}
+
+function listReportTableHtml(pageRows, startIndex, tableStyleOverride = '', rowHeights = []) {
+  return `
+    <div class="pdf-section" style="flex: none;">
+      <table class="pdf-table pdf-roster-table" style="${tableStyleOverride}">
+        <colgroup>
+          <col style="width: 4%;">
+          <col style="width: 9%;">
+          <col style="width: 22%;">
+          <col style="width: 14%;">
+          <col style="width: 18%;">
+          <col style="width: 12%;">
+          <col style="width: 7%;">
+          <col style="width: 14%;">
+        </colgroup>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>الكود</th>
+            <th>اسم الحالة</th>
+            <th>المحمول</th>
+            <th>الرقم القومي</th>
+            <th>القرية</th>
+            <th>الكمية</th>
+            <th>التوقيع</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${pageRows.map((row, i) => caseListRowHtml(row, startIndex + i, rowHeights[i])).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+/** Footer acknowledgement block — the charity's data/signature attestation, printed above the page footer on every page. */
+function rosterAcknowledgementHtml() {
+  return `
+    <div class="pdf-roster-ack">
+      <p class="pdf-roster-ack__statement">
+        إقرار الجمعية بصحة البيانات والتوقيعات وأن التسليم تم للحالات الموجودة بالكشف تحت مسؤوليتي
+      </p>
+      <p class="pdf-roster-ack__note">
+        ملحوظة: يجب أن تكون بطاقة الرقم القومي سارية
+      </p>
+      <div class="pdf-roster-ack__signatures">
+        <div class="pdf-signature-box">
+          <span class="pdf-signature-box__role">رئيس مجلس الإدارة</span>
+          <span class="pdf-signature-box__line"></span>
+          <span class="pdf-signature-box__caption">التوقيع والختم</span>
+        </div>
+        <div class="pdf-signature-box">
+          <span class="pdf-signature-box__role">مسؤول التسليم</span>
+          <span class="pdf-signature-box__line"></span>
+          <span class="pdf-signature-box__caption">التوقيع</span>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+/**
+ * Exports a filtered case list (charity + support-type filter, from
+ * GET /search/cases) to an official A4 PDF laid out as a printed
+ * "كشف تسليم/استلام دعم" delivery roster — charity seal + مركز/قرية on the
+ * top-left, institution name/registration/mission on the top-right, a
+ * doc title driven by the selected support type ("كشف <النوع>"),
+ * and a data/signature acknowledgement + رئيس مجلس الإدارة / مسؤول التسليم
+ * signature boxes repeated at the bottom of every page.
+ *
+ * @param {Array<Object>} rows - normalized search-result items (id, displayId/caseNumber,
+ *   beneficiaryFullName, phonePrimary, nationalId, charityName, centerName, villageName,
+ *   status/statusLabel, matchedSupport?)
+ * @param {Object} meta - { charityLabel, centerLabel, villageLabel, supportTypes: string[], total }
+ * @returns {Promise<{ fileName: string, doc: jsPDF, blob: Blob }>}
+ */
+export async function exportCaseListToPdf(rows, meta = {}) {
+  if (!Array.isArray(rows)) throw new Error('لا توجد بيانات لتصديرها');
+
+  const exportTime = currentTimestamp();
+
+  // Row heights are measured in packRosterRows — fonts must be final first,
+  // or the measured lines won't match what html2canvas later captures.
+  if (document.fonts && document.fonts.ready) {
+    await document.fonts.ready;
+  }
+
+  const { pages, tableStyle } = packRosterRows(rows, meta);
+  const totalPages = pages.length;
+
+  const stage = document.createElement('div');
+  stage.className = 'pdf-export-stage';
+  stage.id = 'pdf-list-export-stage';
+
+  const pageElements = [];
+  let runningIndex = 0;
+
+  for (let i = 0; i < totalPages; i++) {
+    const pageNum = i + 1;
+    const page = pages[i];
+
+    const pageEl = document.createElement('div');
+    pageEl.className = 'pdf-page pdf-page--roster';
+    pageEl.innerHTML = `
+      ${buildListHeaderHtml({ ...meta, total: meta.total ?? rows.length })}
+      <div class="pdf-body">
+        ${listReportTableHtml(page.rows, runningIndex, tableStyle, page.heights)}
+      </div>
+      ${rosterAcknowledgementHtml()}
+      ${buildFooterHtml(pageNum, totalPages, exportTime)}
+    `;
+
+    runningIndex += page.dataCount;
+    stage.appendChild(pageEl);
+    pageElements.push(pageEl);
+  }
+
+  document.body.appendChild(stage);
+
+  try {
+    if (document.fonts && document.fonts.ready) {
+      await document.fonts.ready;
+    }
+
+    const images = [...stage.querySelectorAll('img')];
+    await Promise.all(images.map(img => {
+      if (img.complete) return Promise.resolve();
+      return new Promise(resolve => {
+        img.addEventListener('load', resolve, { once: true });
+        img.addEventListener('error', resolve, { once: true });
+      });
+    }));
+
+    await new Promise(r => setTimeout(r, 120));
+
+    const doc = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4',
+      compress: true
+    });
+
+    for (let i = 0; i < pageElements.length; i++) {
+      const pageEl = pageElements[i];
+
+      const canvas = await html2canvas(pageEl, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff'
+      });
+
+      const imgData = canvas.toDataURL('image/jpeg', 0.95);
+
+      if (i > 0) {
+        doc.addPage('a4', 'portrait');
+      }
+
+      doc.addImage(imgData, 'JPEG', 0, 0, 210, 297, undefined, 'FAST');
+    }
+
+    const safeCharity = String(meta.charityLabel || 'الكل').replace(/[/\\?%*:|"<>]/g, '-').replace(/\s+/g, '_');
+    const fileName = `تقرير_الحالات_${safeCharity}_${Date.now()}.pdf`;
+
+    doc.save(fileName);
+
+    const blob = doc.output('blob');
+
+    return { fileName, doc, blob };
+  } finally {
+    stage.remove();
+  }
 }
 
 /**
@@ -140,25 +530,31 @@ function buildCaseSections(c) {
 
   const sections = [];
 
-  /* ---- Section 0: ملخص بيانات الحالة ---- */
+  /* ---- Section 0: بيانات الحالة ---- */
   const statusLabel = val(c.statusLabel || c.status, 'قيد الدراسة');
-  const priorityLabel = val(c.priority || 'عادي');
+  const legacy = c.legacyImportData;
   sections.push({
     id: 'case-meta',
     html: `
       <div class="pdf-section" style="background: #f8fafc; border: 1.5px solid #cbd5e1;">
         <div class="pdf-section-title">
-          <span>📋 بيانات الحالة والملف</span>
+          <span>📋 بيانات الحالة</span>
           <span class="pdf-badge pdf-badge--info">${DOM.escapeHTML(statusLabel)}</span>
         </div>
         <div class="pdf-grid pdf-grid--3col">
           <div class="pdf-row"><span class="pdf-row__label">اسم المستفيد:</span> <span class="pdf-row__value" style="font-weight: 800; color: #1e3a8a;">${DOM.escapeHTML(val(c.name))}</span></div>
           <div class="pdf-row"><span class="pdf-row__label">الرقم القومي:</span> <span class="pdf-row__value">${DOM.escapeHTML(val(c.nid))}</span></div>
-          <div class="pdf-row"><span class="pdf-row__label">درجة الأولوية:</span> <span class="pdf-row__value">${DOM.escapeHTML(priorityLabel)}</span></div>
+          <div class="pdf-row"><span class="pdf-row__label">الديانة:</span> <span class="pdf-row__value">${DOM.escapeHTML(val(d.religion))}</span></div>
           <div class="pdf-row"><span class="pdf-row__label">المحافظة / المركز:</span> <span class="pdf-row__value">${DOM.escapeHTML(val(c.center || c.governorate))}</span></div>
           <div class="pdf-row"><span class="pdf-row__label">القرية / المنطقة:</span> <span class="pdf-row__value">${DOM.escapeHTML(val(c.village))}</span></div>
           <div class="pdf-row"><span class="pdf-row__label">الجمعية الشريكة:</span> <span class="pdf-row__value">${DOM.escapeHTML(val(c.charity))}</span></div>
         </div>
+        ${legacy && legacy.researcherName ? `
+          <div style="margin-top: 10px; background: #eff6ff; border: 1.5px solid #93c5fd; border-radius: 8px; padding: 8px 12px; display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 13px; font-weight: 800; color: #1d4ed8;">👤 الباحث الأصلي لهذه الحالة:</span>
+            <span style="font-size: 15px; font-weight: 800; color: #1e3a8a;">${DOM.escapeHTML(legacy.researcherName)}</span>
+          </div>
+        ` : ''}
       </div>
     `
   });
@@ -172,35 +568,15 @@ function buildCaseSections(c) {
           <span>👤 القسم الأول — البيانات الشخصية للمستفيد</span>
         </div>
         <div class="pdf-grid pdf-grid--3col">
-          <div class="pdf-row"><span class="pdf-row__label">الاسم بالكامل:</span> <span class="pdf-row__value">${DOM.escapeHTML(val(c.name))}</span></div>
-          <div class="pdf-row"><span class="pdf-row__label">الرقم القومي:</span> <span class="pdf-row__value">${DOM.escapeHTML(val(c.nid))}</span></div>
           <div class="pdf-row"><span class="pdf-row__label">السن / العمر:</span> <span class="pdf-row__value">${d.age ? `${d.age} سنة` : '—'}</span></div>
-          <div class="pdf-row"><span class="pdf-row__label">النوع:</span> <span class="pdf-row__value">${DOM.escapeHTML(val(d.gender))}</span></div>
+          <div class="pdf-row"><span class="pdf-row__label">النوع:</span> <span class="pdf-row__value">${DOM.escapeHTML(genderLabel(d.gender))}</span></div>
           <div class="pdf-row"><span class="pdf-row__label">الحالة الاجتماعية:</span> <span class="pdf-row__value">${DOM.escapeHTML(val(d.maritalStatus))}</span></div>
           <div class="pdf-row"><span class="pdf-row__label">المؤهل الدراسي:</span> <span class="pdf-row__value">${DOM.escapeHTML(val(d.education))}</span></div>
           <div class="pdf-row"><span class="pdf-row__label">المهنة / العمل:</span> <span class="pdf-row__value">${DOM.escapeHTML(val(d.job || d.employmentStatus))}</span></div>
           <div class="pdf-row"><span class="pdf-row__label">الهاتف الأساسي:</span> <span class="pdf-row__value">${DOM.escapeHTML(val(d.phonePrimary || c.phone))}</span></div>
           <div class="pdf-row"><span class="pdf-row__label">الهاتف البديل:</span> <span class="pdf-row__value">${DOM.escapeHTML(val(d.phoneSecondary))}</span></div>
-          <div class="pdf-row"><span class="pdf-row__label">محافظة الميلاد:</span> <span class="pdf-row__value">${DOM.escapeHTML(val(d.birthGovernorate))}</span></div>
           <div class="pdf-row"><span class="pdf-row__label">تكافل وكرامة:</span> <span class="pdf-row__value">${yesNo(d.takafulBeneficiary)} ${d.takafulBeneficiary && d.takafulAmount ? `(${money(d.takafulAmount)})` : ''}</span></div>
           <div class="pdf-row"><span class="pdf-row__label">الحالة الصحية:</span> <span class="pdf-row__value">${DOM.escapeHTML(val(d.healthStatus))}</span></div>
-        </div>
-      </div>
-    `
-  });
-
-  /* ---- Section 2: بيانات التواصل والعنوان ---- */
-  sections.push({
-    id: 'address-contact',
-    html: `
-      <div class="pdf-section">
-        <div class="pdf-section-title">
-          <span>📍 القسم الثاني — بيانات التواصل والعنوان</span>
-        </div>
-        <div class="pdf-grid pdf-grid--3col">
-          <div class="pdf-row"><span class="pdf-row__label">المركز / المدينة:</span> <span class="pdf-row__value">${DOM.escapeHTML(val(c.center))}</span></div>
-          <div class="pdf-row"><span class="pdf-row__label">القرية / المنطقة:</span> <span class="pdf-row__value">${DOM.escapeHTML(val(c.village))}</span></div>
-          ${(c.governorate && c.governorate !== c.center) ? `<div class="pdf-row"><span class="pdf-row__label">المحافظة:</span> <span class="pdf-row__value">${DOM.escapeHTML(c.governorate)}</span></div>` : ''}
           <div class="pdf-row pdf-grid--full"><span class="pdf-row__label">العنوان بالتفصيل:</span> <span class="pdf-row__value">${DOM.escapeHTML(val(d.address))}</span></div>
         </div>
       </div>
@@ -213,34 +589,55 @@ function buildCaseSections(c) {
     html: `
       <div class="pdf-section">
         <div class="pdf-section-title">
-          <span>👨‍👩‍👧‍👦 القسم الثالث — بيانات أفراد الأسرة التابعين</span>
-          <span class="pdf-badge pdf-badge--neutral">${members.length} فرد</span>
+          <span>👨‍👩‍👧‍👦 القسم الثاني — بيانات أفراد الأسرة التابعين</span>
+          <span class="pdf-badge pdf-badge--info" style="font-size: 13px; padding: 3px 10px;">${members.length} فرد</span>
         </div>
         ${members.length > 0 ? `
           <table class="pdf-table">
             <thead>
               <tr>
-                <th style="width: 22%;">الاسم</th>
-                <th style="width: 12%;">صلة القرابة</th>
-                <th style="width: 18%;">الرقم القومي</th>
-                <th style="width: 8%;">السن</th>
-                <th style="width: 14%;">التعليم</th>
-                <th style="width: 14%;">العمل / الدخل</th>
-                <th style="width: 12%;">تكافل</th>
+                <th style="width: 16%;">الاسم</th>
+                <th style="width: 10%;">صلة القرابة</th>
+                <th style="width: 14%;">الرقم القومي</th>
+                <th style="width: 6%;">السن</th>
+                <th style="width: 7%;">النوع</th>
+                <th style="width: 14%;">التعليم / المرحلة</th>
+                <th style="width: 12%;">العمل / الدخل</th>
+                <th style="width: 10%;">تكافل وكرامة</th>
+                <th style="width: 10%;">الأمراض</th>
+                <th>ملاحظات</th>
               </tr>
             </thead>
             <tbody>
-              ${members.map(m => `
+              ${members.map(m => {
+      const eduParts = [];
+      if (m.isStudent) {
+        eduParts.push('طالب');
+        if (m.stage) eduParts.push(m.stage);
+        if (m.grade) eduParts.push(m.grade);
+        if (m.university) eduParts.push(m.university);
+      } else if (m.education) {
+        eduParts.push(m.education);
+      }
+      const eduText = eduParts.filter(Boolean).join(' — ') || '—';
+      const takafulText = m.takafulBeneficiary
+        ? `نعم${m.takafulAmount ? ` (${money(m.takafulAmount)})` : ''}`
+        : 'لا';
+      return `
                 <tr>
                   <td><strong>${DOM.escapeHTML(val(m.name))}</strong></td>
                   <td>${DOM.escapeHTML(val(m.relation))}</td>
                   <td style="font-family: monospace; font-size: 10px;">${DOM.escapeHTML(val(m.nid))}</td>
                   <td>${m.age ? `${m.age} سنة` : '—'}</td>
-                  <td>${DOM.escapeHTML(val(m.stage || m.education))}</td>
+                  <td>${DOM.escapeHTML(genderLabel(m.gender))}</td>
+                  <td>${DOM.escapeHTML(eduText)}</td>
                   <td>${DOM.escapeHTML(val(m.job))} ${m.monthlyIncome ? `(${money(m.monthlyIncome)})` : ''}</td>
-                  <td>${yesNo(m.takafulBeneficiary)}</td>
+                  <td>${DOM.escapeHTML(takafulText)}</td>
+                  <td>${DOM.escapeHTML(val(m.diseases))}</td>
+                  <td>${DOM.escapeHTML(val(m.notes))}</td>
                 </tr>
-              `).join('')}
+              `;
+    }).join('')}
             </tbody>
           </table>
         ` : `
@@ -259,7 +656,7 @@ function buildCaseSections(c) {
     html: `
       <div class="pdf-section">
         <div class="pdf-section-title">
-          <span>🏠 القسم الرابع — بيانات السكن والمرافق والتجهيزات والأصول</span>
+          <span>🏠 القسم الثالث — بيانات السكن والمرافق والتجهيزات والأصول</span>
         </div>
 
         <div class="pdf-section-subtitle">بيانات المسكن</div>
@@ -276,14 +673,26 @@ function buildCaseSections(c) {
           <div class="pdf-row"><span class="pdf-row__label">الكهرباء:</span> <span class="pdf-row__value">${DOM.escapeHTML(val(h.electricity))}</span></div>
           <div class="pdf-row"><span class="pdf-row__label">موتور مياه:</span> <span class="pdf-row__value">${yesNo(h.waterMotor)}</span></div>
           <div class="pdf-row"><span class="pdf-row__label">الإنترنت:</span> <span class="pdf-row__value">${yesNo(h.internet)}</span></div>
-          ${h.description ? `<div class="pdf-row pdf-grid--full"><span class="pdf-row__label">وصف السكن:</span> <span class="pdf-row__value">${DOM.escapeHTML(h.description)}</span></div>` : ''}
+          <div class="pdf-row"><span class="pdf-row__label">المدخل:</span> <span class="pdf-row__value">${DOM.escapeHTML(val(h.entrance))}</span></div>
+          <div class="pdf-row"><span class="pdf-row__label">وسيلة المواصلات:</span> <span class="pdf-row__value">${DOM.escapeHTML(val(h.transport))}</span></div>
         </div>
+        <div class="pdf-section-subtitle">وصف السكن</div>
+        <div class="pdf-row"><span class="pdf-row__value">${DOM.escapeHTML(val(h.description))}</span></div>
 
-        ${appliances.length > 0 ? `
+        ${appliances.some(a => a.isPresent) ? `
           <div class="pdf-section-subtitle">الأجهزة والممتلكات المنزلية</div>
           <div class="pdf-chips-list">
-            ${appliances.map(a => `
-              <span class="pdf-chip ${a.isPresent ? 'pdf-chip--active' : ''}">${a.isPresent ? '✓' : '—'} ${DOM.escapeHTML(a.label || a.key)}</span>
+            ${appliances.filter(a => a.isPresent).map(a => `
+              <span class="pdf-chip pdf-chip--active">✓ ${DOM.escapeHTML(a.label || a.key)}</span>
+            `).join('')}
+          </div>
+        ` : ''}
+
+        ${services.length > 0 ? `
+          <div class="pdf-section-subtitle">مرافق إضافية</div>
+          <div class="pdf-grid pdf-grid--3col">
+            ${services.map(s => `
+              <div class="pdf-row"><span class="pdf-row__label">${DOM.escapeHTML(val(s.name, 'مرفق'))}:</span> <span class="pdf-row__value">${yesNo(s.isAvailable)}${s.condition ? ` — ${DOM.escapeHTML(s.condition)}` : ''}${s.sourceOrMeter ? ` (${DOM.escapeHTML(s.sourceOrMeter)})` : ''}</span></div>
             `).join('')}
           </div>
         ` : ''}
@@ -291,8 +700,12 @@ function buildCaseSections(c) {
         <div class="pdf-section-subtitle">الحيازة الزراعية والأصول</div>
         <div class="pdf-grid pdf-grid--3col">
           <div class="pdf-row"><span class="pdf-row__label">حيازة أرض زراعية:</span> <span class="pdf-row__value">${hasLand ? `نعم (${val(ag.landType)} — ${val(ag.landArea)} فدان)` : 'لا'}</span></div>
+          ${hasLand && ag.cropType ? `<div class="pdf-row"><span class="pdf-row__label">نوع المحصول:</span> <span class="pdf-row__value">${DOM.escapeHTML(ag.cropType)}</span></div>` : ''}
+          ${hasLand && ag.landRentAmount ? `<div class="pdf-row"><span class="pdf-row__label">قيمة الإيجار:</span> <span class="pdf-row__value">${money(ag.landRentAmount)}</span></div>` : ''}
           ${hasLand && ag.landAnnualIncome ? `<div class="pdf-row"><span class="pdf-row__label">الدخل السنوي من الأرض:</span> <span class="pdf-row__value">${money(ag.landAnnualIncome)}</span></div>` : ''}
           <div class="pdf-row"><span class="pdf-row__label">حيازة مواشي ودواجن:</span> <span class="pdf-row__value">${hasLivestock ? `نعم ${Array.isArray(ag.livestockTypes) && ag.livestockTypes.length ? `(${ag.livestockTypes.join('، ')})` : ''}` : 'لا'}</span></div>
+          ${hasLivestock && ag.livestockDetails ? `<div class="pdf-row pdf-grid--full"><span class="pdf-row__label">تفاصيل المواشي:</span> <span class="pdf-row__value">${DOM.escapeHTML(ag.livestockDetails)}</span></div>` : ''}
+          ${ag.notes ? `<div class="pdf-row pdf-grid--full"><span class="pdf-row__label">ملاحظات الحيازة الزراعية:</span> <span class="pdf-row__value">${DOM.escapeHTML(ag.notes)}</span></div>` : ''}
         </div>
       </div>
     `
@@ -308,7 +721,7 @@ function buildCaseSections(c) {
     html: `
       <div class="pdf-section">
         <div class="pdf-section-title">
-          <span>💰 القسم الخامس — البيانات الاقتصادية والمالية</span>
+          <span>💰 القسم الرابع — البيانات الاقتصادية والمالية</span>
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
@@ -319,7 +732,8 @@ function buildCaseSections(c) {
                 <thead>
                   <tr>
                     <th>البند / المصدر</th>
-                    <th style="width: 35%;">المبلغ</th>
+                    <th style="width: 30%;">المبلغ</th>
+                    <th style="width: 22%;">الدورية</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -327,6 +741,7 @@ function buildCaseSections(c) {
                     <tr>
                       <td>${DOM.escapeHTML(val(i.label))} ${i.source ? `<span style="font-size: 8.5px; color: #64748b;">(${DOM.escapeHTML(i.source)})</span>` : ''}</td>
                       <td style="color: #047857; font-weight: 700;">${money(i.amount)}</td>
+                      <td>${DOM.escapeHTML(val(i.period))}</td>
                     </tr>
                   `).join('')}
                 </tbody>
@@ -341,7 +756,8 @@ function buildCaseSections(c) {
                 <thead>
                   <tr>
                     <th>نوع المصروف</th>
-                    <th style="width: 35%;">المبلغ</th>
+                    <th style="width: 30%;">المبلغ</th>
+                    <th style="width: 22%;">الدورية</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -349,6 +765,7 @@ function buildCaseSections(c) {
                     <tr>
                       <td>${DOM.escapeHTML(val(e.label))}</td>
                       <td style="color: #be123c; font-weight: 700;">${money(e.amount)}</td>
+                      <td>${DOM.escapeHTML(val(e.period))}</td>
                     </tr>
                   `).join('')}
                 </tbody>
@@ -380,6 +797,25 @@ function buildCaseSections(c) {
   const reviewerOp = c.reviewerOpinion;
   const managerOp = c.managerApproval;
 
+  /* ---- Section: الاحتياجات المقيَّمة (القسم الخامس) ---- */
+  const needs = Array.isArray(c.assessedNeeds) ? c.assessedNeeds : [];
+  if (needs.length > 0) {
+    sections.push({
+      id: 'assessed-needs',
+      html: `
+      <div class="pdf-section">
+        <div class="pdf-section-title">
+          <span>📌 القسم الخامس — الاحتياجات المقيَّمة</span>
+          <span class="pdf-badge pdf-badge--neutral">${needs.length} احتياج</span>
+        </div>
+        <div class="pdf-chips-list">
+          ${needs.map(n => `<span class="pdf-chip pdf-chip--active">✓ ${DOM.escapeHTML(val(n.needType))}</span>`).join('')}
+        </div>
+      </div>
+    `
+    });
+  }
+
   sections.push({
     id: 'assessment-opinions',
     html: `
@@ -391,12 +827,12 @@ function buildCaseSections(c) {
         ${workerOp ? `
           <div class="pdf-section-subtitle" style="display: flex; justify-content: space-between;">
             <span>رأي وتقرير الأخصائي الاجتماعي الميداني:</span>
-            <span class="pdf-badge pdf-badge--info">${DOM.escapeHTML(val(workerOp.decision, 'مسجل'))}</span>
+            <span class="pdf-badge pdf-badge--info">${decisionHtml(workerOp.decision)}</span>
           </div>
           <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px 10px; font-size: 11px; line-height: 1.6; color: #1e293b;">
             "${DOM.escapeHTML(val(workerOp.notes, 'لا توجد ملاحظات تفصيلية'))}"
           </div>
-          ${workerOp.author ? `
+          ${workerOp.author && !workerOp.isLegacyImport ? `
             <div style="font-size: 10px; color: #64748b; margin-top: 3px; font-weight: 700;">
               الأخصائي: ${DOM.escapeHTML(workerOp.author)} ${workerOp.date ? `(${formatDate(workerOp.date)})` : ''}
             </div>
@@ -443,16 +879,16 @@ function buildCaseSections(c) {
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px;">
             ${reviewerOp && reviewerOp.decision ? `
               <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; padding: 6px 8px;">
-                <div style="font-size: 10.5px; font-weight: 800; color: #1d4ed8; margin-bottom: 2px;">قرار وتوصية المراجع: ${DOM.escapeHTML(reviewerOp.decision)}</div>
+                <div style="font-size: 10.5px; font-weight: 800; color: #1d4ed8; margin-bottom: 2px;">قرار وتوصية المراجع: ${decisionHtml(reviewerOp.decision)}</div>
                 <div style="font-size: 10px; color: #334155;">${DOM.escapeHTML(val(reviewerOp.notes))}</div>
-                ${reviewerOp.author ? `<div style="font-size: 9px; color: #64748b; margin-top: 2px;">المراجع: ${DOM.escapeHTML(reviewerOp.author)}</div>` : ''}
+                ${reviewerOp.author && !reviewerOp.isLegacyImport ? `<div style="font-size: 9px; color: #64748b; margin-top: 2px;">المراجع: ${DOM.escapeHTML(reviewerOp.author)}</div>` : ''}
               </div>
             ` : '<div></div>'}
             ${managerOp && managerOp.decision ? `
               <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; padding: 6px 8px;">
-                <div style="font-size: 10.5px; font-weight: 800; color: #047857; margin-bottom: 2px;">الاعتماد النهائي للمدير: ${DOM.escapeHTML(managerOp.decision)}</div>
+                <div style="font-size: 10.5px; font-weight: 800; color: #047857; margin-bottom: 2px;">الاعتماد النهائي للمدير: ${decisionHtml(managerOp.decision)}</div>
                 <div style="font-size: 10px; color: #334155;">${DOM.escapeHTML(val(managerOp.notes))}</div>
-                ${managerOp.author ? `<div style="font-size: 9px; color: #64748b; margin-top: 2px;">المدير: ${DOM.escapeHTML(managerOp.author)}</div>` : ''}
+                ${managerOp.author && !managerOp.isLegacyImport ? `<div style="font-size: 9px; color: #64748b; margin-top: 2px;">المدير: ${DOM.escapeHTML(managerOp.author)}</div>` : ''}
               </div>
             ` : '<div></div>'}
           </div>
@@ -530,6 +966,71 @@ function buildCaseSections(c) {
       `
     });
   }
+
+  /* ---- Section 9: الدعم المصروف فعليًا (تُعرض فقط إن وُجدت) ---- */
+  const supportHistory = Array.isArray(sup.history) ? sup.history : [];
+  if (supportHistory.length > 0) {
+    sections.push({
+      id: 'support-history',
+      html: `
+        <div class="pdf-section">
+          <div class="pdf-section-title">
+            <span>📦 القسم التاسع — الدعم المصروف فعليًا</span>
+            <span class="pdf-badge pdf-badge--neutral">${supportHistory.length} عملية صرف</span>
+          </div>
+          <table class="pdf-table">
+            <thead>
+              <tr>
+                <th>نوع الدعم</th>
+                <th style="width: 20%;">الكمية</th>
+                <th style="width: 30%;">المستلم</th>
+                <th style="width: 20%;">التاريخ</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${supportHistory.map(hst => `
+                <tr>
+                  <td><strong>${DOM.escapeHTML(val(hst.supportType))}</strong></td>
+                  <td>${DOM.escapeHTML(val(hst.quantity))}</td>
+                  <td>${DOM.escapeHTML(val(hst.recipientName))}</td>
+                  <td>${formatDate(hst.date)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      `
+    });
+  }
+
+  /* ---- Section 10: اعتماد وتوقيعات ---- */
+  sections.push({
+    id: 'signatures',
+    html: `
+      <div class="pdf-section pdf-signatures">
+        <div class="pdf-section-title">
+          <span>✍️ الاعتماد والتوقيعات</span>
+        </div>
+        <div class="pdf-signatures-grid">
+          <div class="pdf-signature-box">
+            <span class="pdf-signature-box__role">أخصائي التنمية</span>
+            <span class="pdf-signature-box__line"></span>
+            <span class="pdf-signature-box__caption">التوقيع</span>
+          </div>
+          <div class="pdf-signature-box">
+            <span class="pdf-signature-box__role">المراجع</span>
+            <span class="pdf-signature-box__line"></span>
+            <span class="pdf-signature-box__caption">التوقيع</span>
+          </div>
+          <div class="pdf-signature-box">
+            <span class="pdf-signature-box__role">مدير التنمية</span>
+            <span class="pdf-signature-box__line"></span>
+            <span class="pdf-signature-box__caption">التوقيع</span>
+          </div>
+        </div>
+      </div>
+    `
+  });
 
   return sections;
 }
@@ -631,6 +1132,19 @@ export async function exportCaseToPdf(caseData, options = {}) {
     if (document.fonts && document.fonts.ready) {
       await document.fonts.ready;
     }
+
+    // Wait for every logo/image inside the stage to actually finish loading
+    // (or fail) before html2canvas snapshots it — otherwise fast exports can
+    // capture the header/footer logos mid-load as blank space.
+    const images = [...stage.querySelectorAll('img')];
+    await Promise.all(images.map(img => {
+      if (img.complete) return Promise.resolve();
+      return new Promise(resolve => {
+        img.addEventListener('load', resolve, { once: true });
+        img.addEventListener('error', resolve, { once: true });
+      });
+    }));
+
     await new Promise(r => setTimeout(r, 120));
 
     // Initialize jsPDF document (A4 portrait)

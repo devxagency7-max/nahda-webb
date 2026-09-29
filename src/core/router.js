@@ -11,6 +11,7 @@ import { AuthService } from '../services/auth.service.js';
 import { ProfileService } from '../services/profile.service.js';
 import { TokenStore } from '../services/tokens.js';
 import { EventBus, EVENTS } from './event-bus.js';
+import { StorageService, STORAGE_KEYS } from '../services/storage.js';
 
 export function switchView(viewName, saveToStorage = true) {
   // بوابة الصلاحيات: أي محاولة لفتح شاشة خارج صلاحيات الدور الحالي — سواء من
@@ -32,12 +33,19 @@ export function switchView(viewName, saveToStorage = true) {
   const viewCaseDetails = DOM.qs('#view-case-details');
   const viewEmployees = DOM.qs('#view-employees');
   const viewReports = DOM.qs('#view-reports');
+  const viewCaseSupportFilter = DOM.qs('#view-case-support-filter');
   const breadcrumb = DOM.qs('.breadcrumb');
 
   if (saveToStorage) {
     store.setCurrentView(viewName, true);
   } else {
     store.setCurrentView(viewName, false);
+  }
+
+  // آخر id لصفحة تفاصيل حالة اتفتحت — مفيد بس طول ما المستخدم لسه واقف على
+  // case-details (عشان استعادتها بعد refresh)؛ أي انتقال لصفحة تانية يبطّله.
+  if (viewName !== 'case-details') {
+    StorageService.remove(STORAGE_KEYS.LAST_VIEWED_CASE_ID);
   }
 
   // Hide all view panels
@@ -52,6 +60,7 @@ export function switchView(viewName, saveToStorage = true) {
   if (viewCaseDetails) viewCaseDetails.classList.add('page-view--hidden');
   if (viewEmployees) viewEmployees.classList.add('page-view--hidden');
   if (viewReports) viewReports.classList.add('page-view--hidden');
+  if (viewCaseSupportFilter) viewCaseSupportFilter.classList.add('page-view--hidden');
 
   // Toggle login screen body mode
   document.body.classList.toggle('is-login-view', viewName === 'login');
@@ -60,7 +69,7 @@ export function switchView(viewName, saveToStorage = true) {
   DOM.qsa('.sidebar-sublink').forEach(link => link.classList.remove('sidebar-sublink--active'));
   DOM.qsa('.accordion-header').forEach(hdr => hdr.classList.remove('accordion-header--active'));
 
-  document.body.classList.toggle('is-dashboard-view', viewName !== 'personal-data' && viewName !== 'bg-studio' && viewName !== 'state-mgmt' && viewName !== 'charities' && viewName !== 'profile' && viewName !== 'all-cases' && viewName !== 'case-details' && viewName !== 'employees' && viewName !== 'reports' && viewName !== 'login');
+  document.body.classList.toggle('is-dashboard-view', viewName !== 'personal-data' && viewName !== 'bg-studio' && viewName !== 'state-mgmt' && viewName !== 'charities' && viewName !== 'profile' && viewName !== 'all-cases' && viewName !== 'case-details' && viewName !== 'employees' && viewName !== 'reports' && viewName !== 'case-support-filter' && viewName !== 'login');
 
   if (viewName === 'login') {
     if (viewLogin) viewLogin.classList.remove('page-view--hidden');
@@ -117,6 +126,26 @@ export function switchView(viewName, saveToStorage = true) {
     });
 
     EventBus.emit('reports:opened');
+  } else if (viewName === 'case-support-filter') {
+    if (viewCaseSupportFilter) viewCaseSupportFilter.classList.remove('page-view--hidden');
+    if (breadcrumb) {
+      breadcrumb.innerHTML = `
+        <span>الرئيسية</span>
+        <span>/</span>
+        <span>إدارة النظام</span>
+        <span>/</span>
+        <span class="breadcrumb__item--active">فلترة الحالات حسب الجمعية والدعم</span>
+      `;
+    }
+    const navCaseSupportFilterLink = DOM.qs('#nav-case-support-filter-link');
+    if (navCaseSupportFilterLink) navCaseSupportFilterLink.classList.add('accordion-header--active');
+
+    // Close other open accordion bodies for a clean sidebar state
+    DOM.qsa('.accordion-group--open').forEach(group => {
+      group.classList.remove('accordion-group--open');
+      const body = group.querySelector('.accordion-body');
+      if (body) body.style.maxHeight = null;
+    });
   } else if (viewName === 'all-cases') {
     if (viewAllCases) viewAllCases.classList.remove('page-view--hidden');
     if (breadcrumb) {

@@ -59,15 +59,23 @@ if (Array.isArray(initialEmployees)) {
 class AppStore {
   constructor() {
     // تنضيف مرة واحدة لأي حالة قديمة كانت متخزنة "للأبد" في localStorage
-    // من قبل إلغاء التخزين الدائم لـ currentCase — غير كده كانت هتفضل
-    // موجودة في القرص من غير أي استخدام، ومربكة لو حد فتح devtools يدوّر.
+    // من قبل إلغاء التخزين الدائم لـ currentCase/familyMembers — غير كده
+    // كانت هتفضل موجودة في القرص من غير أي استخدام، ومربكة لو حد فتح
+    // devtools يدوّر. أفراد الأسرة تحديدًا كانوا بيرجعوا تلقائيًا بعد أي
+    // Refresh رغم إن رب الأسرة (currentCase) بيتصفّر — يعني ممكن يفضلوا
+    // ظاهرين تابعين لحالة/شخص تاني تمامًا اتصفّرت بياناته. دلوقتي أفراد
+    // الأسرة in-memory بس زي currentCase بالظبط، وبيتصفّروا مع أي
+    // refresh/فتح جديد للصفحة.
     StorageService.remove(STORAGE_KEYS.CURRENT_CASE);
+    StorageService.remove(STORAGE_KEYS.FAMILY_MEMBERS);
+    StorageService.remove(STORAGE_KEYS.AGRICULTURE);
     this.state = {
       currentView: StorageService.get(STORAGE_KEYS.CURRENT_VIEW, 'login'),
       activeStage: StorageService.get(STORAGE_KEYS.ACTIVE_STAGE, '1'),
       currentUser: migrateStoredUser(StorageService.get(STORAGE_KEYS.CURRENT_USER, null)),
       bgSettings: Object.assign({}, defaultBgSettings, StorageService.get(STORAGE_KEYS.BG_SETTINGS, {})),
-      familyMembers: StorageService.get(STORAGE_KEYS.FAMILY_MEMBERS, []),
+      // مقصود عدم القراءة من localStorage هنا — راجع تعليق التنضيف فوق.
+      familyMembers: [],
       charities: initialCharities,
       employees: initialEmployees,
       beniSuefLocations: StorageService.get(STORAGE_KEYS.BENI_SUEF_LOCATIONS, {}),
@@ -79,7 +87,11 @@ class AppStore {
       // name keep using `beniSuefLocations` untouched; write operations
       // (add/rename/delete) resolve through this map to call the real API.
       locationIds: { centers: {}, villages: {} },
-      agriculture: StorageService.get(STORAGE_KEYS.AGRICULTURE, null),
+      // مقصود عدم القراءة من localStorage هنا — كارت 5 (الحيازة الزراعية) كان
+      // بيسترجع آخر إجابة محفوظة تلقائيًا حتى مع حالة/شخص جديد تمامًا بعد
+      // refresh، وده اختيار تلقائي غير مقصود لبيانات ملكهاش المستخدم الحالي.
+      // in-memory بس دلوقتي، بيتصفّر مع أي refresh زي currentCase/familyMembers.
+      agriculture: null,
       visitedStages: StorageService.get(STORAGE_KEYS.VISITED_STAGES, []),
       // الحالة (Case) الجاري إدخالها عبر معالج البيانات الشخصية. `id` بيتحدد
       // فقط بعد أول POST /cases (من المرحلة 1، عند الضغط على "التالي") —
@@ -279,9 +291,9 @@ class AppStore {
     return this.visitedStages.includes(String(stageNumber));
   }
 
+  /** In-memory only (راجع تعليق التنضيف في constructor) — بيتصفّر مع أي refresh بنفس فلسفة currentCase. */
   setAgriculture(data) {
     this.state.agriculture = data;
-    StorageService.set(STORAGE_KEYS.AGRICULTURE, data);
     EventBus.emit(EVENTS.AGRICULTURE_UPDATED, data);
   }
 
@@ -297,9 +309,9 @@ class AppStore {
     EventBus.emit(EVENTS.BG_SETTINGS_CHANGED, this.state.bgSettings);
   }
 
+  /** In-memory only (راجع تعليق التنضيف في constructor) — بيتصفّر مع أي refresh بنفس فلسفة currentCase. */
   setFamilyMembers(members) {
     this.state.familyMembers = members;
-    StorageService.set(STORAGE_KEYS.FAMILY_MEMBERS, members);
     EventBus.emit(EVENTS.FAMILY_MEMBERS_UPDATED, members);
     EventBus.emit(EVENTS.WORKFLOW_RECALC_TRIGGERED);
   }

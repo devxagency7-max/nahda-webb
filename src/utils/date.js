@@ -50,3 +50,24 @@ export function formatLocalDate(date = new Date()) {
   const day = String(date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
 }
+
+/**
+ * Formats a UTC timestamp from the API as an Arabic date + time in Egypt's
+ * timezone, e.g. "السبت، 26 سبتمبر 2026 — 10:10 ص". The timezone is pinned
+ * to Africa/Cairo (not the viewer's machine) so every user sees the same
+ * office time for a workflow event.
+ * @param {string} utcString - ISO timestamp, e.g. "2026-09-26T08:10:05.12+00:00"
+ * @returns {string} '' for a missing/invalid value
+ */
+export function formatCairoDateTime(utcString) {
+  if (!utcString) return '';
+  const date = new Date(utcString);
+  if (Number.isNaN(date.getTime())) return '';
+  const day = date.toLocaleDateString('ar-EG', {
+    timeZone: 'Africa/Cairo', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+  });
+  const time = date.toLocaleTimeString('ar-EG', {
+    timeZone: 'Africa/Cairo', hour: 'numeric', minute: '2-digit'
+  });
+  return `${day} — ${time}`;
+}

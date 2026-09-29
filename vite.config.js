@@ -1,4 +1,4 @@
-const API_TARGET = process.env.VITE_API_PROXY_TARGET || 'http://187.77.70.246';
+const API_TARGET = process.env.VITE_API_PROXY_TARGET || 'https://srv1990155.hstgr.cloud';
 
 export default {
   root: '.',

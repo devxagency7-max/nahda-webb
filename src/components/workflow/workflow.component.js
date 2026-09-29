@@ -12,11 +12,10 @@
    -------------------------------------------------------------------------- */
 import { showToast } from '../../utils/toast.js';
 import { onWorkflowRecalc } from '../../core/state.js';
+import { switchView } from '../../core/router.js';
 import { store } from '../../state/store.js';
 import { DOM } from '../../utils/dom.js';
 import { parseEgyptianNationalId, normalizeNumerals } from '../../utils/nationalId.js';
-import { collectCaseFromForm, loadCaseFromServer } from '../personal-data/case-preview.js';
-import { openCaseDetailsPage } from '../case-details/case-details.component.js';
 import {
   readAgricultureData,
   agricultureProgress,
@@ -31,13 +30,14 @@ import {
   validateStep1,
   clearStep1Errors,
   highlightStep1Issues,
-  validateStep6,
-  validateStep7
+  validateStep6
 } from '../personal-data/personal-data.api.js';
 import { messageFromError } from '../../services/errors.js';
 import { LocationsService } from '../../services/locations.service.js';
 import { CasesService } from '../../services/cases.service.js';
 import { EmployeesService } from '../../services/employees.service.js';
+import { resetFamilyMembersManager } from '../family-members/family-members.component.js';
+import { resetFinancialManager } from '../financial-ledger/financial-ledger.component.js';
 
 export const STAGES_METADATA = [
   { id: 'stage-01', step: 1, row: 1, title: '1. الأساسية والأفراد', target: 'step-pane-1', route: 'personal-data' },
@@ -88,31 +88,6 @@ let currentActiveStep = 1;
 let journeyResizeObserver = null;
 
 export function initWorkflowTabs() {
-  // معاينة الملف بشكله النهائي. لو الحالة اتحفظت فعلاً على السيرفر (فيها
-  // case id من أول "التالي" في المرحلة 1) بنجيب النسخة الحقيقية المحفوظة؛
-  // غير كده (لسه ماوصلش لأول حفظ) بنرجع لمعاينة محلية من الفورم كمسودة.
-  const previewBtn = DOM.qs('#btn-preview-case-details');
-  if (previewBtn) {
-    previewBtn.addEventListener('click', async (e) => {
-      e.preventDefault();
-      const caseId = store.currentCase?.id;
-      if (!caseId) {
-        openCaseDetailsPage(collectCaseFromForm());
-        return;
-      }
-      previewBtn.disabled = true;
-      try {
-        const viewModel = await loadCaseFromServer(caseId);
-        openCaseDetailsPage(viewModel);
-      } catch (err) {
-        showToast(`تعذّر تحميل النسخة المحفوظة من الحالة، هنعرضلك المسودة المحلية بدلاً منها — ${messageFromError(err)}`, 'warning');
-        openCaseDetailsPage(collectCaseFromForm());
-      } finally {
-        previewBtn.disabled = false;
-      }
-    });
-  }
-
   const toggleBtn = DOM.qs('#workflow-toggle-btn');
   const toggleText = DOM.qs('#workflow-toggle-text');
   const roadWrapper = DOM.qs('#workflow-road-wrapper');
@@ -123,9 +98,64 @@ export function initWorkflowTabs() {
   const nationalIdInput = DOM.qs('#national-id');
   const ageInput = DOM.qs('#current-age');
   const genderSelect = DOM.qs('#gender');
-  const govInput = DOM.qs('#governorate');
   const errorMsgEl = DOM.qs('#national-id-error');
-  const successMsgEl = DOM.qs('#national-id-success');
+  const duplicateMsgEl = DOM.qs('#national-id-duplicate');
+  const checkingMsgEl = DOM.qs('#national-id-checking');
+  const availableMsgEl = DOM.qs('#national-id-available');
+
+  // بعد ما يتأكد الرقم القومي محليًا (checksum) بنسأل السيرفر لو مسجّل
+  // بالفعل لحالة تانية — عشان الأخصائي يعرف من هنا بدل ما يكتشف بعد ما
+  // يكمّل الفورم كله ويضغط "التالي" فيرجّعله السيرفر DUPLICATE_NATIONAL_ID.
+  // debounce بسيط (350ms، زي باقي حقول البحث في المشروع) عشان مانبعتش طلب
+  // مع كل حرف وقت ما لسه بيكتب/يمسح.
+  let duplicateCheckDebounce = null;
+  let duplicateCheckToken = 0;
+
+  function hideDuplicateStatus() {
+    if (duplicateMsgEl) duplicateMsgEl.style.display = 'none';
+    if (checkingMsgEl) checkingMsgEl.style.display = 'none';
+    if (availableMsgEl) availableMsgEl.style.display = 'none';
+  }
+
+  function checkDuplicateNationalId(nationalIdValue) {
+    clearTimeout(duplicateCheckDebounce);
+    const myToken = ++duplicateCheckToken;
+
+    duplicateCheckDebounce = setTimeout(async () => {
+      if (checkingMsgEl) checkingMsgEl.style.display = 'block';
+      if (duplicateMsgEl) duplicateMsgEl.style.display = 'none';
+      if (availableMsgEl) availableMsgEl.style.display = 'none';
+
+      try {
+        const result = await CasesService.search({ nationalId: nationalIdValue });
+        if (myToken !== duplicateCheckToken) return; // اتبعت طلب أحدث في الأثناء
+
+        const items = result?.items || [];
+        const match = items.find(item => item.nationalId === nationalIdValue
+          && item.id !== store.currentCase?.id);
+
+        if (checkingMsgEl) checkingMsgEl.style.display = 'none';
+
+        if (match) {
+          if (duplicateMsgEl) {
+            duplicateMsgEl.textContent = `⚠ هذا الرقم القومي مسجّل بالفعل — الحالة رقم ${match.caseNumber || match.displayId || ''} (${CASE_STATUS_LABEL[match.status] || match.status || ''})`;
+            duplicateMsgEl.style.display = 'block';
+          }
+          if (availableMsgEl) availableMsgEl.style.display = 'none';
+          nationalIdInput.style.borderColor = '#ef4444';
+        } else {
+          if (duplicateMsgEl) duplicateMsgEl.style.display = 'none';
+          if (availableMsgEl) availableMsgEl.style.display = 'block';
+        }
+      } catch (err) {
+        if (myToken !== duplicateCheckToken) return;
+        if (checkingMsgEl) checkingMsgEl.style.display = 'none';
+        // فشل التحقق اللحظي (شبكة/سيرفر) مايوقفش المستخدم — السيرفر لسه
+        // هيرفض DUPLICATE_NATIONAL_ID فعليًا عند "التالي" لو الرقم مكرر فعلاً.
+        // مانوريش "الرقم ده جديد" هنا برضه — التحقق نفسه فشل، مش أكدنا حاجة.
+      }
+    }, 350);
+  }
 
   function handleNationalIdExtraction() {
     if (!nationalIdInput) return;
@@ -144,7 +174,9 @@ export function initWorkflowTabs() {
 
     if (cleanVal.length === 0) {
       if (errorMsgEl) errorMsgEl.style.display = 'none';
-      if (successMsgEl) successMsgEl.style.display = 'none';
+      hideDuplicateStatus();
+      clearTimeout(duplicateCheckDebounce);
+      duplicateCheckToken++;
       nationalIdInput.style.borderColor = '';
       clearDerivedFields();
       calculatePercentages();
@@ -153,7 +185,9 @@ export function initWorkflowTabs() {
 
     if (cleanVal.length < 14) {
       if (errorMsgEl) errorMsgEl.style.display = 'none';
-      if (successMsgEl) successMsgEl.style.display = 'none';
+      hideDuplicateStatus();
+      clearTimeout(duplicateCheckDebounce);
+      duplicateCheckToken++;
       nationalIdInput.style.borderColor = '';
       return;
     }
@@ -162,21 +196,22 @@ export function initWorkflowTabs() {
 
     if (result.valid) {
       if (errorMsgEl) errorMsgEl.style.display = 'none';
-      if (successMsgEl) successMsgEl.style.display = 'block';
       nationalIdInput.style.borderColor = '#0d9488';
 
       if (ageInput) ageInput.value = result.age;
       if (genderSelect) genderSelect.value = result.genderAr;
-      if (govInput) govInput.value = result.governorateAr;
 
       showToast(`تم استخراج البيانات تلقائيًا من الرقم القومي (السن: ${result.age} سنة، المحافظة: ${result.governorateAr}، النوع: ${result.genderAr}) ✅`, 'success');
+      checkDuplicateNationalId(cleanVal);
     } else {
-      if (successMsgEl) successMsgEl.style.display = 'none';
       if (errorMsgEl) {
         errorMsgEl.textContent = result.error || 'الرقم القومي غير صحيح';
         errorMsgEl.style.display = 'block';
       }
       nationalIdInput.style.borderColor = '#ef4444';
+      hideDuplicateStatus();
+      clearTimeout(duplicateCheckDebounce);
+      duplicateCheckToken++;
       clearDerivedFields();
     }
 
@@ -186,7 +221,6 @@ export function initWorkflowTabs() {
   function clearDerivedFields() {
     if (ageInput) ageInput.value = '';
     if (genderSelect) genderSelect.value = '';
-    if (govInput) govInput.value = 'بني سويف';
   }
 
   if (nationalIdInput) {
@@ -258,7 +292,7 @@ export function initWorkflowTabs() {
 
   function calculatePercentages() {
     // 1. البيانات الأساسية وأفراد الأسرة
-    const s1Fields = ['case-name', 'national-id', 'head-relation', 'district', 'village', 'address'];
+    const s1Fields = ['case-name', 'national-id', 'head-relation', 'address'];
     let s1Count = 0;
     s1Fields.forEach(id => {
       const el = DOM.qs(`#${id}`);
@@ -282,10 +316,16 @@ export function initWorkflowTabs() {
     // بترجع 0% بدل ما تتحسب مكتملة بالغلط.
     const pct5 = agricultureProgress();
 
-    // 6. الدخل والمصروفات
-    const incCards = DOM.qsa('#income-list-container .member-card');
-    const expCards = DOM.qsa('#expense-list-container .member-card');
-    const pct6 = (incCards.length > 0 || expCards.length > 0) ? 100 : 0;
+    // 6. الدخل والمصروفات — عدد الكروت مش دليل كافٍ على الاكتمال: في بنود
+    // تلقائية ثابتة (معاش، معاش تكافل وكرامة، دخل/إيجار الأرض الزراعية، 7
+    // فئات مصروفات) بتتزرع دايمًا بقيمة صفر بمجرد فتح المرحلة (راجع
+    // financial-ledger.component.js: _defaultExpenseCategories/buildAutoIncomeItems)
+    // — فكان عدد الكروت بيبقى أكبر من صفر فورًا وتظهر المرحلة 100% مكتملة
+    // من غير ما المستخدم يسجّل أي رقم فعلي. بنتأكد بدل كده إن فيه بند دخل أو
+    // مصروف واحد على الأقل بقيمة أكبر من صفر (من store.incomeItems/expenseItems
+    // اللي بيحدّثها recalculateBudget مع كل تغيير — مصدر الحقيقة الحقيقي للمبالغ).
+    const hasNonZeroAmount = (items) => Array.isArray(items) && items.some(item => Number(item.amount) > 0);
+    const pct6 = (hasNonZeroAmount(store.incomeItems) || hasNonZeroAmount(store.expenseItems)) ? 100 : 0;
 
     // 7. الدعم والقرار (مطابق لـ SupportRecommendationFormData.progress في
     // الأبلكيشن: 100% لو فيه فئة دعم واحدة على الأقل متفعّلة، وإلا 0%)
@@ -353,13 +393,13 @@ export function initWorkflowTabs() {
   /* ---------- التحقق قبل الانتقال + إعلان المرحلة لقارئ الشاشة ---------- */
 
   // سجل التحقق لكل مرحلة. المراحل غير المدرجة بتعدّي بدون قيود (زي ما كانت).
-  // 6 و7 تنبيهية فقط (مفيش highlighter لهم — البيانات فعليًا اختيارية عند
-  // السيرفر) بينما 1 و5 بيبرزوا الحقول الناقصة بصريًا كمان.
+  // 6 تنبيهية فقط (مفيش highlighter ليها — البيانات فعليًا اختيارية عند
+  // السيرفر) بينما 1 و5 بيبرزوا الحقول الناقصة بصريًا كمان. 7 بتعدّي بدون
+  // تحذير خالص — نوع الدعم اختياري بالكامل.
   const STEP_VALIDATORS = {
     1: validateStep1,
     5: validateAgriculture,
-    6: validateStep6,
-    7: validateStep7
+    6: validateStep6
   };
 
   const STEP_ERROR_CLEANERS = {
@@ -585,8 +625,6 @@ export function initWorkflowTabs() {
    * Dispatches to the right API save for the step being left. Step 5
    * (agriculture) needs readAgricultureData from agriculture.component.js,
    * so it's wired here rather than through the plain STEP_SAVE_HANDLERS map.
-   * Step 8 has no handler yet — its backend contract is still an open
-   * question (see personal-data.api.js) — so it's a silent no-op for now.
    * @returns {Promise<boolean>} false means "stay on this step" (already toasted).
    */
   async function saveCurrentStepToApi(step) {
@@ -619,7 +657,77 @@ export function initWorkflowTabs() {
     // علشان الحفظ النهائي يبقى لقطة متسقة من الاستمارة كلها.
     store.setAgriculture(readAgricultureData());
 
-    showToast('تم حفظ بيانات الاستمارة بنجاح 💾✨', 'success');
+    showToast('تم حفظ رأي الباحث الاجتماعي، والحالة بقت "بانتظار الإسناد" 💾✨', 'success');
+
+    // وضع "تعديل حالة موجودة" (راجع case-edit.loader.js) مختلف عن "إنشاء
+    // حالة جديدة": هنا مفيش داعي نمسح الفورم ولا نروح الرئيسية — المستخدم
+    // جاي أصلاً من صفحة تفاصيل الحالة وعايز يرجعلها يشوف التعديل اللي عمله.
+    const isEditMode = store.currentCase?.isEditMode === true;
+    const caseId = store.currentCase?.id;
+
+    setTimeout(() => {
+      if (isEditMode && caseId && window.openCaseDetailsPage) {
+        window.switchView('case-details');
+        window.openCaseDetailsPage(caseId);
+      } else {
+        switchView('dashboard');
+        resetWizardForNewCase();
+      }
+    }, 1200);
+  }
+
+  /**
+   * يصفّر الاستمارة كلها استعدادًا لحالة جديدة — نفس الأثر اللي كان بيحصل
+   * مع Refresh فعلي، لكن من غير ما نحتاج نعمل reload حقيقي للصفحة. بيتنادى
+   * بعد ما المستخدم يخلّص استمارة (مرحلة 8) ويرجع للرئيسية، عشان لو فتح
+   * "البيانات الأساسية" تاني يلاقيها فاضية بدل ما تكمّل تحديث نفس الحالة
+   * القديمة بالغلط.
+   */
+  function resetWizardForNewCase() {
+    // 1. الحالة الجارية نفسها (id، rowVersion كل قسم) — زي ما بيحصل مع أي
+    // refresh فعلي (راجع تعليق currentCase في state/store.js).
+    store.clearCurrentCase();
+
+    // 2. أفراد الأسرة والزراعة — in-memory بس زي currentCase بالظبط (نفس
+    // إصلاح باگ "أفراد الأسرة بيفضلوا من حالة سابقة" اللي اتعمل قبل كده).
+    resetFamilyMembersManager();
+    store.setAgriculture(null);
+
+    // 3. الدخل والمصروفات (مرحلة 6) — بنود تلقائية + يدوية كلها closures
+    // محلية جوه financial-ledger.component.js، فبترجع لحالتها الافتراضية
+    // عن طريق الـ reset callback المسجّل هناك.
+    resetFinancialManager();
+
+    // 4. كل حقول الإدخال النصية/الاختيارية في التابات التمنية — بما فيهم
+    // الحقول اللي معندهاش تطبيع خاص (عنوان، ملاحظات، راديو، سيلكت...).
+    const view = DOM.qs('#view-personal-data');
+    if (view) {
+      DOM.qsa('input[type="text"], input[type="tel"], input[type="number"], textarea', view).forEach(el => {
+        if (el.readOnly) return; // current-age مشتقة من الرقم القومي، مش حقل حر
+        el.value = '';
+      });
+      DOM.qsa('select', view).forEach(el => { el.selectedIndex = 0; });
+      DOM.qsa('input[type="radio"], input[type="checkbox"]', view).forEach(el => { el.checked = false; });
+      DOM.qsa('.chip-btn--active', view).forEach(chip => chip.classList.remove('chip-btn--active'));
+      DOM.qsa('.chip-field__other', view).forEach(el => { el.value = ''; el.style.display = 'none'; });
+      DOM.qsa('.field-invalid', view).forEach(el => el.classList.remove('field-invalid'));
+    }
+
+    // 5. المرفقات المرفوعة (مرحلة 2) — قايمة العرض المحلية (object URLs).
+    const attachmentsList = DOM.qs('#attachments-list');
+    if (attachmentsList) {
+      DOM.qsa('.case-page-att-item', attachmentsList).forEach(row => row.remove());
+    }
+    const attachmentsEmptyState = DOM.qs('#attachments-empty-state');
+    if (attachmentsEmptyState) attachmentsEmptyState.style.display = 'flex';
+
+    // 6. حالات التحقق/التحذير المعلّقة من الجلسة القديمة.
+    warnedSteps.clear();
+    Object.keys(STEP_VALIDATORS).map(Number).forEach(step => hideValidationMsg(step));
+
+    // 7. رجّع نسبة الإكمال لصفر في كل التابات، والتاب النشط لأول مرحلة.
+    calculatePercentages();
+    activateStep(1, false);
   }
 
   // Floating Step Navigation Click Handlers

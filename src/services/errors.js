@@ -38,7 +38,7 @@ export const FALLBACK_MESSAGES = {
   UNAUTHORIZED: 'انتهت صلاحية الجلسة، يرجى تسجيل الدخول مرة أخرى',
   FORBIDDEN: 'ليس لديك صلاحية للقيام بهذا الإجراء',
   VALIDATION_ERROR: 'بيانات غير صحيحة',
-  NOT_FOUND: 'العنصر المطلوب غير موجود',
+
   RATE_LIMITED: 'عدد كبير من المحاولات، حاول لاحقًا',
   INTERNAL_ERROR: 'حدث خطأ في الخادم، حاول لاحقًا',
   INVALID_CREDENTIALS: 'البريد الإلكتروني أو كلمة المرور غير صحيحة',
@@ -52,7 +52,7 @@ export const FALLBACK_MESSAGES = {
   DELETE_CONFLICT: 'لا يمكن الحذف لوجود بيانات مرتبطة',
   CASE_NOT_FOUND: 'الحالة غير موجودة أو لا يمكنك الوصول إليها',
   DUPLICATE_NATIONAL_ID: 'يوجد حالة مسجّلة بهذا الرقم القومي بالفعل',
-  CONCURRENCY_CONFLICT: 'تم تعديل هذه البيانات من مستخدم آخر — يرجى إعادة التحميل والمحاولة مجددًا',
+  CONCURRENCY_CONFLICT: 'حصل تعارض أثناء الحفظ — حاول تاني',
   INVALID_STATUS_TRANSITION: 'هذا الإجراء غير متاح في الحالة الحالية للملف',
   OPINION_SLOT_LOCKED: 'تم اعتماد هذا الرأي بالفعل ولا يمكن تعديله',
   MISSING_WORKER_OPINION: 'لم يقم الأخصائي الاجتماعي بكتابة رأيه بعد',

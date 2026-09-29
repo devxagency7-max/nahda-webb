@@ -41,7 +41,9 @@
             maxlength="14" dir="ltr" style="text-align: right;">
         </div>
         <div class="input-error-msg" id="national-id-error" style="display: none; color: #ef4444; font-size: 12px; font-weight: 700; margin-top: 6px;">الرقم القومي غير صحيح</div>
-        <div class="input-success-msg" id="national-id-success" style="display: none; color: #0d9488; font-size: 12px; font-weight: 700; margin-top: 6px;">✓ تم استخراج (السن، المحافظة، النوع) تلقائياً</div>
+        <div class="input-error-msg" id="national-id-duplicate" style="display: none; color: #7f1d1d; font-size: 12px; font-weight: 700; margin-top: 6px;"></div>
+        <div class="input-success-msg" id="national-id-checking" style="display: none; color: #64748b; font-size: 12px; font-weight: 600; margin-top: 6px;">جارِ التحقق من الرقم القومي...</div>
+        <div class="input-success-msg" id="national-id-available" style="display: none; color: #0d9488; font-size: 12px; font-weight: 700; margin-top: 6px;">الرقم ده جديد ✅</div>
       </div>
 
       <div class="form-group">
@@ -160,7 +162,7 @@
           <div style="display: flex; align-items: center; gap: 10px;">
             <h2 class="glass-card__title">الجمعية والنطاق الجغرافي</h2>
           </div>
-          <p class="glass-card__subtitle">المركز والقرية، والجمعية المسؤولة عن متابعة الحالة</p>
+          <p class="glass-card__subtitle">المركز والقرية والجمعية المسؤولة عن متابعة الحالة، وعنوان سكن رب الأسرة بالتفصيل</p>
         </div>
       </div>
     </div>
@@ -214,105 +216,8 @@
           </svg>
         </div>
       </div>
-    </div>
-  </section>
 
-  <!-- كارت بيانات العنوان والتواجد السكني لرب الأسرة -->
-  <section class="glass-card" id="address-info-card" style="margin-top: 24px;">
-    <div class="glass-card__header">
-      <div class="glass-card__title-group">
-        <div class="glass-card__icon" style="background: rgba(245, 158, 11, 0.15); color: #d97706;">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-            <circle cx="12" cy="10" r="3"></circle>
-          </svg>
-        </div>
-        <div>
-          <h2 class="glass-card__title">بيانات العنوان والتواجد السكني</h2>
-          <p class="glass-card__subtitle">المركز، القرية، والعنوان التفصيلي لمحل سكن الأسرة</p>
-        </div>
-      </div>
-    </div>
-
-    <div class="form-grid form-grid--3-col">
-      <div class="form-group">
-        <label class="form-label" for="governorate"><span>المحافظة</span></label>
-        <div class="form-select-wrapper">
-          <select id="governorate" class="form-select">
-            <option value="" disabled>-- اختر المحافظة --</option>
-            <option value="القاهرة">القاهرة</option>
-            <option value="الإسكندرية">الإسكندرية</option>
-            <option value="بورسعيد">بورسعيد</option>
-            <option value="السويس">السويس</option>
-            <option value="دمياط">دمياط</option>
-            <option value="الدقهلية">الدقهلية</option>
-            <option value="الشرقية">الشرقية</option>
-            <option value="القليوبية">القليوبية</option>
-            <option value="كفر الشيخ">كفر الشيخ</option>
-            <option value="الغربية">الغربية</option>
-            <option value="المنوفية">المنوفية</option>
-            <option value="البحيرة">البحيرة</option>
-            <option value="الإسماعيلية">الإسماعيلية</option>
-            <option value="الجيزة">الجيزة</option>
-            <option value="بني سويف" selected>بني سويف</option>
-            <option value="الفيوم">الفيوم</option>
-            <option value="المنيا">المنيا</option>
-            <option value="أسيوط">أسيوط</option>
-            <option value="سوهاج">سوهاج</option>
-            <option value="قنا">قنا</option>
-            <option value="أسوان">أسوان</option>
-            <option value="الأقصر">الأقصر</option>
-            <option value="البحر الأحمر">البحر الأحمر</option>
-            <option value="الوادي الجديد">الوادي الجديد</option>
-            <option value="مطروح">مطروح</option>
-            <option value="شمال سيناء">شمال سيناء</option>
-            <option value="جنوب سيناء">جنوب سيناء</option>
-            <option value="خارج الجمهورية">خارج الجمهورية</option>
-          </select>
-          <svg class="select-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="6 9 12 15 18 9"></polyline>
-          </svg>
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label class="form-label" for="district">
-          <span>المركز / المدينة</span>
-        </label>
-        <div class="form-select-wrapper">
-          <select id="district" class="form-select">
-            <option value="" selected disabled>-- اختر المحافظة أو المركز --</option>
-            <option value="محافظة بني سويف">🏛️ محافظة بني سويف</option>
-            <optgroup label="مراكز ومدن المحافظة">
-              <option value="بني سويف">مدينة / مركز بني سويف</option>
-              <option value="الواسطى">مدينة / مركز الواسطى</option>
-              <option value="ناصر">مدينة / مركز ناصر</option>
-              <option value="إهناسيا">مدينة / مركز إهناسيا</option>
-              <option value="ببا">مدينة / مركز ببا</option>
-              <option value="سمسطا">مدينة / مركز سمسطا</option>
-              <option value="الفشن">مدينة / مركز الفشن</option>
-            </optgroup>
-          </select>
-          <svg class="select-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="6 9 12 15 18 9"></polyline>
-          </svg>
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label class="form-label" for="village">
-          <span>القرية / الوحدة المحلية</span>
-        </label>
-        <div class="form-select-wrapper">
-          <select id="village" class="form-select">
-            <option value="" selected disabled>-- اختر القرية من القائمة --</option>
-          </select>
-          <svg class="select-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="6 9 12 15 18 9"></polyline>
-          </svg>
-        </div>
-      </div>
-
+      <!-- العنوان بالتفصيل -->
       <div class="form-group form-group--full">
         <label class="form-label" for="address"><span>العنوان بالتفصيل</span></label>
         <div class="input-container">
@@ -350,7 +255,7 @@
       <div class="form-group">
         <label class="form-label" for="head-monthly-income"><span>الدخل الشهري لرب الأسرة (جنيه)</span></label>
         <div class="input-container">
-          <input type="number" id="head-monthly-income" class="form-input"
+          <input type="text" inputmode="decimal" data-numeric="decimal" id="head-monthly-income" class="form-input"
             placeholder="أدخل قيمة الدخل الشهري بالجنيه...">
         </div>
       </div>
@@ -366,7 +271,7 @@
       <div class="form-group" id="head-takaful-amount-group" style="display: none;">
         <label class="form-label" for="head-takaful-amount"><span>مبلغ تكافل وكرامة (جنيه)</span></label>
         <div class="input-container">
-          <input type="number" id="head-takaful-amount" class="form-input"
+          <input type="text" inputmode="decimal" data-numeric="decimal" id="head-takaful-amount" class="form-input"
             placeholder="أدخل مبلغ تكافل وكرامة بالجنيه...">
         </div>
       </div>
@@ -500,7 +405,7 @@
 
           <div class="form-group">
             <label class="form-label" for="new-member-age">السن الحالي</label>
-            <input type="number" id="new-member-age" class="form-input" placeholder="السن بالسنوات..." min="0"
+            <input type="text" inputmode="numeric" data-numeric="integer" id="new-member-age" class="form-input" placeholder="السن بالسنوات..." min="0"
               max="120">
           </div>
 
@@ -607,7 +512,12 @@
 
           <div class="form-group">
             <label class="form-label" for="new-member-income">الدخل الشهري (جنيه)</label>
-            <input type="number" id="new-member-income" class="form-input" placeholder="الدخل بالجنيه...">
+            <input type="text" inputmode="decimal" data-numeric="decimal" id="new-member-income" class="form-input" placeholder="الدخل بالجنيه...">
+          </div>
+
+          <div class="form-group form-group--full">
+            <label class="form-label" for="new-member-diseases">الأمراض</label>
+            <input type="text" id="new-member-diseases" class="form-input" placeholder="أدخل الأمراض إن وجدت...">
           </div>
 
           <div class="form-group form-group--full"
@@ -620,7 +530,7 @@
 
           <div class="form-group" id="new-member-takaful-amount-group" style="display: none;">
             <label class="form-label" for="new-member-takaful-amount"><span>مبلغ تكافل وكرامة (جنيه)</span></label>
-            <input type="number" id="new-member-takaful-amount" class="form-input" placeholder="أدخل مبلغ تكافل وكرامة بالجنيه...">
+            <input type="text" inputmode="decimal" data-numeric="decimal" id="new-member-takaful-amount" class="form-input" placeholder="أدخل مبلغ تكافل وكرامة بالجنيه...">
           </div>
 
           <div class="form-group form-group--full">

@@ -5,7 +5,9 @@
         <img src="assets/logo.png" alt="منظومة النهضة" class="sidebar__logo-img">
       </div>
       <div class="sidebar__title-wrapper">
-        <div class="sidebar__title">مؤسسة النهضة</div>
+        <div class="sidebar__title">مؤسسة نهضة</div>
+        <div class="sidebar__title">بني سويف</div>
+        <div class="sidebar__subtitle">المشهرة برقم 1079 لسنة 2009</div>
       </div>
     </div>
     <button class="sidebar__toggle" aria-label="طي الشريط الجانبي" title="طي الشريط الجانبي">
@@ -83,6 +85,18 @@
       </button>
     </div>
 
+    <!-- Accordion Item: فلترة الحالات حسب الجمعية والدعم (خاص بالمدير) -->
+    <div class="accordion-group" id="sidebar-case-support-filter-group" style="display: none;">
+      <button class="accordion-header" data-view-target="case-support-filter" id="nav-case-support-filter-link" type="button">
+        <div class="accordion-header__content">
+          <svg class="accordion-header__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+          </svg>
+          <span class="accordion-header__title">فلترة الحالات بالدعم</span>
+        </div>
+      </button>
+    </div>
+
     <!-- Accordion Item 3: إعدادات النظام -->
     <div class="accordion-group">
       <button class="accordion-header">
@@ -105,8 +119,21 @@
       </div>
     </div>
 
+    <!-- Partner Logos: shown just above the logout button -->
+    <div class="sidebar__partners" style="margin-top: auto;">
+      <div class="sidebar__partner">
+        <img src="assets/devx_logo.jpg" alt="DevX" class="sidebar__partner-logo">
+        <span class="sidebar__partner-name">DevX</span>
+      </div>
+      <span class="sidebar__partners-amp">&amp;</span>
+      <div class="sidebar__partner">
+        <img src="assets/delmon_logo.jpeg" alt="Delmon" class="sidebar__partner-logo sidebar__partner-logo--round">
+        <span class="sidebar__partner-name">Delmon</span>
+      </div>
+    </div>
+
     <!-- Accordion Item 4: تسجيل الخروج (Last Button in Sidebar) -->
-    <div class="accordion-group" style="margin-top: auto;">
+    <div class="accordion-group">
       <button class="accordion-header accordion-header--logout" data-view-target="login" id="nav-logout-link" title="تسجيل الخروج" aria-label="تسجيل الخروج" type="button">
         <div class="accordion-header__content">
           <svg class="accordion-header__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

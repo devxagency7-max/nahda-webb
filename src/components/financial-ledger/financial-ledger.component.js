@@ -36,6 +36,37 @@ function toMonthlyAmount(amount, frequency) {
   }
 }
 
+// initFinancialManager() بيتنادى مرة واحدة بس عند فتح التطبيق (مش بيتعاد
+// تشغيله لكل حالة جديدة)، فـ incomeItems/expenseItems بيفضلوا arrays محلية
+// جوه الـ closure بتاعته — مفيش طريقة توصلهم من برّه غير عن طريق callback
+// بيسجّله هنا، يستخدمه resetFinancialManager تحت لما نبدأ حالة جديدة.
+let _resetCallback = null;
+
+/**
+ * يرجّع بنود الدخل والمصروفات لحالتها الافتراضية (زي أول ما التطبيق فتح) —
+ * بيتنادى لما المستخدم يخلّص استمارة ويرجع للرئيسية استعدادًا لحالة جديدة،
+ * بدل ما يفضل شايل بيانات الحالة القديمة.
+ */
+export function resetFinancialManager() {
+  if (_resetCallback) _resetCallback();
+}
+
+let _loadCallback = null;
+
+/**
+ * يستبدل بنود الدخل/المصروفات اليدوية (غير التلقائية) بيإلي جايين من حالة
+ * محفوظة بيتم فتحها للتعديل — البنود التلقائية بتتحسب من جديد لوحدها (عن
+ * طريق syncAutoIncomeItems/syncLandRentExpenseItem) فمانلمسهاش هنا. بنود
+ * المصروفات الخمسة الثابتة (Locked) بتتحدّث بقيمها المحفوظة بدل القيم
+ * الافتراضية صفر.
+ * @param {Array} manualIncomeItems - بنود دخل يدوية {type, person, amount, frequency, notes}
+ * @param {Array} fixedExpenseAmounts - map من اسم الفئة الثابتة -> المبلغ المحفوظ
+ * @param {Array} manualExpenseItems - بنود مصروف يدوية إضافية غير الخمسة الثابتة
+ */
+export function loadFinancialManager(manualIncomeItems, fixedExpenseAmounts, manualExpenseItems) {
+  if (_loadCallback) _loadCallback(manualIncomeItems || [], fixedExpenseAmounts || {}, manualExpenseItems || []);
+}
+
 export function initFinancialManager() {
   const btnOpenIncome = DOM.qs('#btn-open-add-income');
   const btnCancelIncome = DOM.qs('#btn-cancel-add-income');
@@ -531,4 +562,38 @@ export function initFinancialManager() {
   // مزامنة بند "إيجار أراضي زراعية" مع خطوة 5، وعرض القائمة الافتراضية أول مرة.
   onWorkflowRecalc(syncLandRentExpenseItem);
   syncLandRentExpenseItem();
+
+  _resetCallback = () => {
+    incomeItems = [];
+    expenseItems = _defaultExpenseCategories.map(type => ({
+      type,
+      amount: 0,
+      frequency: 'شهري',
+      locked: true
+    }));
+    expandedTakaful.value = false;
+    renderIncomeList();
+    renderExpenseList();
+    recalculateBudget(false);
+  };
+
+  _loadCallback = (manualIncomeItems, fixedExpenseAmounts, manualExpenseItems) => {
+    // البنود التلقائية (دخل رب الأسرة، معاش، تكافل وكرامة، دخل/إيجار الأرض)
+    // بتتبني تاني من نفسها فور استدعاء syncAutoIncomeItems/syncLandRentExpenseItem
+    // (بيحصل أصلاً مع أي triggerWorkflowRecalc بعد ما نملى تاب 1/5) — هنا بس
+    // بنحط البنود اليدوية زي ما كانت متسجّلة على السيرفر.
+    incomeItems = [...manualIncomeItems];
+
+    expenseItems = _defaultExpenseCategories.map(type => ({
+      type,
+      amount: Number(fixedExpenseAmounts[type]) || 0,
+      frequency: 'شهري',
+      locked: true
+    }));
+    manualExpenseItems.forEach(item => expenseItems.push(item));
+
+    renderIncomeList();
+    renderExpenseList();
+    recalculateBudget(false);
+  };
 }

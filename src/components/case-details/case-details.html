@@ -5,16 +5,25 @@
     <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;">
       <div>
         <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
-          <span class="badge" style="background: rgba(37, 99, 235, 0.15); color: #2563eb; font-weight: 800; font-size: 14px;" id="case-detail-code">CASE-101</span>
-          <span class="dash-status-pill dash-status-pill--warning" id="case-detail-status-pill">🟡 قيد المراجعة</span>
+          <span class="badge" style="background: rgba(37, 99, 235, 0.15); color: #2563eb; font-weight: 800; font-size: 14px;" id="case-detail-code"></span>
+          <span class="dash-status-pill dash-status-pill--warning" id="case-detail-status-pill"></span>
         </div>
-        <h1 style="font-size: 24px; font-weight: 800; color: #000; margin: 0;" id="case-detail-name">أحمد محمود علي عبد الفتاح</h1>
-        <p style="font-size: var(--font-size-xs); color: var(--text-secondary); margin: 4px 0 0;" id="case-detail-subinfo">
-          الرقم القومي: 29805142200154 — جمعية النهضة للتنمية والتطوير (بني سويف — إبشنا)
+        <h1 style="font-size: 24px; font-weight: 800; color: #000; margin: 0;" id="case-detail-name"></h1>
+        <p style="font-size: var(--font-size-xs); color: var(--text-secondary); margin: 4px 0 0;" id="case-detail-subinfo"></p>
+        <p style="display: none; align-items: center; gap: 6px; font-size: 15px; font-weight: 800; color: #1d4ed8; margin: 8px 0 0;" id="case-detail-researcher">
+          <span>👤</span><span id="case-detail-researcher-name"></span>
         </p>
       </div>
 
       <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+        <button type="button" class="btn btn--secondary" id="btn-edit-case" style="font-weight: 700; display: inline-flex; align-items: center; gap: 8px;">
+          <span>✏️</span>
+          <span>تعديل بيانات الحالة</span>
+        </button>
+        <button type="button" class="btn btn--secondary" id="btn-case-timeline" style="font-weight: 700; display: inline-flex; align-items: center; gap: 8px;">
+          <span>📜</span>
+          <span id="btn-case-timeline-text">تاريخ الحالة</span>
+        </button>
         <button type="button" class="btn btn--primary" id="btn-export-case-pdf" style="font-weight: 700; display: inline-flex; align-items: center; gap: 8px;">
           <span>📥</span>
           <span id="btn-export-case-pdf-text">تحميل الحالة PDF</span>

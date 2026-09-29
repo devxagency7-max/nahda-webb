@@ -7,47 +7,76 @@
    -------------------------------------------------------------------------- */
 import { HttpClient } from './http.js';
 
+// Unfiltered and called independently from several screens (charities,
+// dashboard, workflow, state-data-management, employees) — cache per tab
+// session so opening/switching between them doesn't re-fire GET /locations
+// each time. Cleared on any mutation below.
+let locationsCache = null;
+
 export const LocationsService = {
   /**
+   * @param {boolean} [forceRefresh]
    * @returns {Promise<Array<{id:string,name:string,villages:Array<{id:string,name:string}>}>>}
    *   Centers ordered by name, each with its villages nested (already scoped
    *   per-center — prefer this over GET /dropdowns/district|village, which
    *   returns a flat, center-agnostic list — see §16/§22 frontend notes).
    */
-  async list() {
-    return HttpClient.get('/locations');
+  async list(forceRefresh = false) {
+    if (!forceRefresh && locationsCache) {
+      return locationsCache;
+    }
+    locationsCache = await HttpClient.get('/locations');
+    return locationsCache;
+  },
+
+  clearCache() {
+    locationsCache = null;
   },
 
   /** @returns {Promise<string>} new center's id */
   async createCenter(name) {
-    return HttpClient.post('/locations/centers', { body: { name } });
+    const id = await HttpClient.post('/locations/centers', { body: { name } });
+    LocationsService.clearCache();
+    return id;
   },
 
   async renameCenter(id, name) {
-    return HttpClient.put(`/locations/centers/${id}`, { body: { name } });
+    const result = await HttpClient.put(`/locations/centers/${id}`, { body: { name } });
+    LocationsService.clearCache();
+    return result;
   },
 
   /** @throws {ApiError} DELETE_CONFLICT if the center still has villages attached */
   async deleteCenter(id) {
-    return HttpClient.delete(`/locations/centers/${id}`);
+    const result = await HttpClient.delete(`/locations/centers/${id}`);
+    LocationsService.clearCache();
+    return result;
   },
 
   /** @returns {Promise<string>} new village's id */
   async createVillage(centerId, name) {
-    return HttpClient.post('/locations/villages', { body: { centerId, name } });
+    const id = await HttpClient.post('/locations/villages', { body: { centerId, name } });
+    LocationsService.clearCache();
+    return id;
   },
 
   /** Rename only — a village cannot be moved to another center via this route. */
   async renameVillage(id, name) {
-    return HttpClient.put(`/locations/villages/${id}`, { body: { name } });
+    const result = await HttpClient.put(`/locations/villages/${id}`, { body: { name } });
+    LocationsService.clearCache();
+    return result;
   },
 
   async deleteVillage(id) {
-    return HttpClient.delete(`/locations/villages/${id}`);
+    const result = await HttpClient.delete(`/locations/villages/${id}`);
+    LocationsService.clearCache();
+    return result;
   },
 
   /** Destructive & irreversible server-side — always confirm in the UI first. */
   async reset() {
-    return HttpClient.post('/locations/reset');
+    const result = await HttpClient.post('/locations/reset');
+    LocationsService.clearCache();
+    return result;
   }
 };

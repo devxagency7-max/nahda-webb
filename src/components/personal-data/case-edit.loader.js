@@ -1,0 +1,406 @@
+/* --------------------------------------------------------------------------
+   CASE EDIT LOADER — تحميل حالة محفوظة سابقًا في معالج البيانات الشخصية
+   عشان تتعدّل، بدل ما يبدأ المستخدم حالة جديدة من الصفر.
+
+   الاستخدام: يتنادى من زرار "تعديل بيانات الحالة" في case-details.component.js.
+   بيعمل GET /cases/{id} (+ family-members/support/attachments على التوازي)،
+   يملى كل التابات التمنية من الرد، ويهيّئ store.currentCase بحيث أي "التالي"
+   بعد كده ياخد مسار PUT (تحديث) مش POST (إنشاء).
+
+   قيد مهم من الباك إند (اتأكد منه صراحة): PUT /cases/{id}/beneficiary بيعمل
+   استبدال كامل — أي حقل يتبعت null أو مايتبعتش بيتمسح فعليًا. فلازم نملى كل
+   حقول تاب 1 (بما فيها اللي المستخدم مش ناوي يلمسها) قبل أي حفظ، وده بالظبط
+   اللي الدالة دي بتعمله.
+   -------------------------------------------------------------------------- */
+import { DOM } from '../../utils/dom.js';
+import { store } from '../../state/store.js';
+import { showToast } from '../../utils/toast.js';
+import { triggerWorkflowRecalc } from '../../core/state.js';
+import { CasesService } from '../../services/cases.service.js';
+import { AttachmentsService } from '../../services/attachments.service.js';
+import { messageFromError } from '../../services/errors.js';
+import { restoreAgricultureManager } from '../agriculture/agriculture.component.js';
+import { loadFamilyMembersManager } from '../family-members/family-members.component.js';
+import { loadFinancialManager } from '../financial-ledger/financial-ledger.component.js';
+
+function setVal(id, value) {
+  const el = DOM.qs(`#${id}`);
+  if (el && value != null) el.value = value;
+}
+
+function setChecked(id, checked) {
+  const el = DOM.qs(`#${id}`);
+  if (el) el.checked = Boolean(checked);
+}
+
+/**
+ * يحط قيمة في <select> — لو القيمة مش من ضمن الـ <option>s الثابتة، بيفعّل
+ * سلوك "أخرى" الحر (other-dropdowns.component.js) بدل ما يسيب الـ select فاضي
+ * بصمت (السلوك الافتراضي للمتصفح لو select.value اتحط بقيمة مش موجودة).
+ */
+function setSelectValue(id, value) {
+  const el = DOM.qs(`#${id}`);
+  if (!el || value == null || value === '') return;
+
+  const matchingOption = [...el.options].find(o => o.value === value);
+  if (matchingOption) {
+    el.value = value;
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+    return;
+  }
+
+  // مفيش خيار مطابق — فعّل "أخرى" بالقيمة الحرة دي (لو الحقل بيدعمها).
+  const otherOpt = [...el.options].find(o => o.dataset.isOther === 'true' || o.value === 'أخرى');
+  if (otherOpt) {
+    otherOpt.value = value;
+    otherOpt.textContent = `أخرى: ${value}`;
+    el.value = value;
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+}
+
+/** يفعّل شيب واحد (زي ما لو المستخدم داس عليه) — بيعيد استخدام منطق chip-field.component.js كامل (العدّاد، "أخرى"، إلخ) بدل ما نكرره هنا. */
+function activateChip(fieldSelector, value) {
+  if (!value) return;
+  const field = DOM.qs(fieldSelector);
+  if (!field) return;
+  const chip = [...DOM.qsa('.chip-btn', field)].find(c => c.dataset.value === value);
+  if (chip && !chip.classList.contains('chip-btn--active')) {
+    chip.click();
+  } else if (!chip) {
+    // قيمة مش من ضمن الخيارات الثابتة — فعّل "أخرى" وحط القيمة فيه.
+    const otherChip = [...DOM.qsa('.chip-btn', field)].find(c => c.dataset.value === 'أخرى');
+    if (otherChip) {
+      if (!otherChip.classList.contains('chip-btn--active')) otherChip.click();
+      const otherInput = field.querySelector('.chip-field__other');
+      if (otherInput) {
+        otherInput.value = value;
+        otherInput.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+    }
+  }
+}
+
+/** يفعّل أكتر من شيب في نفس الحقل (للحقول اللي بتسمح باختيار متعدد فعليًا، زي المواشي). */
+function activateChips(fieldSelector, values) {
+  (values || []).forEach(v => activateChip(fieldSelector, v));
+}
+
+/** id -> اسم (المركز/القرية) عن طريق store.locationIds، نفس اللي case-details.component.js بيستخدمها. */
+function resolveLocationNames(centerId, villageId) {
+  const ids = store.locationIds || { centers: {}, villages: {} };
+  const centerName = Object.keys(ids.centers || {}).find(name => ids.centers[name] === centerId);
+  const villagesInCenter = (centerName && ids.villages[centerName]) || {};
+  const villageName = Object.keys(villagesInCenter).find(name => villagesInCenter[name] === villageId);
+  return { centerName, villageName };
+}
+
+/* ---------------------------- تاب 1 — البيانات الأساسية ---------------------------- */
+
+function fillStep1(detail) {
+  const b = detail.beneficiary || {};
+
+  setVal('case-name', b.fullName);
+  setVal('national-id', b.nationalId);
+  // current-age/gender حقول للقراءة بس ومشتقة من الرقم القومي — دوس على
+  // الرقم القومي هيولّد استخراجها تلقائيًا (نفس مسار الكتابة اليدوية) عن
+  // طريق حدث input اللي بيسمعه workflow.component.js.
+  const nidInput = DOM.qs('#national-id');
+  if (nidInput) nidInput.dispatchEvent(new Event('input', { bubbles: true }));
+
+  setSelectValue('religion', b.religion);
+  // maritalStatus وheadRelation بيتقروا من نفس حقل #head-relation عند الحفظ
+  // (collectBeneficiaryPayload) — أيهما موجود بيملي نفس الحقل.
+  setSelectValue('head-relation', b.headRelation || b.maritalStatus);
+  setSelectValue('education-level', b.education);
+  setVal('phone1', b.phonePrimary);
+  setVal('phone2', b.phoneSecondary);
+  setVal('address', b.address);
+  setVal('job-title', b.job);
+  setVal('head-monthly-income', b.monthlyIncome);
+  setChecked('head-takaful-karama', b.takafulBeneficiary);
+  const takafulGroup = DOM.qs('#head-takaful-amount-group');
+  if (takafulGroup) takafulGroup.style.display = b.takafulBeneficiary ? 'block' : 'none';
+  setVal('head-takaful-amount', b.takafulAmount);
+  setSelectValue('work-type', b.employmentStatus);
+
+  // المركز/القرية: الـ <select>s دي بتتعامل بالاسم مش بالـ id (location-
+  // cascade.component.js)، فلازم نحوّل id -> name الأول.
+  const { centerName, villageName } = resolveLocationNames(b.centerId, b.villageId);
+  if (centerName) {
+    setSelectValue('referral-district-select', centerName);
+    // تفعيل الـ cascade يدويًا عشان قايمة القرى تتحدّث قبل ما نحط قيمتها.
+    const districtSelect = DOM.qs('#referral-district-select');
+    if (districtSelect) districtSelect.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+  if (villageName) {
+    setSelectValue('referral-village-select', villageName);
+  }
+
+  triggerWorkflowRecalc();
+}
+
+/* ---------------------------- تاب 2 — المرفقات ---------------------------- */
+
+/**
+ * يمسح مرفق حقيقي من حالة موجودة — DELETE /api/v1/attachments/{id} (موثّق
+ * وشغال فعليًا، اتأكد من التوثيق). كان الصف بيتعرض للقراءة بس بدون زرار حذف؛
+ * ده مش قيد من الباك إند، كان مجرد وصلة ناقصة عندنا في الفرونت إند.
+ */
+async function removeExistingAttachment(row, item) {
+  const delBtn = row.querySelector('.btn-delete-existing-att');
+  if (delBtn) delBtn.disabled = true;
+  try {
+    await AttachmentsService.remove(item.id);
+    row.remove();
+    const listEl = DOM.qs('#attachments-list');
+    const emptyState = DOM.qs('#attachments-empty-state');
+    if (listEl && emptyState) {
+      emptyState.style.display = DOM.qsa('.case-page-att-item', listEl).length === 0 ? 'flex' : 'none';
+    }
+    showToast(`تم حذف المرفق "${item.fileName || ''}"`, 'success');
+    triggerWorkflowRecalc();
+  } catch (err) {
+    if (delBtn) delBtn.disabled = false;
+    showToast(`تعذّر حذف المرفق — ${messageFromError(err)}`, 'error');
+  }
+}
+
+function fillStep2(attachments) {
+  const listEl = DOM.qs('#attachments-list');
+  const emptyState = DOM.qs('#attachments-empty-state');
+  if (!listEl) return;
+
+  DOM.qsa('.case-page-att-item', listEl).forEach(row => row.remove());
+
+  const items = (attachments && attachments.items) || [];
+  if (emptyState) emptyState.style.display = items.length === 0 ? 'flex' : 'none';
+
+  items.forEach(item => {
+    const row = DOM.createElement('div', {
+      className: 'case-page-att-item',
+      dataset: { attId: item.id }
+    });
+
+    const info = DOM.createElement('span', {}, null);
+    info.innerHTML = `📎 <strong>${DOM.escapeHTML(item.fileName || '')}</strong>` +
+      (item.documentType ? ` — ${DOM.escapeHTML(item.documentType)}` : '');
+
+    const actions = DOM.createElement('span', { style: { display: 'flex', alignItems: 'center', gap: '10px' } });
+
+    const delBtn = DOM.createElement('button', {
+      type: 'button',
+      className: 'btn-in-field-reset btn-delete-existing-att',
+      title: 'حذف المرفق',
+      style: { color: '#ef4444' }
+    });
+    delBtn.innerHTML = `
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="3 6 5 6 21 6"></polyline>
+        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+      </svg>
+    `;
+    delBtn.addEventListener('click', () => removeExistingAttachment(row, item));
+    actions.appendChild(delBtn);
+
+    row.appendChild(info);
+    row.appendChild(actions);
+    listEl.appendChild(row);
+  });
+
+  triggerWorkflowRecalc();
+}
+
+/* ---------------------------- تاب 3 — السكن ---------------------------- */
+
+function fillStep3(housing) {
+  const h = housing || {};
+  setVal('housing-description', h.description);
+  activateChip('.chip-field[data-field="housingType"]', h.ownership);
+  activateChip('.chip-field[data-field="walls"]', h.walls);
+  activateChip('.chip-field[data-field="roof"]', h.roof);
+  activateChip('.chip-field[data-field="floor"]', h.floor);
+  activateChip('.chip-field[data-field="entrance"]', h.entrance);
+  activateChip('.chip-field[data-field="bathroomCondition"]', h.bathroomCondition);
+  setVal('rooms-count', h.roomsCount);
+  triggerWorkflowRecalc();
+}
+
+/* ---------------------------- تاب 4 — المرافق والتجهيزات ---------------------------- */
+
+function fillStep4(utilities) {
+  const ut = utilities || {};
+  activateChip('.chip-field[data-field="electricity"]', ut.electricity);
+  activateChip('.chip-field[data-field="waterMeter"]', ut.water);
+  activateChip('.chip-field[data-field="waterMotor"]', ut.waterMotor ? 'يوجد' : 'لا يوجد');
+  activateChip('.chip-field[data-field="transportation"]', ut.transport);
+  if (ut.internet) activateChip('.chip-field[data-field="internet"]', 'يوجد');
+
+  (ut.appliances || []).forEach(a => {
+    const value = a.isPresent ? (a.details || 'يوجد') : 'لا يوجد';
+    activateChip(`.chip-field[data-field="${a.applianceKey}"]`, value);
+  });
+
+  triggerWorkflowRecalc();
+}
+
+/* ---------------------------- تاب 5 — الزراعة ---------------------------- */
+
+function fillStep5(agriculture) {
+  const ag = agriculture || {};
+  let livestockTypes = [];
+  try {
+    livestockTypes = ag.selectedLivestock || (ag.selectedLivestockJson ? JSON.parse(ag.selectedLivestockJson) : []);
+  } catch {
+    livestockTypes = [];
+  }
+
+  store.setAgriculture({
+    hasLand: ag.hasLand || 'unanswered',
+    landType: ag.landType || '',
+    area: ag.landAreaFeddan != null ? String(ag.landAreaFeddan) : '',
+    rentAmount: ag.landRentAmount != null ? String(ag.landRentAmount) : '',
+    annualIncome: ag.annualLandIncome != null ? String(ag.annualLandIncome) : '',
+    hasLivestock: ag.hasLivestock || 'unanswered',
+    livestockTypes,
+    livestockOther: ag.livestockOther || '',
+    livestockDetails: ag.livestockDetails || '',
+    notes: ag.notes || ''
+  });
+  // agriculture.component.js بيقرا store.agriculture بس وقت init — لازم
+  // نستدعي الاستعادة يدويًا هنا عشان الفورم يعرض القيم دي فعليًا.
+  restoreAgricultureManager();
+}
+
+/* ---------------------------- تاب 6 — الدخل والمصروفات ---------------------------- */
+
+const FIXED_EXPENSE_LABELS = new Set([
+  'الأكل والشرب', 'المصروفات الدراسية', 'الكهرباء', 'المياه', 'الغاز', 'الإيجار', 'القسط'
+]);
+
+function fillStep6(financial) {
+  const fin = financial || {};
+  const incomeItems = fin.incomeItems || [];
+  const expenseItems = fin.expenseItems || [];
+
+  // البنود التلقائية (isAuto) بتتحسب من جديد لوحدها من تاب 1/5 — هنا بنحتفظ
+  // بس بالبنود اليدوية اللي المستخدم ضافها بنفسه.
+  const manualIncomeItems = incomeItems
+    .filter(i => !i.isAuto)
+    .map(i => ({ type: i.label, person: '', amount: Number(i.amount) || 0, frequency: i.period || 'شهري', notes: '' }));
+
+  const fixedExpenseAmounts = {};
+  const manualExpenseItems = [];
+  expenseItems.forEach(i => {
+    if (FIXED_EXPENSE_LABELS.has(i.label) && !i.isAuto) {
+      fixedExpenseAmounts[i.label] = Number(i.amount) || 0;
+    } else if (!i.isAuto) {
+      manualExpenseItems.push({ type: i.label, amount: Number(i.amount) || 0, frequency: i.period || 'شهري', notes: '' });
+    }
+  });
+
+  loadFinancialManager(manualIncomeItems, fixedExpenseAmounts, manualExpenseItems);
+}
+
+/* ---------------------------- تاب 7 — الدعم ---------------------------- */
+
+function fillStep7(items) {
+  // يقبل شكلين: احتياجات جديدة (needType/category) أو دعم قديم من
+  // حالات اتسجّلت قبل التحويل لـ assessed-needs (supportType/supportCategory).
+  (items || []).forEach(item => {
+    const needType = item.needType ?? item.supportType;
+    const category = item.category ?? item.supportCategory;
+    const tile = [...DOM.qsa('.support-type-tile')].find(t => t.dataset.supportType === needType);
+    if (!tile) return;
+    const checkbox = tile.querySelector('.support-type-checkbox');
+    if (checkbox && !checkbox.checked) checkbox.click();
+    if (category) {
+      const subChip = [...DOM.qsa('.support-type-tile__subs .chip-btn', tile)].find(c => c.dataset.value === category);
+      if (subChip && !subChip.classList.contains('chip-btn--active')) subChip.click();
+    }
+  });
+  triggerWorkflowRecalc();
+}
+
+/* ---------------------------- أفراد الأسرة ---------------------------- */
+
+function mapMembersFromApi(members) {
+  return (members || []).map(m => ({
+    name: m.name || '',
+    relation: m.relation || '',
+    idNum: m.nationalId || '',
+    age: m.computedCurrentAge != null ? String(m.computedCurrentAge) : (m.age != null ? String(m.age) : ''),
+    gender: m.gender || '',
+    religion: '',
+    job: m.job || 'غير محدد',
+    income: m.monthlyIncome != null ? String(m.monthlyIncome) : '',
+    notes: m.notes || '',
+    diseases: m.diseases || '',
+    isStudent: String(Boolean(m.isStudent)),
+    stage: m.educationStage || '',
+    grade: m.grade || '',
+    university: m.university || '',
+    qualification: m.isStudent ? '' : (m.education || ''),
+    takafulKarama: String(Boolean(m.takafulBeneficiary)),
+    takafulKaramaAmount: m.takafulAmount != null ? String(m.takafulAmount) : ''
+  }));
+}
+
+/* ---------------------------- نقطة الدخول ---------------------------- */
+
+/**
+ * يحمّل حالة موجودة كاملة في معالج البيانات الشخصية للتعديل.
+ * @param {string} caseId
+ * @returns {Promise<boolean>} true لو نجح التحميل
+ */
+export async function loadCaseIntoForm(caseId) {
+  try {
+    const [detail, familyRes, supportRes, attachmentsRes] = await Promise.all([
+      CasesService.getById(caseId),
+      CasesService.getFamilyMembers(caseId).catch(() => ({ members: [] })),
+      CasesService.getSupport(caseId).catch(() => ({ recommendations: [] })),
+      AttachmentsService.listForCase(caseId).catch(() => ({ items: [] }))
+    ]);
+
+    // نفس عداد النسخة المشترك على مستوى الحالة كلها (rowVersion) بيتستخدم
+    // لكل قسم قايمة (utilities/financial/support) — راجع ملحوظة caseRowVersion
+    // في personal-data.api.js. الأقسام اللي عندها rowVersion خاص بيها
+    // (housing/agriculture) بتتخزن بنفس القيمة كمان لنفس السبب.
+    store.setCurrentCase({
+      id: detail.id,
+      caseNumber: detail.caseNumber,
+      status: detail.status,
+      nationalId: detail.beneficiary?.nationalId,
+      // بيميّز وضع "تعديل حالة موجودة" عن "إنشاء حالة جديدة" — workflow.component.js
+      // بيستخدمها في نهاية الاستمارة عشان يقرر يرجع لصفحة تفاصيل الحالة
+      // (تعديل) بدل الرئيسية مع مسح الفورم (إنشاء).
+      isEditMode: true,
+      sectionVersions: {
+        beneficiary: detail.beneficiary?.rowVersion,
+        housing: detail.housing?.rowVersion,
+        agriculture: detail.agriculture?.rowVersion,
+        caseRowVersion: detail.rowVersion
+      }
+    });
+
+    fillStep1(detail);
+    fillStep2(attachmentsRes);
+    fillStep3(detail.housing);
+    fillStep4(detail.utilities);
+    fillStep5(detail.agriculture);
+    loadFamilyMembersManager(mapMembersFromApi(familyRes?.members));
+    fillStep6(detail.financial);
+    // حالات قديمة اتسجّلت قبل ما التاب ده يتحوّل لـ assessed-needs لسه
+    // محتفظة باختياراتها تحت support-recommendations (النموذج القديم) —
+    // بنعرض الاحتياجات الجديدة لو موجودة، ولو الحالة لسه ما اتحفظتش
+    // بالشكل الجديد بنرجع نقرا من الدعم القديم عشان الـ checkboxes متفضلش فاضية.
+    const legacyRecommendations = supportRes?.recommendations || supportRes?.supportRecommendations || [];
+    fillStep7(detail.assessedNeeds?.needs?.length ? detail.assessedNeeds.needs : legacyRecommendations);
+
+    triggerWorkflowRecalc();
+    return true;
+  } catch (err) {
+    showToast(`تعذّر تحميل بيانات الحالة للتعديل — ${messageFromError(err)}`, 'error');
+    return false;
+  }
+}

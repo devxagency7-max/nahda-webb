@@ -29,8 +29,8 @@
 }
 
 .sidebar__header {
-  height: 80px;
-  padding: 0 20px;
+  min-height: 80px;
+  padding: 12px 20px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -74,9 +74,12 @@
 }
 
 .sidebar__subtitle {
-  font-size: var(--font-size-xs);
-  color: #334155;
-  font-weight: 700;
+  margin-top: 4px;
+  font-size: var(--font-size-sm);
+  line-height: 1.4;
+  color: #0f172a;
+  font-weight: 800;
+  white-space: normal;
 }
 
 .sidebar__toggle {
@@ -364,8 +367,55 @@
 .sidebar--collapsed .accordion-header__title,
 .sidebar--collapsed .accordion-header__arrow,
 .sidebar--collapsed .accordion-body,
+.sidebar--collapsed .sidebar__partners,
 .sidebar--collapsed .user-info {
   display: none;
+}
+
+/* --------------------------------------------------------------------------
+   SIDEBAR PARTNER LOGOS (DevX & Delmon)
+   -------------------------------------------------------------------------- */
+.sidebar__partners {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+
+.sidebar__partner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.sidebar__partner-logo {
+  height: 32px;
+  width: auto;
+  max-width: 64px;
+  object-fit: contain;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.sidebar__partner-logo--round {
+  border-radius: 50%;
+}
+
+.sidebar__partner-name {
+  font-size: 10px;
+  font-weight: 700;
+  color: #334155;
+  white-space: nowrap;
+}
+
+.sidebar__partners-amp {
+  font-size: 15px;
+  font-weight: 800;
+  color: #64748b;
 }
 
 .sidebar--collapsed .sidebar__header,

@@ -152,12 +152,8 @@ function kpiSpecsFromStats(stats) {
   // Data entry (and any unrecognised role): their own intake work
   return [
     { title: 'حالات أدخلتها', value: stats.createdByMe ?? 0, icon: 'file', tone: 'blue',
-      target: 'all', hint: 'الحالات التي سجّلتها بنفسك' },
+      target: 'mine', hint: 'الحالات التي سجّلتها بنفسك' },
     totalCasesCard(stats.totalCases ?? 0),
-    { title: 'ناقصة المستندات', value: stats.missingDocuments ?? 0, icon: 'alert', tone: 'amber',
-      target: 'all', hint: 'حالات بها مرفقات غير مستوفاة' },
-    { title: 'قيد المراجعة', value: stats.pendingReview ?? 0, icon: 'clock', tone: 'amber',
-      target: 'pending', hint: 'عرض الحالات قيد المراجعة' },
     { title: 'الجمعيات المعتمدة', value: stats.approvedCharities ?? 0, icon: 'building', tone: 'neutral' }
   ];
 }

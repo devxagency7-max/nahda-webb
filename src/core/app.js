@@ -26,7 +26,9 @@ import { initProfileComponent } from '../components/profile/profile.component.js
 import { initAllCasesComponent } from '../components/all-cases/all-cases.component.js';
 import { initCaseDetailsComponent } from '../components/case-details/case-details.component.js';
 import { initReportsComponent } from '../components/reports/reports.component.js';
+import { initCaseSupportFilterComponent } from '../components/case-support-filter/case-support-filter.component.js';
 import { Lifecycle } from './lifecycle.js';
+import { initNumericInputNormalization } from '../utils/numeric-inputs.js';
 
 export function bootstrapApp() {
   document.addEventListener('DOMContentLoaded', async () => {
@@ -74,6 +76,8 @@ export function bootstrapApp() {
     initAllCasesComponent();
     initCaseDetailsComponent();
     initReportsComponent();
+    initCaseSupportFilterComponent();
+    initNumericInputNormalization();
   });
 
   // Handle unload lifecycle cleanup

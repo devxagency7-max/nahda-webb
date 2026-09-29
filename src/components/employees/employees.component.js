@@ -960,7 +960,14 @@ export function initEmployeesManager() {
     if (btnExport) btnExport.disabled = true;
   }
 
-  // Initial load
-  ensureLocationsLoaded().then(populateCenterOptions);
-  loadEmployees();
+  // Initial load — بس لو المستخدم أصلاً عنده صلاحية manage_employees. الكومبوننت
+  // ده بيتهيّأ مرة واحدة لكل المستخدمين عند فتح التطبيق (initEmployeesManager
+  // في app.js)، مش بس لما حد يفتح صفحة "إدارة الموظفين" فعليًا — فكان
+  // loadEmployees() بيتنفّذ ويطلق GET /employees حتى لو المستخدم مش manager،
+  // والسيرفر برفضه 403 في كل مرة refresh من غير أي داعي (الصفحة أصلًا مخفية
+  // عن غير المديرين، فمفيش حاجة تتعرض أساسًا).
+  if (canManage()) {
+    ensureLocationsLoaded().then(populateCenterOptions);
+    loadEmployees();
+  }
 }

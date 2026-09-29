@@ -7,21 +7,46 @@
 import { DOM } from '../../utils/dom.js';
 import { showToast } from '../../utils/toast.js';
 import { store } from '../../state/store.js';
-import { canWriteOpinion, isRole, ROLES } from '../../core/permissions.js';
+import { canWriteOpinion, isRole, ROLES, ROLE_LABELS, can, PERMISSIONS } from '../../core/permissions.js';
+import { loadCaseIntoForm } from '../personal-data/case-edit.loader.js';
 import { EventBus, EVENTS } from '../../core/event-bus.js';
 import { CasesService } from '../../services/cases.service.js';
 import { AttachmentsService } from '../../services/attachments.service.js';
 import { DropdownsService } from '../../services/dropdowns.service.js';
 import { messageFromError } from '../../services/errors.js';
-import { formatLocalDate } from '../../utils/date.js';
+import { formatLocalDate, formatCairoDateTime } from '../../utils/date.js';
 import { exportCaseToPdf } from '../../services/case-pdf.service.js';
+import { StorageService, STORAGE_KEYS } from '../../services/storage.js';
 
 let currentActiveCase = null;
+
+// آخر «تاريخ حالة» اتجاب — { caseId, data }. بيتمسح لما حالة تانية تتفتح
+// أو بعد أي إجراء سير عمل، عشان النافذة ماتعرضش تاريخ قديم.
+let timelineCache = null;
 
 export function initCaseDetailsComponent() {
   // Bind globally for page router / navigation hooks
   window.openCaseDetailsPage = openCaseDetailsPage;
   bindExportPdfButton();
+  bindEditButton();
+  bindTimelineButton();
+
+  // استعادة نفس صفحة تفاصيل الحالة بعد refresh (لو كانت آخر صفحة مفتوحة)
+  // بدل ما تفضل الحقول فاضية أو — قبل التصليح ده — تعرض بيانات placeholder
+  // ثابتة (CASE-101 / أحمد محمود...) كانت متسجّلة جوه ملف الـ HTML نفسه من
+  // ساعة التصميم، ومحدش كان بيشيلها لأن الصفحة أصلاً معندهاش أي إعادة تحميل
+  // تلقائي عند فتح التطبيق. دلوقتي بنجيب نفس الحالة الحقيقية اللي المستخدم
+  // كان واقف عندها (GET /cases/{id} طازة، مش أي كاش) لو فيه id محفوظ.
+  if (store.currentView === 'case-details') {
+    const lastId = StorageService.get(STORAGE_KEYS.LAST_VIEWED_CASE_ID, null);
+    if (lastId) {
+      openCaseDetailsPage(lastId);
+    } else {
+      // مفيش حالة محفوظة نرجعلها — مانسيبش الصفحة فاضية بلا معنى.
+      store.setCurrentView('dashboard', true);
+      if (window.switchView) window.switchView('dashboard', false);
+    }
+  }
 }
 
 /** Merges any in-flight unsaved user edits currently on the screen into the case data */
@@ -60,6 +85,37 @@ function captureLiveCaseEdits(baseCase) {
   }
 
   return c;
+}
+
+function bindEditButton() {
+  const btn = DOM.qs('#btn-edit-case');
+  if (!btn) return;
+
+  if (!can(PERMISSIONS.EDIT_CASE)) {
+    btn.style.display = 'none';
+    return;
+  }
+
+  btn.addEventListener('click', async () => {
+    if (!currentActiveCase || !currentActiveCase.rawId) {
+      showToast('لا توجد بيانات حالة للتعديل');
+      return;
+    }
+    if (btn.disabled) return;
+
+    btn.disabled = true;
+    const originalHtml = btn.innerHTML;
+    btn.innerHTML = '<span>⏳ جاري تحميل بيانات الحالة...</span>';
+
+    const loaded = await loadCaseIntoForm(currentActiveCase.rawId);
+
+    btn.disabled = false;
+    btn.innerHTML = originalHtml;
+
+    if (loaded && window.switchView) {
+      window.switchView('personal-data');
+    }
+  });
 }
 
 function bindExportPdfButton() {
@@ -122,22 +178,31 @@ function financialSourceLabel(source) {
   return undefined;
 }
 
-/** Worker/reviewer/manager opinion -> the {decision,notes,author,date,submitted} shape the opinion cards expect, or null if not yet recorded. */
+/**
+ * Worker/reviewer/manager opinion -> the {decision,notes,author,date,submitted}
+ * shape the opinion cards expect, or null if not yet recorded.
+ * `displayDate` (backend-confirmed) is the date to *show*: the original
+ * search/registration date for legacy-imported opinions, the real opinion
+ * date for opinions recorded on the system. Falls back to
+ * updatedAtUtc/createdAtUtc only for older responses that don't send it yet.
+ */
 function mapOpinion(o) {
   if (!o) return null;
   return {
     decision: o.decision,
     notes: o.notes || o.detailedReport || o.returnReason || '',
     author: o.authorName,
-    date: (o.updatedAtUtc || o.createdAtUtc || '').slice(0, 10),
-    submitted: o.isSubmitted
+    date: (o.displayDate || o.updatedAtUtc || o.createdAtUtc || '').slice(0, 10),
+    submitted: o.isSubmitted,
+    isLegacyImport: o.isLegacyImport
   };
 }
 
 /**
  * Maps the real API's case detail + family-members + support + attachments
  * responses into the render shape this component's cards expect. As of the
- * latest backend update, `GET /cases/{id}` embeds housing, utilities,
+ * latest backend update, `GET /cases/{id}` (and `GET /cases/{id}/report`'s
+ * `data.case`, which is the exact same shape) embeds housing, utilities,
  * agriculture, financial and the three workflow opinions directly — no
  * separate calls needed for those.
  * @param {Map<string,string>} applianceLabels applianceKey -> Arabic label,
@@ -145,15 +210,20 @@ function mapOpinion(o) {
  *   a convention of ~9 known keys, not a server-enforced enum, and is the
  *   single source for appliances shown on both the housing and utilities
  *   cards — there is no separate housing-appliances list).
+ * @param {Object} [legacyRecord] `data.legacyRecord` from `GET /cases/{id}/report`
+ *   — the original Excel row's column/value pairs, only when `available` is true.
  */
-function normalizeApiCase(detail, familyRes, supportRes, attachmentsRes, applianceLabels) {
+function normalizeApiCase(detail, familyRes, supportRes, attachmentsRes, applianceLabels, legacyRecord) {
   const b = detail.beneficiary || {};
   const { centerName, villageName } = resolveLocationNames(b.centerId, b.villageId);
   const statusMeta = STATUS_META[detail.status] || { label: detail.status || '—', cls: 'dash-status-pill--warning' };
   const members = (familyRes && familyRes.members) || [];
   const recommendations = (supportRes && (supportRes.recommendations || supportRes.supportRecommendations)) || [];
   const approved = (supportRes && (supportRes.approved || supportRes.approvedSupport)) || null;
+  const supportHistory = (supportRes && supportRes.history) || detail.support?.history || [];
   const attachments = (attachmentsRes && attachmentsRes.items) || [];
+  const needs = (detail.assessedNeeds && detail.assessedNeeds.needs) || [];
+  const legacy = detail.legacyImportData || null;
 
   const h = detail.housing || {};
   const ut = detail.utilities || {};
@@ -176,7 +246,8 @@ function normalizeApiCase(detail, familyRes, supportRes, attachmentsRes, applian
   const appliances = (ut.appliances || []).map(a => ({
     key: a.applianceKey,
     label: (applianceLabels && applianceLabels.get(a.applianceKey)) || a.applianceKey,
-    isPresent: a.isPresent
+    isPresent: a.isPresent,
+    details: a.details
   }));
 
   return {
@@ -190,21 +261,48 @@ function normalizeApiCase(detail, familyRes, supportRes, attachmentsRes, applian
     name: b.fullName,
     nid: b.nationalId,
     phone: b.phonePrimary,
+    charity: detail.charityName,
     center: centerName,
     village: villageName,
+    registrationDate: detail.registrationDate,
+    isLegacyImport: Boolean(detail.isLegacyImport),
+    legacyImportData: legacy ? {
+      caseNumberLegacy: legacy.caseNumberLegacy,
+      caseCodeLegacy: legacy.caseCodeLegacy,
+      classification: legacy.classification,
+      researcherName: legacy.researcherName,
+      birthDate: legacy.birthDate,
+      netIncome: legacy.netIncome,
+      closed: legacy.closed,
+      rawStatus: legacy.rawStatus,
+      sourceRowNumber: legacy.sourceRowNumber
+    } : null,
+    legacyRecord: legacyRecord || null,
     demographics: {
       age: b.age,
       gender: b.gender,
+      religion: b.religion,
       birthGovernorate: b.birthGovernorate,
       phonePrimary: b.phonePrimary,
       phoneSecondary: b.phoneSecondary,
-      address: b.address
+      address: b.address,
+      education: b.education,
+      maritalStatus: b.maritalStatus,
+      headRelation: b.headRelation || b.maritalStatus,
+      healthStatus: b.healthStatus,
+      employmentStatus: b.employmentStatus,
+      job: b.job,
+      monthlyIncome: b.monthlyIncome,
+      takafulBeneficiary: b.takafulBeneficiary,
+      takafulAmount: b.takafulAmount
     },
     familyMembers: members.map(m => ({
       name: m.name,
       relation: m.relation,
       nid: m.nationalId,
       age: m.computedCurrentAge ?? m.age,
+      gender: m.gender,
+      religion: m.religion,
       isStudent: m.isStudent,
       stage: m.educationStage,
       grade: m.grade,
@@ -232,6 +330,7 @@ function normalizeApiCase(detail, familyRes, supportRes, attachmentsRes, applian
       floor: h.floor,
       entrance: h.entrance,
       roomsCount: h.roomsCount,
+      bathroomType: h.bathroomType,
       bathroomCondition: h.bathroomCondition,
       sanitation: h.sanitation,
       electricity: h.electricity,
@@ -273,6 +372,10 @@ function normalizeApiCase(detail, familyRes, supportRes, attachmentsRes, applian
       totalExpenses: fin.totalExpenses,
       netBalance: fin.netBalance
     },
+    assessedNeeds: needs.map(n => ({
+      needType: n.needType,
+      notes: n.notes
+    })),
     support: {
       types: recommendations.map(r => ({
         title: r.supportType,
@@ -286,8 +389,20 @@ function normalizeApiCase(detail, familyRes, supportRes, attachmentsRes, applian
         beneficiary: approved.beneficiary,
         approvedAt: approved.approvedAtUtc ? approved.approvedAtUtc.slice(0, 10) : '',
         notes: approved.approvalNotes
-      } : null
+      } : null,
+      // Actually-disbursed support (distinct from `types`/proposed and
+      // `approvedSupport`/the one final decision) — every historical
+      // support-type × quantity handed to the recipient, e.g. legacy imports
+      // that logged several disbursements over time.
+      history: supportHistory.map(hst => ({
+        supportType: hst.supportType,
+        quantity: hst.quantity,
+        recipientName: hst.recipientName,
+        date: hst.date || hst.disbursedAtUtc
+      }))
     },
+    // اسم الباحث الأصلي للحالات المستوردة — يُعرض في بانر «تاريخ الحالة».
+    workerAuthorName: (opinions.worker && opinions.worker.authorName) || '',
     workerOpinion: mapOpinion(opinions.worker),
     reviewerOpinion: mapOpinion(opinions.reviewer),
     managerApproval: mapOpinion(opinions.manager)
@@ -308,17 +423,25 @@ function loadApplianceLabels() {
   return applianceLabelsPromise;
 }
 
-/** Fetches and normalizes a real case by id. Returns null (and toasts) on failure. */
+/**
+ * Fetches and normalizes a real case by id. Returns null (and toasts) on
+ * failure. Uses `GET /cases/{id}/report` rather than plain `GET /cases/{id}`
+ * — `data.case` is the identical shape, and this is the one call that also
+ * carries `data.legacyRecord` (the original Excel row), needed for both the
+ * PDF export and the "البيانات الأصلية" card.
+ */
 async function loadCaseFromApi(id) {
   try {
-    const [detail, familyRes, supportRes, attachmentsRes, applianceLabels] = await Promise.all([
-      CasesService.getById(id),
+    const [reportRes, familyRes, supportRes, attachmentsRes, applianceLabels] = await Promise.all([
+      CasesService.getReport(id),
       CasesService.getFamilyMembers(id).catch(() => ({ members: [] })),
       CasesService.getSupport(id).catch(() => ({})),
       AttachmentsService.listForCase(id).catch(() => ({ items: [] })),
       loadApplianceLabels()
     ]);
-    return normalizeApiCase(detail, familyRes, supportRes, attachmentsRes, applianceLabels);
+    const detail = reportRes.case;
+    const legacyRecord = reportRes.legacyRecord;
+    return normalizeApiCase(detail, familyRes, supportRes, attachmentsRes, applianceLabels, legacyRecord);
   } catch (err) {
     showToast(messageFromError(err));
     return null;
@@ -330,16 +453,31 @@ async function loadCaseFromApi(id) {
  *        كائن حالة جاهز (تستخدمه معاينة المسودة القادمة من شاشة الإدخال).
  */
 export async function openCaseDetailsPage(caseRef) {
+  const isRealId = typeof caseRef === 'string' && caseRef;
   const targetCase = (caseRef && typeof caseRef === 'object')
     ? caseRef
     : await loadCaseFromApi(caseRef);
   if (!targetCase) return;
   currentActiveCase = targetCase;
+  timelineCache = null;
+
+  // معاينة المسودة (كائن محلي بلا rawId) مالهاش تاريخ على السيرفر.
+  const timelineBtn = DOM.qs('#btn-case-timeline');
+  if (timelineBtn) timelineBtn.style.display = targetCase.rawId ? '' : 'none';
+
+  // بنخزّن id الحالة الحقيقية بس (مش مسودة محلية) — عشان لو المستخدم عمل
+  // refresh وهو واقف على الصفحة دي، نقدر نجيبها تاني ونعرض نفس الحالة، بدل
+  // ما تفضل الصفحة فاضية أو تعرض بيانات placeholder قديمة.
+  if (isRealId) {
+    StorageService.set(STORAGE_KEYS.LAST_VIEWED_CASE_ID, caseRef);
+  }
 
   const codeEl = DOM.qs('#case-detail-code');
   const pillEl = DOM.qs('#case-detail-status-pill');
   const nameEl = DOM.qs('#case-detail-name');
   const subinfoEl = DOM.qs('#case-detail-subinfo');
+  const researcherEl = DOM.qs('#case-detail-researcher');
+  const researcherNameEl = DOM.qs('#case-detail-researcher-name');
   const stackEl = DOM.qs('#case-details-stack');
 
   if (codeEl) codeEl.textContent = targetCase.id;
@@ -355,6 +493,15 @@ export async function openCaseDetailsPage(caseRef) {
       [targetCase.center, targetCase.village].filter(Boolean).join(' — ')
     ].filter(Boolean);
     subinfoEl.textContent = parts.join(' — ');
+  }
+  const researcherName = targetCase.legacyImportData && targetCase.legacyImportData.researcherName;
+  if (researcherEl && researcherNameEl) {
+    if (researcherName) {
+      researcherNameEl.textContent = `الباحث الأصلي لهذه الحالة: ${researcherName}`;
+      researcherEl.style.display = 'flex';
+    } else {
+      researcherEl.style.display = 'none';
+    }
   }
 
   if (stackEl) {
@@ -420,11 +567,12 @@ function sectionFlag(isMissing) {
   return '<span class="badge case-missing-flag">ناقص</span>';
 }
 
-/** قائمة أجهزة على هيئة شارات متوفّر / غير متوفّر — من data.utilities.appliances، بأسماء GET /dropdowns?step=4&fieldType=chip. */
+/** قائمة أجهزة على هيئة شارات — يظهر المتوفر فقط، من data.utilities.appliances، بأسماء GET /dropdowns?step=4&fieldType=chip. */
 function applianceChips(appliances) {
-  if (!appliances || !appliances.length) return '<p class="case-page-empty">لا توجد بيانات أجهزة مسجّلة.</p>';
-  return `<div>${appliances.map(a => `
-    <span class="badge case-availability-chip${a.isPresent ? ' case-availability-chip--on' : ''}">${a.isPresent ? '✓' : '—'} ${DOM.escapeHTML(a.label)}</span>
+  const present = (appliances || []).filter(a => a.isPresent);
+  if (!present.length) return '<p class="case-page-empty">لا توجد أجهزة متوفرة مسجّلة.</p>';
+  return `<div>${present.map(a => `
+    <span class="badge case-availability-chip case-availability-chip--on">✓ ${DOM.escapeHTML(a.label)}${a.details ? ` (${DOM.escapeHTML(a.details)})` : ''}</span>
   `).join('')}</div>`;
 }
 
@@ -468,20 +616,22 @@ function renderBasicDataCard(c, gone = () => false) {
         ${row('محافظة الميلاد', d.birthGovernorate)}
         ${row('التليفون الأساسي', d.phonePrimary || c.phone)}
         ${row('التليفون الاحتياطي', d.phoneSecondary || '—')}
-        ${row('الحالة الاجتماعية', d.maritalStatus)}
+        ${row('صلة القرابة', d.headRelation || d.maritalStatus)}
         ${row('الوضع الصحي', d.healthStatus)}
       </div>
 
       <div class="case-page-subtitle">بيانات وظيفية ومالية</div>
       <div class="case-page-grid">
-        ${row('الوظيفة', d.job || d.employmentStatus)}
+        ${row('المسمى الوظيفي / المهنة', d.job)}
+        ${row('طبيعة العمل', d.employmentStatus)}
         ${row('الدخل الشهري', d.monthlyIncome !== undefined ? money(d.monthlyIncome) : '')}
         <div><strong>مستفيد من تكافل وكرامة:</strong> ${yesNo(d.takafulBeneficiary)}</div>
         ${d.takafulBeneficiary ? row('مبلغ تكافل الشهري', money(d.takafulAmount)) : ''}
       </div>
 
-      <div class="case-page-subtitle">العنوان</div>
+      <div class="case-page-subtitle">العنوان والجمعية</div>
       <div class="case-page-grid">
+        ${row('الجمعية', c.charity)}
         ${row('المركز', c.center)}
         ${row('القرية', c.village)}
         <div style="grid-column: 1 / -1;"><strong>العنوان بالتفصيل:</strong> ${DOM.escapeHTML(d.address || '')}</div>
@@ -503,6 +653,8 @@ function renderBasicDataCard(c, gone = () => false) {
               <div class="case-page-grid case-member-card__body">
                 ${row('الرقم القومي', m.nid)}
                 ${row('العمر', m.age ? `${m.age} سنة` : '')}
+                ${row('النوع', m.gender)}
+                ${row('الديانة', m.religion)}
                 <div><strong>طالب:</strong> ${yesNo(m.isStudent)}</div>
                 ${m.isStudent ? row('المرحلة الدراسية', m.stage) : row('المؤهل الدراسي', m.education)}
                 ${m.isStudent ? row('الصف', m.grade) : ''}
@@ -566,6 +718,7 @@ function renderHousingCard(c, gone = () => false) {
         ${row('الأرضية', h.floor)}
         ${row('المدخل', h.entrance)}
         ${row('عدد الغرف', h.roomsCount)}
+        ${row('طبيعة دورات المياه', h.bathroomType)}
         ${row('حالة دورات المياه', h.bathroomCondition)}
         ${row('الصرف الصحي', h.sanitation)}
         ${row('الكهرباء', h.electricity)}
@@ -695,10 +848,32 @@ function renderFinancialCard(c, gone = () => false) {
 }
 
 /* -------------------------------- 7. الدعم -------------------------------- */
+function renderAssessedNeedsCard(c, gone = () => false) {
+  const needs = Array.isArray(c.assessedNeeds) ? c.assessedNeeds : [];
+  if (!needs.length) return '';
+
+  return `
+    <div class="glass-card case-page-card">
+      <div class="case-page-card__title"><span>📌 الاحتياجات المقيَّمة</span>${sectionFlag(gone('الاحتياجات'))}</div>
+      <div class="case-support-list">
+        ${needs.map(n => `
+          <div class="case-support-item">
+            <div>
+              <strong class="case-support-item__title">${DOM.escapeHTML(n.needType || '')}</strong>
+            </div>
+            ${n.notes ? `<span class="case-support-option">${DOM.escapeHTML(n.notes)}</span>` : ''}
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
 function renderSupportCard(c, gone = () => false) {
   const s = c.support || {};
   const types = Array.isArray(s.types) ? s.types : [];
   const approved = s.approvedSupport;
+  const history = Array.isArray(s.history) ? s.history : [];
 
   return `
     <div class="glass-card case-page-card">
@@ -734,6 +909,21 @@ function renderSupportCard(c, gone = () => false) {
           </div>
         </div>
       ` : ''}
+
+      ${history.length ? `
+        <div class="case-page-subtitle" style="margin-top: 12px;">الدعم المصروف فعليًا</div>
+        <div class="case-support-list">
+          ${history.map(hst => `
+            <div class="case-support-item">
+              <div>
+                <strong class="case-support-item__title">${DOM.escapeHTML(hst.supportType || '')}</strong>
+                ${hst.quantity !== undefined && hst.quantity !== null ? `<span class="case-support-amount">${DOM.escapeHTML(String(hst.quantity))}</span>` : ''}
+              </div>
+              ${hst.recipientName ? `<span class="badge">${DOM.escapeHTML(hst.recipientName)}</span>` : ''}
+            </div>
+          `).join('')}
+        </div>
+      ` : ''}
     </div>
   `;
 }
@@ -751,6 +941,7 @@ function renderCaseDetailsCards(container, c) {
     ${renderUtilitiesCard(c, gone)}
     ${renderAgricultureCard(c, gone)}
     ${renderFinancialCard(c, gone)}
+    ${renderAssessedNeedsCard(c, gone)}
     ${renderSupportCard(c, gone)}
 
     <!-- 8. الرأي — قسم واحد بثلاث خانات: الأخصائي (عرض) / المراجع / المدير -->
@@ -786,9 +977,9 @@ function decisionBadge(decision) {
   return `<span class="badge" style="background: ${meta.bg}; color: ${meta.color}; font-weight: 800; font-size: 13px;">${meta.label}</span>`;
 }
 
-/** Author + date line under a recorded opinion. */
+/** Author + date line under a recorded opinion — hidden for legacy-imported opinions (no real author name). */
 function opinionMeta(opinion) {
-  if (!opinion || !opinion.author) return '';
+  if (!opinion || !opinion.author || opinion.isLegacyImport) return '';
   return `
     <div style="margin-top: 10px; font-size: 12px; color: #64748b; font-weight: 700;">
       ✍️ ${DOM.escapeHTML(opinion.author)}${opinion.date ? ` — ${DOM.escapeHTML(opinion.date)}` : ''}
@@ -1011,6 +1202,7 @@ function applyOpinionResult(container, c, result, opinionField) {
     c.statusLabel = statusMeta.label;
     c.statusClass = statusMeta.cls;
   }
+  timelineCache = null;
   syncStatusPill(c);
   renderCaseDetailsCards(container, c);
   EventBus.emit(EVENTS.CASE_UPDATED, c);
@@ -1030,6 +1222,7 @@ async function refreshAfterConflict(container, c) {
       c.statusLabel = statusMeta.label;
       c.statusClass = statusMeta.cls;
     }
+    timelineCache = null;
     syncStatusPill(c);
     renderCaseDetailsCards(container, c);
   } catch {
@@ -1096,6 +1289,7 @@ async function commitManagerDecision(container, c, decision) {
       c.caseRowVersion = result.caseRowVersion;
       c.managerApproval = null;
       c.reviewerOpinion = null;
+      timelineCache = null;
       const statusMeta = STATUS_META[result.status];
       if (statusMeta) {
         c.status = result.status;
@@ -1133,6 +1327,280 @@ async function commitManagerDecision(container, c, decision) {
     }
     return false;
   }
+}
+
+/* --------------------------------------------------------------------------
+   CASE TIMELINE — «تاريخ الحالة»
+   مراحل سير العمل الإدارية للحالة (مين عمل إيه وإمتى) من
+   GET /cases/{id}/timeline. بيتجاب لما الزرار يتضغط بس، مش مع فتح الحالة.
+   الملخص (7 مراحل ثابتة) جاهز من السيرفر، والأحداث الكاملة تحته بالترتيب.
+   -------------------------------------------------------------------------- */
+
+/** أيقونة ولون كل نوع حدث — الاعتماد على `type` الثابت، مش على `label`. */
+const TIMELINE_EVENT_META = {
+  created: { icon: '🆕', tone: 'neutral' },
+  created_self_assigned: { icon: '📱', tone: 'info' },
+  assigned: { icon: '👤', tone: 'info' },
+  assignment_accepted: { icon: '✅', tone: 'info' },
+  self_assigned: { icon: '🙋', tone: 'info' },
+  assignment_rejected: { icon: '⛔', tone: 'warning' },
+  submitted_to_reviewer: { icon: '📤', tone: 'info' },
+  reviewer_draft_saved: { icon: '📝', tone: 'neutral' },
+  returned_to_worker: { icon: '↩️', tone: 'warning' },
+  sent_to_manager: { icon: '⚖️', tone: 'info' },
+  returned_for_completion: { icon: '↩️', tone: 'warning' },
+  approved: { icon: '🟢', tone: 'success' },
+  rejected: { icon: '🔴', tone: 'danger' },
+  approved_override: { icon: '🟢', tone: 'success' },
+  rejected_override: { icon: '🔴', tone: 'danger' },
+  worker_opinion_edited: { icon: '✏️', tone: 'neutral' }
+};
+
+// مسودات المراجع مالهاش معنى في المسار الإداري — بتستخبى من القائمة.
+const HIDDEN_TIMELINE_EVENTS = new Set(['reviewer_draft_saved']);
+const OVERRIDE_TIMELINE_EVENTS = new Set(['approved_override', 'rejected_override']);
+
+function bindTimelineButton() {
+  const btn = DOM.qs('#btn-case-timeline');
+  const label = DOM.qs('#btn-case-timeline-text');
+  if (!btn) return;
+
+  btn.addEventListener('click', async () => {
+    const c = currentActiveCase;
+    if (!c || !c.rawId) {
+      showToast('لا توجد حالة محفوظة لعرض تاريخها');
+      return;
+    }
+    if (btn.disabled) return;
+
+    if (timelineCache && timelineCache.caseId === c.rawId) {
+      openTimelineModal(timelineCache.data, c);
+      return;
+    }
+
+    btn.disabled = true;
+    const originalText = label ? label.textContent : 'تاريخ الحالة';
+    if (label) label.textContent = 'جاري التحميل...';
+
+    try {
+      const data = await CasesService.getTimeline(c.rawId);
+      // لو المستخدم فتح حالة تانية أثناء الطلب، مانعرضش تاريخ حالة قديمة.
+      if (currentActiveCase !== c) return;
+      timelineCache = { caseId: c.rawId, data };
+      openTimelineModal(data, c);
+    } catch (err) {
+      showToast(messageFromError(err), 'error');
+    } finally {
+      btn.disabled = false;
+      if (label) label.textContent = originalText;
+    }
+  });
+}
+
+/** اسم الشخص ودوره بالعربي — `{id, name, email, role}` من السيرفر. */
+function timelinePerson(p) {
+  if (!p || !p.name) return '<span class="case-tl-muted">غير معروف</span>';
+  const role = ROLE_LABELS[p.role];
+  return `<strong>${DOM.escapeHTML(p.name)}</strong>${role ? ` <span class="case-tl-role">(${DOM.escapeHTML(role)})</span>` : ''}`;
+}
+
+function timelineBadge(text, tone) {
+  return `<span class="badge case-tl-badge case-tl-badge--${tone}">${DOM.escapeHTML(text)}</span>`;
+}
+
+function timelineNote(note) {
+  if (!note) return '';
+  return `<p class="case-tl-note">${DOM.escapeHTML(note)}</p>`;
+}
+
+/**
+ * مراحل الملخص السبعة بالترتيب. `step` = عنصر الملخص (null لو لسه ماحصلش)،
+ * و`lines` بتُبنى بس لو المرحلة حصلت.
+ */
+function timelineSummarySteps(s) {
+  const assigned = s.assigned;
+  const returned = s.lastReturned;
+  const first = s.firstSentToReviewer;
+  const last = s.lastSentToReviewer;
+  const decision = s.decision;
+  // لو اتبعتت للمراجع مرة واحدة، lastSentToReviewer = firstSentToReviewer.
+  const resent = Boolean(last && (!first || last.at !== first.at));
+
+  return [
+    {
+      icon: '🆕',
+      title: 'إنشاء الحالة',
+      step: s.created,
+      lines: () => [`بواسطة ${timelinePerson(s.created.by)}`]
+    },
+    {
+      icon: '👤',
+      title: 'الإسناد للأخصائي',
+      step: assigned,
+      badges: () => (assigned.selfAssigned ? [timelineBadge('كلّف نفسه', 'info')] : []),
+      lines: () => (assigned.selfAssigned
+        ? [`الأخصائي ${timelinePerson(assigned.to)}`]
+        : [
+          `أسندها ${timelinePerson(assigned.by)} إلى ${timelinePerson(assigned.to)}`,
+          assigned.acceptedAt
+            ? `قبل الأخصائي الإسناد: ${DOM.escapeHTML(formatCairoDateTime(assigned.acceptedAt))}`
+            : '<span class="case-tl-warn">لم يقبل الأخصائي الإسناد بعد</span>'
+        ])
+    },
+    {
+      icon: '📤',
+      title: 'الإرسال للمراجع',
+      step: first,
+      lines: () => [`أرسلها ${timelinePerson(first.by)}`]
+    },
+    {
+      icon: '↩️',
+      title: 'آخر إرجاع للأخصائي',
+      step: returned,
+      pendingText: 'لم تُرجع للأخصائي',
+      badges: () => [timelineBadge(returned.returnedBy === 'manager' ? 'من المدير' : 'من المراجع', 'warning')],
+      lines: () => [`أعادها ${timelinePerson(returned.by)}`],
+      note: () => returned.reason
+    },
+    // إعادة الإرسال بتظهر بس لو حصل فعلاً إرسال تاني بعد إرجاع.
+    ...(resent ? [{
+      icon: '🔁',
+      title: 'إعادة الإرسال للمراجع',
+      step: last,
+      lines: () => [`أرسلها ${timelinePerson(last.by)}`]
+    }] : []),
+    {
+      icon: '⚖️',
+      title: 'الإرسال للمدير',
+      step: s.sentToManager,
+      lines: () => [`أرسلها ${timelinePerson(s.sentToManager.by)}`]
+    },
+    {
+      icon: decision && decision.decision === 'rejected' ? '🔴' : '🟢',
+      title: 'قرار المدير',
+      step: decision,
+      badges: () => [
+        decision.decision === 'rejected' ? timelineBadge('مرفوضة', 'danger') : timelineBadge('معتمدة', 'success'),
+        ...(decision.isOverride ? [timelineBadge('قرار استثنائي', 'warning')] : [])
+      ],
+      lines: () => [`${decision.decision === 'rejected' ? 'رفضها' : 'اعتمدها'} ${timelinePerson(decision.by)}`]
+    }
+  ];
+}
+
+function renderTimelineSummary(summary) {
+  const steps = timelineSummarySteps(summary || {});
+  return `
+    <ol class="case-tl-steps">
+      ${steps.map(st => {
+        if (!st.step) {
+          return `
+            <li class="case-tl-step case-tl-step--pending">
+              <span class="case-tl-step__icon">${st.icon}</span>
+              <div class="case-tl-step__body">
+                <div class="case-tl-step__head"><span class="case-tl-step__title">${st.title}</span></div>
+                <div class="case-tl-muted">${st.pendingText || 'لم تتم بعد'}</div>
+              </div>
+            </li>
+          `;
+        }
+        const badges = st.badges ? st.badges().join('') : '';
+        return `
+          <li class="case-tl-step">
+            <span class="case-tl-step__icon">${st.icon}</span>
+            <div class="case-tl-step__body">
+              <div class="case-tl-step__head"><span class="case-tl-step__title">${st.title}</span>${badges}</div>
+              <div class="case-tl-time">🕒 ${DOM.escapeHTML(formatCairoDateTime(st.step.at))}</div>
+              ${st.lines().map(l => `<div class="case-tl-line">${l}</div>`).join('')}
+              ${st.note ? timelineNote(st.note()) : ''}
+            </div>
+          </li>
+        `;
+      }).join('')}
+    </ol>
+  `;
+}
+
+function renderTimelineEvents(events) {
+  const visible = (events || []).filter(e => !HIDDEN_TIMELINE_EVENTS.has(e.type));
+  if (!visible.length) return '<p class="case-page-empty">لا توجد أحداث مسجّلة على الحالة بعد.</p>';
+
+  return `
+    <ol class="case-tl-events">
+      ${visible.map(e => {
+        const meta = TIMELINE_EVENT_META[e.type] || { icon: '•', tone: 'neutral' };
+        const badges = [
+          e.isResubmission ? timelineBadge('إعادة إرسال', 'info') : '',
+          OVERRIDE_TIMELINE_EVENTS.has(e.type) ? timelineBadge('قرار استثنائي', 'warning') : ''
+        ].join('');
+        return `
+          <li class="case-tl-event case-tl-event--${meta.tone}">
+            <span class="case-tl-event__dot">${meta.icon}</span>
+            <div class="case-tl-event__body">
+              <div class="case-tl-step__head"><span class="case-tl-event__label">${DOM.escapeHTML(e.label || e.type)}</span>${badges}</div>
+              <div class="case-tl-time">🕒 ${DOM.escapeHTML(formatCairoDateTime(e.occurredAtUtc))}</div>
+              <div class="case-tl-line">
+                ${e.actor ? timelinePerson(e.actor) : ''}${e.target ? ` ← ${timelinePerson(e.target)}` : ''}
+              </div>
+              ${timelineNote(e.note)}
+            </div>
+          </li>
+        `;
+      }).join('')}
+    </ol>
+  `;
+}
+
+/** بانر الحالات المستوردة من الإكسيل — خطواتها القديمة ماكانتش متسجلة. */
+function renderLegacyTimelineBanner(c) {
+  const researcher = c.workerAuthorName || (c.legacyImportData && c.legacyImportData.researcherName) || '';
+  const regDate = c.registrationDate ? String(c.registrationDate).slice(0, 10) : '';
+  return `
+    <div class="case-draft-banner case-tl-legacy">
+      <strong>حالة مستوردة من النظام القديم${regDate ? ` — تاريخ البحث: ${DOM.escapeHTML(regDate)}` : ''}</strong>
+      ${researcher ? `<span>الباحث الأصلي: ${DOM.escapeHTML(researcher)}</span>` : ''}
+      <span>خطوات هذه الحالة في البرنامج القديم لم تكن مسجّلة — يظهر هنا فقط ما حدث منذ تشغيل النظام الجديد.</span>
+    </div>
+  `;
+}
+
+function openTimelineModal(data, c) {
+  const overlay = document.createElement('div');
+  overlay.className = 'case-modal-overlay';
+  overlay.innerHTML = `
+    <div class="case-modal case-modal--wide" role="dialog" aria-modal="true" aria-labelledby="timeline-modal-title">
+      <div class="case-tl-header">
+        <div>
+          <h3 class="case-modal__title" id="timeline-modal-title">📜 تاريخ الحالة</h3>
+          <p class="case-modal__desc">${DOM.escapeHTML(c.id || '')}${c.name ? ` — ${DOM.escapeHTML(c.name)}` : ''} · التوقيت بتوقيت مصر</p>
+        </div>
+        <button type="button" class="case-tl-close" id="btn-timeline-close" aria-label="إغلاق">✕</button>
+      </div>
+      <div class="case-tl-scroll">
+        ${data && data.isLegacy ? renderLegacyTimelineBanner(c) : ''}
+        <div class="case-page-subtitle">ملخص المراحل</div>
+        ${renderTimelineSummary(data && data.summary)}
+        <div class="case-page-subtitle">كل الأحداث</div>
+        ${renderTimelineEvents(data && data.events)}
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  const close = () => {
+    overlay.remove();
+    document.removeEventListener('keydown', onKey);
+  };
+  function onKey(e) {
+    if (e.key === 'Escape') close();
+  }
+  document.addEventListener('keydown', onKey);
+  overlay.addEventListener('click', e => {
+    if (e.target === overlay) close();
+  });
+  const closeBtn = overlay.querySelector('#btn-timeline-close');
+  closeBtn.addEventListener('click', close);
+  closeBtn.focus();
 }
 
 /* --------------------------------------------------------------------------

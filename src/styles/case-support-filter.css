@@ -1,0 +1,112 @@
+/* --------------------------------------------------------------------------
+   CASE SUPPORT FILTER (MANAGER-ONLY) STYLES
+   -------------------------------------------------------------------------- */
+
+.csf-page-card {
+  padding: 24px 30px;
+  margin-bottom: 24px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.csf-filter-grid {
+  display: grid;
+  grid-template-columns: minmax(220px, 320px) minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.csf-filter-grid--geo {
+  grid-template-columns: repeat(3, minmax(180px, 1fr));
+  margin-bottom: 18px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+@media (max-width: 900px) {
+  .csf-filter-grid,
+  .csf-filter-grid--geo {
+    grid-template-columns: 1fr;
+  }
+}
+
+.csf-filter-grid__support {
+  min-width: 0;
+}
+
+.csf-support-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-height: 160px;
+  overflow-y: auto;
+  padding: 4px 2px;
+}
+
+.csf-support-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.csf-support-chip:hover {
+  background: rgba(255, 255, 255, 0.85);
+  border-color: rgba(37, 99, 235, 0.3);
+}
+
+.csf-support-chip input {
+  accent-color: #2563eb;
+  cursor: pointer;
+}
+
+.csf-support-chip--active {
+  background: #2563eb !important;
+  color: #ffffff !important;
+  border-color: #2563eb !important;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+
+.csf-filter-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.csf-table-wrapper {
+  overflow-x: auto;
+  border-radius: 14px;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.csf-matched-support-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.csf-matched-support-pill {
+  display: inline-block;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #1d4ed8;
+  background: rgba(37, 99, 235, 0.1);
+  border-radius: 10px;
+  white-space: nowrap;
+}

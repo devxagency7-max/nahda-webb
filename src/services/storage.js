@@ -16,6 +16,7 @@ export const STORAGE_KEYS = {
   AGRICULTURE: 'nahda_agriculture_data',
   VISITED_STAGES: 'nahda_visited_stages',
   CURRENT_CASE: 'nahda_current_case',
+  LAST_VIEWED_CASE_ID: 'nahda_last_viewed_case_id',
   ACCESS_TOKEN: 'nahda_access_token',
   REFRESH_TOKEN: 'nahda_refresh_token',
   TOKEN_EXPIRES_AT: 'nahda_token_expires_at'
