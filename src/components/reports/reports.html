@@ -50,9 +50,9 @@
       <div class="reports-date-filter-group">
         <label class="reports-filter-label">نطاق التاريخ:</label>
         <div class="reports-date-inputs">
-          <input type="date" id="rep-filter-from" class="reports-date-input" title="من تاريخ">
+          <input type="date" id="rep-filter-from" class="reports-date-input" title="من تاريخ" aria-label="من تاريخ">
           <span class="reports-date-sep">إلى</span>
-          <input type="date" id="rep-filter-to" class="reports-date-input" title="إلى تاريخ">
+          <input type="date" id="rep-filter-to" class="reports-date-input" title="إلى تاريخ" aria-label="إلى تاريخ">
           <button type="button" class="btn btn--secondary btn--sm" id="btn-apply-date-filter">تطبيق</button>
         </div>
       </div>
@@ -574,7 +574,7 @@
       <!-- Comparison Inputs -->
       <div class="comparison-form-grid">
         <div class="reports-filter-group">
-          <label class="reports-filter-label">المقياس المطلوب مقارنته:</label>
+          <label class="reports-filter-label" for="cmp-metric-select">المقياس المطلوب مقارنته:</label>
           <select id="cmp-metric-select" class="reports-select">
             <option value="Count">عدد الحالات المسجلة (Count)</option>
             <option value="TotalAmount">إجمالي مبالغ الدعم المعتمد (TotalAmount)</option>
@@ -583,16 +583,16 @@
 
         <div class="comparison-period-box">
           <span class="comparison-period-title">الفترة الحالية:</span>
-          <input type="date" id="cmp-curr-from" class="reports-date-input">
+          <input type="date" id="cmp-curr-from" aria-label="بداية الفترة الحالية" class="reports-date-input">
           <span>إلى</span>
-          <input type="date" id="cmp-curr-to" class="reports-date-input">
+          <input type="date" id="cmp-curr-to" aria-label="نهاية الفترة الحالية" class="reports-date-input">
         </div>
 
         <div class="comparison-period-box">
           <span class="comparison-period-title">الفترة السابقة للمقارنة:</span>
-          <input type="date" id="cmp-prev-from" class="reports-date-input">
+          <input type="date" id="cmp-prev-from" aria-label="بداية الفترة السابقة" class="reports-date-input">
           <span>إلى</span>
-          <input type="date" id="cmp-prev-to" class="reports-date-input">
+          <input type="date" id="cmp-prev-to" aria-label="نهاية الفترة السابقة" class="reports-date-input">
         </div>
 
         <div>
@@ -653,22 +653,22 @@
       <!-- Builder Configuration Grid -->
       <div class="builder-controls-grid">
         <div class="reports-filter-group">
-          <label class="reports-filter-label">مجموعة البيانات (Dataset):</label>
+          <label class="reports-filter-label" for="builder-dataset-select">مجموعة البيانات (Dataset):</label>
           <select id="builder-dataset-select" class="reports-select"></select>
         </div>
 
         <div class="reports-filter-group">
-          <label class="reports-filter-label">بُعد التصنيف (Dimension):</label>
+          <label class="reports-filter-label" for="builder-dimension-select">بُعد التصنيف (Dimension):</label>
           <select id="builder-dimension-select" class="reports-select"></select>
         </div>
 
         <div class="reports-filter-group">
-          <label class="reports-filter-label">المقياس الإحصائي (Metric):</label>
+          <label class="reports-filter-label" for="builder-metric-select">المقياس الإحصائي (Metric):</label>
           <select id="builder-metric-select" class="reports-select"></select>
         </div>
 
         <div class="reports-filter-group">
-          <label class="reports-filter-label">طريقة التجميع (Aggregation):</label>
+          <label class="reports-filter-label" for="builder-aggregation-select">طريقة التجميع (Aggregation):</label>
           <select id="builder-aggregation-select" class="reports-select">
             <option value="Count">تعداد (Count)</option>
             <option value="Sum">مجموع (Sum)</option>
@@ -679,7 +679,7 @@
         </div>
 
         <div class="reports-filter-group">
-          <label class="reports-filter-label">اتجاه الترتيب:</label>
+          <label class="reports-filter-label" for="builder-sort-select">اتجاه الترتيب:</label>
           <select id="builder-sort-select" class="reports-select">
             <option value="Descending">تنازلي (الأعلى أولاً)</option>
             <option value="Ascending">تصاعدي (الأقل أولاً)</option>
@@ -687,7 +687,7 @@
         </div>
 
         <div class="reports-filter-group">
-          <label class="reports-filter-label">الحد الأقصى للنتائج:</label>
+          <label class="reports-filter-label" for="builder-max-rows">الحد الأقصى للنتائج:</label>
           <input type="text" inputmode="numeric" data-numeric="integer" id="builder-max-rows" class="reports-search-input" value="100" min="1" max="5000">
         </div>
       </div>

@@ -58,7 +58,7 @@
           </div>
         </div>
 
-        <button class="btn btn--primary" id="btn-open-add-income" type="button">
+        <button class="btn btn--primary" id="btn-open-add-income" type="button" data-disclosure aria-expanded="false" aria-controls="add-income-inline-form">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <line x1="12" y1="5" x2="12" y2="19"></line>
             <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -68,7 +68,7 @@
       </div>
 
       <!-- Inline Add Income Form -->
-      <div class="inline-member-form" id="add-income-inline-form" style="display: none; margin-bottom: 20px;">
+      <div class="inline-member-form" id="add-income-inline-form" role="group" aria-label="نموذج إضافة بند دخل" style="display: none; margin-bottom: 20px;">
         <div class="form-grid form-grid--3-col">
           <div class="form-group">
             <label class="form-label" for="new-income-type">نوع المصدر</label>
@@ -151,7 +151,7 @@
           </div>
         </div>
 
-        <button class="btn btn--primary" id="btn-open-add-expense" type="button">
+        <button class="btn btn--primary" id="btn-open-add-expense" type="button" data-disclosure aria-expanded="false" aria-controls="add-expense-inline-form">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <line x1="12" y1="5" x2="12" y2="19"></line>
             <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -161,7 +161,7 @@
       </div>
 
       <!-- Inline Add Expense Form -->
-      <div class="inline-member-form" id="add-expense-inline-form" style="display: none; margin-bottom: 20px;">
+      <div class="inline-member-form" id="add-expense-inline-form" role="group" aria-label="نموذج إضافة بند مصروف" style="display: none; margin-bottom: 20px;">
         <div class="form-grid form-grid--2-col">
           <div class="form-group">
             <label class="form-label" for="new-expense-type">نوع المصروف / النفقة</label>

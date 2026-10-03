@@ -43,7 +43,7 @@ export function initAssessedNeedsManager() {
             ${item.reason ? `<p class="member-card__details" style="color: var(--color-primary);">السبب: ${DOM.escapeHTML(item.reason)}</p>` : ''}
           </div>
         </div>
-        <button class="btn btn--ghost btn--sm btn-delete-need" data-idx="${idx}" title="حذف" type="button">
+        <button class="btn btn--ghost btn--sm btn-delete-need" data-idx="${idx}" title="حذف" aria-label="حذف الاحتياج" type="button">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
         </button>
       `;

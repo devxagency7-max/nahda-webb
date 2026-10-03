@@ -17,6 +17,7 @@ export const STORAGE_KEYS = {
   VISITED_STAGES: 'nahda_visited_stages',
   CURRENT_CASE: 'nahda_current_case',
   LAST_VIEWED_CASE_ID: 'nahda_last_viewed_case_id',
+  SUPPORT_DECISION_DATA: 'nahda_support_decision_data',
   ACCESS_TOKEN: 'nahda_access_token',
   REFRESH_TOKEN: 'nahda_refresh_token',
   TOKEN_EXPIRES_AT: 'nahda_token_expires_at'

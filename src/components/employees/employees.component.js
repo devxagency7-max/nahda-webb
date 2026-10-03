@@ -17,7 +17,10 @@ import { EventBus, EVENTS } from '../../core/event-bus.js';
 import { EmployeesService } from '../../services/employees.service.js';
 import { LocationsService } from '../../services/locations.service.js';
 import { messageFromError } from '../../services/errors.js';
+import { errorStateHTML, bindRetry } from '../../utils/error-state.js';
 import { can, PERMISSIONS } from '../../core/permissions.js';
+import { confirmDialog } from '../../utils/dialog.js';
+import { onViewEnter } from '../../core/view-lifecycle.js';
 
 // Common Arabic Names to Clean English Transliteration Dictionary
 const COMMON_ARABIC_NAMES = {
@@ -91,8 +94,17 @@ let currentFilterRole = 'all';
 let currentSearchQuery = '';
 
 // Live roster, always fetched from the server — never persisted locally.
+// The whole roster is fetched (EmployeesService.listAll) but only the first
+// PAGE_SIZE rows are drawn; "تحميل المزيد" reveals another PAGE_SIZE locally.
+const PAGE_SIZE = 50;
 let employeesList = [];
+let visibleCount = PAGE_SIZE;
+// Guards against an older, slower response overwriting a newer one (fetching
+// every page makes overlapping loads — fast typing, pill clicks — likelier).
+let loadSeq = 0;
 let isLoading = false;
+// آخر خطأ في تحميل القائمة — بيتعرض كحالة خطأ فيها "إعادة المحاولة" بدل "لا يوجد موظفين".
+let loadError = null;
 
 /**
  * Smart transliteration of an Arabic name to a clean email (e.g. "محمود علي" -> "mahmoud.ali@nahda.org.eg")
@@ -145,16 +157,76 @@ function generateEmailFromName(fullName) {
   return `${prefix}@nahda.org.eg`;
 }
 
+/* --------------------------------------------------------------------------
+   EMPLOYEE PASSWORD GENERATOR
+   التوليد مسؤولية الـ frontend (الباك إند بيطلب password جاهز في
+   CreateEmployeeRequest) — فلازم يكون العشوائية نفسها cryptographically
+   secure. النسخة القديمة كانت بادئة ثابتة (11 حرف من 15) + 4 حروف من
+   مولّد غير آمن، والبادئة نفسها مكتوبة حرفيًا في الـ bundle المنشور —
+   فالمساحة الفعلية كانت 55^4 = ~9.15 مليون احتمال (23.1 بت)، مكسورة
+   عمليًا، خصوصًا إن البريد نفسه متوقَّع (firstname.lastname@nahda.org.eg).
+
+   دلوقتي: 16 حرف، مفيش أي حرف ثابت، والمصدر crypto.getRandomValues
+   (نفس Web Crypto اللي المشروع بيستخدمه أصلًا في crypto.randomUUID —
+   وgetRandomValues متاحة في سياقات أوسع منها، فمفيش أي مخاطرة توافق).
+
+   استبعاد الحروف المتشابهة (i l o I O 0 1) مقصود وبيفضل: كلمة المرور
+   بتُقرأ وتُنقل يدويًا للموظف، فالوضوح البصري شرط حقيقي مش رفاهية.
+   -------------------------------------------------------------------------- */
+const PW_LOWER = 'abcdefghjkmnpqrstuvwxyz';      // من غير i و l و o
+const PW_UPPER = 'ABCDEFGHJKLMNPQRSTUVWXYZ';     // من غير I و O (L واضحة فبتفضل)
+const PW_DIGITS = '23456789';                    // من غير 0 و 1
+const PW_SYMBOLS = '!#$%&*+-=?@';                // من غير علامات التنصيص والمسافة والفاصلة
+const PW_ALL = PW_LOWER + PW_UPPER + PW_DIGITS + PW_SYMBOLS;
+const PW_LENGTH = 16;
+
 /**
- * Generates a secure, strong, employee password (e.g. Nahda#2026!7xK)
+ * رقم عشوائي غير متحيّز في [0, max) من الـ CSPRNG.
+ * الـ rejection sampling ضروري: byte % max لوحده بيتحيّز لأول حروف
+ * المجموعة (قياسًا: انحراف 23.5% مقابل ~1.5% مع الرفض).
+ * @param {number} max
+ * @returns {number}
+ */
+function secureIndex(max) {
+  const limit = Math.floor(256 / max) * max;
+  const buf = new Uint8Array(1);
+  let value;
+  do {
+    crypto.getRandomValues(buf);
+    value = buf[0];
+  } while (value >= limit);
+  return value % max;
+}
+
+/** حرف واحد عشوائي من مجموعة محددة. */
+function securePick(set) {
+  return set.charAt(secureIndex(set.length));
+}
+
+/**
+ * Generates a cryptographically secure employee password: 16 characters,
+ * no fixed prefix, guaranteed to contain lowercase + uppercase + digit +
+ * symbol (~96 bits of entropy).
+ * @returns {string}
  */
 function generateSecurePassword() {
-  const chars = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  let rand = '';
-  for (let i = 0; i < 4; i++) {
-    rand += chars.charAt(Math.floor(Math.random() * chars.length));
+  // حرف مضمون من كل فئة، عشان نضمن تحقيق أي سياسة تعقيد في الباك إند.
+  const out = [
+    securePick(PW_LOWER),
+    securePick(PW_UPPER),
+    securePick(PW_DIGITS),
+    securePick(PW_SYMBOLS)
+  ];
+  for (let i = out.length; i < PW_LENGTH; i++) {
+    out.push(securePick(PW_ALL));
   }
-  return `Nahda#2026!${rand}`;
+  // Fisher-Yates بمصدر عشوائي آمن — عشان الحروف المضمونة ماتفضلش في
+  // أول 4 خانات (ده كان بيبقى pattern متوقَّع في حد ذاته).
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = secureIndex(i + 1);
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out.join('');
 }
 
 /**
@@ -292,8 +364,9 @@ export function initEmployeesManager() {
     btnRegenPassword.addEventListener('click', (e) => {
       e.preventDefault();
       passwordInput.value = generateSecurePassword();
-      passwordInput.type = 'text';
-      if (btnTogglePw) btnTogglePw.textContent = '👁️';
+      // بتفضل مخفية افتراضيًا — زرار الإظهار جنبها لو المستخدم محتاج يقراها.
+      passwordInput.type = 'password';
+      if (btnTogglePw) btnTogglePw.textContent = '🔒';
       showToast('تم توليد كلمة مرور عشوائية جديدة 🔒');
     });
   }
@@ -309,7 +382,9 @@ export function initEmployeesManager() {
   if (btnCopyPassword && passwordInput) {
     btnCopyPassword.addEventListener('click', (e) => {
       e.preventDefault();
-      copyToClipboard(passwordInput.value, `تم نسخ كلمة المرور: ${passwordInput.value} 🔑`);
+      // الـ toast مابيعرضش كلمة المرور نفسها — كانت بتظهر على الشاشة لكل
+      // من حوله بلا داعٍ، والنسخ نفسه كافي كتأكيد.
+      copyToClipboard(passwordInput.value, 'تم نسخ كلمة المرور 🔑');
     });
   }
 
@@ -320,6 +395,8 @@ export function initEmployeesManager() {
       const isText = passwordInput.type === 'text';
       passwordInput.type = isText ? 'password' : 'text';
       btnTogglePw.textContent = isText ? '🔒' : '👁️';
+      btnTogglePw.setAttribute('aria-pressed', isText ? 'false' : 'true');
+      btnTogglePw.setAttribute('aria-label', isText ? 'إظهار كلمة المرور' : 'إخفاء كلمة المرور');
     });
   }
 
@@ -351,13 +428,13 @@ export function initEmployeesManager() {
   function showCredentialsBox({ name, roleLabel, roleCode, email, password, phone }) {
     const overlay = DOM.createElement('div', { className: 'modal-overlay' });
     overlay.innerHTML = `
-      <div class="modal-card" style="max-width: 480px;">
+      <div class="modal-card" style="max-width: 480px;" role="dialog" aria-modal="true" aria-labelledby="cred-modal-title">
         <div class="modal-card__header">
           <div>
-            <div class="modal-card__title">✓ بيانات الدخول جاهزة للمشاركة</div>
+            <div class="modal-card__title" id="cred-modal-title">✓ بيانات الدخول جاهزة للمشاركة</div>
             <div class="modal-card__subtitle" id="cred-showcase-time">الآن</div>
           </div>
-          <button type="button" class="modal-card__close" id="cred-modal-close" title="إغلاق">✕</button>
+          <button type="button" class="modal-card__close" id="cred-modal-close" title="إغلاق" aria-label="إغلاق النافذة">✕</button>
         </div>
         <div class="modal-card__body">
           <div class="credentials-showcase-body">
@@ -503,7 +580,7 @@ export function initEmployeesManager() {
         }
 
         resetForm();
-        await loadEmployees();
+        await loadEmployees({ keepPaging: true });
       } catch (err) {
         reportError(err, editId ? 'تعذر تحديث بيانات الموظف: ' : 'تعذر إنشاء حساب الموظف: ');
       } finally {
@@ -528,9 +605,9 @@ export function initEmployeesManager() {
     if (cancelBtn) cancelBtn.style.display = 'none';
     if (passwordInput) {
       passwordInput.value = generateSecurePassword();
-      passwordInput.type = 'text';
+      passwordInput.type = 'password';
     }
-    if (btnTogglePw) btnTogglePw.textContent = '👁️';
+    if (btnTogglePw) btnTogglePw.textContent = '🔒';
     if (emailInput) {
       emailInput.value = '';
       emailInput.readOnly = true;
@@ -585,6 +662,14 @@ export function initEmployeesManager() {
       return;
     }
 
+    if (loadError) {
+      tbody.innerHTML = `<tr><td colspan="7">${errorStateHTML(loadError, 'الموظفين', { compact: true })}</td></tr>`;
+      bindRetry(tbody, loadEmployees);
+      if (emptyState) emptyState.style.display = 'none';
+      if (tableEl) tableEl.style.display = 'table';
+      return;
+    }
+
     // Filter Employees
     const filtered = employeesList.filter(emp => {
       const matchesRole = currentFilterRole === 'all' || emp.roleCode === currentFilterRole;
@@ -618,7 +703,10 @@ export function initEmployeesManager() {
 
     const manage = canManage();
 
-    tbody.innerHTML = filtered.map((emp, idx) => {
+    const visible = filtered.slice(0, visibleCount);
+    const remaining = filtered.length - visible.length;
+
+    const rowsHtml = visible.map((emp, idx) => {
       const badgeClass = ROLE_BADGE_CLASSES[emp.roleCode] || 'emp-badge--emerald';
       const isActive = emp.status === 'active';
       const statusBadge = isActive
@@ -671,6 +759,26 @@ export function initEmployeesManager() {
       `;
     }).join('');
 
+    const loadMoreHtml = remaining > 0 ? `
+      <tr class="employees-load-more-row">
+        <td colspan="7" style="text-align: center; padding: 20px;">
+          <button type="button" class="btn btn--secondary btn-load-more-employees" style="font-weight: 800;">
+            تحميل المزيد (عرض ${visible.length} من ${filtered.length}) ⬇️
+          </button>
+        </td>
+      </tr>
+    ` : '';
+
+    tbody.innerHTML = rowsHtml + loadMoreHtml;
+
+    const loadMoreBtn = tbody.querySelector('.btn-load-more-employees');
+    if (loadMoreBtn) {
+      loadMoreBtn.addEventListener('click', () => {
+        visibleCount += PAGE_SIZE;
+        renderEmployeesTable();
+      });
+    }
+
     // Attach Action Listeners in Table Rows
     bindTableActions(tbody);
   }
@@ -701,7 +809,13 @@ export function initEmployeesManager() {
         const confirmMsg = isActive
           ? `هل أنت متأكد من تعطيل حساب الموظف (${emp.name})؟ لن يتمكن من تسجيل الدخول بعدها.`
           : `هل تريد إعادة تفعيل حساب الموظف (${emp.name})؟`;
-        if (!window.confirm(confirmMsg)) return;
+        const confirmed = await confirmDialog({
+          title: isActive ? 'تعطيل حساب موظف' : 'تفعيل حساب موظف',
+          message: confirmMsg,
+          confirmLabel: isActive ? 'تعطيل' : 'تفعيل',
+          danger: isActive
+        });
+        if (!confirmed) return;
 
         btn.disabled = true;
         try {
@@ -712,7 +826,7 @@ export function initEmployeesManager() {
             await EmployeesService.activate(empId);
             showToast(`تم تفعيل حساب الموظف (${emp.name}) 🟢`);
           }
-          await loadEmployees();
+          await loadEmployees({ keepPaging: true });
         } catch (err) {
           reportError(err, 'تعذر تنفيذ العملية: ');
         } finally {
@@ -770,14 +884,19 @@ export function initEmployeesManager() {
         const emp = employeesList.find(x => x.id === empId);
         if (!emp) return;
 
-        const confirmed = window.confirm(`هل أنت متأكد من حذف حساب الموظف (${emp.name})؟ لن يتمكن من تسجيل الدخول للنظام بعدها، والبريد الإلكتروني لن يكون قابلاً لإعادة الاستخدام مستقبلاً.`);
+        const confirmed = await confirmDialog({
+          title: 'حذف حساب موظف',
+          message: `هل أنت متأكد من حذف حساب الموظف (${emp.name})؟ لن يتمكن من تسجيل الدخول للنظام بعدها، والبريد الإلكتروني لن يكون قابلاً لإعادة الاستخدام مستقبلاً.`,
+          confirmLabel: 'حذف الحساب',
+          danger: true
+        });
         if (!confirmed) return;
 
         btn.disabled = true;
         try {
           await EmployeesService.remove(empId);
           showToast(`تم حذف حساب الموظف (${emp.name}) بنجاح 🗑️`);
-          await loadEmployees();
+          await loadEmployees({ keepPaging: true });
         } catch (err) {
           reportError(err, 'تعذر حذف الموظف: ');
         } finally {
@@ -794,18 +913,18 @@ export function initEmployeesManager() {
 
     const overlay = DOM.createElement('div', { className: 'modal-overlay' });
     overlay.innerHTML = `
-      <div class="modal-card" style="max-width: 460px;">
+      <div class="modal-card" style="max-width: 460px;" role="dialog" aria-modal="true" aria-labelledby="reset-pw-title">
         <div class="modal-card__header">
           <div>
-            <div class="modal-card__title">إعادة تعيين كلمة مرور</div>
+            <div class="modal-card__title" id="reset-pw-title">إعادة تعيين كلمة مرور</div>
             <div class="modal-card__subtitle">${DOM.escapeHTML(emp.name)}</div>
           </div>
-          <button type="button" class="modal-card__close" id="reset-pw-close" title="إغلاق">✕</button>
+          <button type="button" class="modal-card__close" id="reset-pw-close" title="إغلاق" aria-label="إغلاق النافذة">✕</button>
         </div>
         <div class="modal-card__body">
           <p style="font-size:13px; color:#64748b; margin: 0 0 14px;">سيتم توليد كلمة مرور جديدة وقوية للموظف. هذه هي الفرصة الوحيدة لرؤيتها ونسخها — لن تظهر مرة أخرى بعد الإغلاق.</p>
           <div class="input-with-action">
-            <input type="text" id="reset-pw-value" class="form-input form-input--generated" readonly dir="ltr" style="letter-spacing:1px; font-weight:800; font-family:'Consolas','Courier New',monospace;" value="${DOM.escapeHTML(pending)}">
+            <input type="text" id="reset-pw-value" aria-label="كلمة المرور الجديدة" class="form-input form-input--generated" readonly dir="ltr" style="letter-spacing:1px; font-weight:800; font-family:'Consolas','Courier New',monospace;" value="${DOM.escapeHTML(pending)}">
           </div>
           <div style="display:flex; gap:8px; margin-top:12px;">
             <button type="button" class="btn btn--secondary btn--sm" id="reset-pw-regen">🔄 توليد جديدة</button>
@@ -829,7 +948,7 @@ export function initEmployeesManager() {
     });
 
     overlay.querySelector('#reset-pw-copy').addEventListener('click', () => {
-      copyToClipboard(pending, `تم نسخ كلمة المرور: ${pending} 🔑`);
+      copyToClipboard(pending, 'تم نسخ كلمة المرور 🔑');
     });
 
     overlay.querySelector('#reset-pw-cancel').addEventListener('click', closeDialog);
@@ -911,16 +1030,21 @@ export function initEmployeesManager() {
     btnExport.addEventListener('click', exportEmployeesToCSV);
   }
 
-  // 15. Load employees from the real API — replaces the whole in-memory list.
-  async function loadEmployees() {
+  // 15. Load every matching employee from the real API — replaces the whole
+  // in-memory list. The visible window resets to the first PAGE_SIZE rows
+  // unless `keepPaging` (reload after a write, where the user is mid-list).
+  async function loadEmployees({ keepPaging = false } = {}) {
+    const seq = ++loadSeq;
+    if (!keepPaging) visibleCount = PAGE_SIZE;
     isLoading = true;
+    loadError = null;
     renderEmployeesTable();
     try {
-      const result = await EmployeesService.list({
+      const result = await EmployeesService.listAll({
         search: currentSearchQuery || undefined,
-        role: currentFilterRole !== 'all' ? currentFilterRole : undefined,
-        limit: 100
+        role: currentFilterRole !== 'all' ? currentFilterRole : undefined
       });
+      if (seq !== loadSeq) return;
       const items = (result && result.items) || [];
       employeesList = items.map(item => ({
         id: item.id,
@@ -935,12 +1059,15 @@ export function initEmployeesManager() {
         rowVersion: item.rowVersion
       }));
     } catch (err) {
+      if (seq !== loadSeq) return;
       employeesList = [];
-      reportError(err, 'تعذر تحميل قائمة الموظفين: ');
+      loadError = err;
     } finally {
-      isLoading = false;
-      renderEmployeesTable();
-      updateEmployeesStats();
+      if (seq === loadSeq) {
+        isLoading = false;
+        renderEmployeesTable();
+        updateEmployeesStats();
+      }
     }
   }
 
@@ -960,14 +1087,12 @@ export function initEmployeesManager() {
     if (btnExport) btnExport.disabled = true;
   }
 
-  // Initial load — بس لو المستخدم أصلاً عنده صلاحية manage_employees. الكومبوننت
-  // ده بيتهيّأ مرة واحدة لكل المستخدمين عند فتح التطبيق (initEmployeesManager
-  // في app.js)، مش بس لما حد يفتح صفحة "إدارة الموظفين" فعليًا — فكان
-  // loadEmployees() بيتنفّذ ويطلق GET /employees حتى لو المستخدم مش manager،
-  // والسيرفر برفضه 403 في كل مرة refresh من غير أي داعي (الصفحة أصلًا مخفية
-  // عن غير المديرين، فمفيش حاجة تتعرض أساسًا).
-  if (canManage()) {
-    ensureLocationsLoaded().then(populateCenterOptions);
+  // التحميل بيحصل لما الشاشة تتفتح فعلًا (وبيتعاد مع كل فتحة عشان تبان
+  // تعديلات باقي المديرين)، مش وقت فتح التطبيق — وبس لو المستخدم عنده
+  // صلاحية manage_employees، غير كده السيرفر بيرجّع 403 من غير داعي.
+  onViewEnter('employees', ({ firstEnter }) => {
+    if (!canManage()) return;
+    if (firstEnter) ensureLocationsLoaded().then(populateCenterOptions);
     loadEmployees();
-  }
+  });
 }

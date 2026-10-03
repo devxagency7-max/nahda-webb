@@ -3,10 +3,11 @@
    Replaces the wizard's static HTML <option> lists with the real values
    configured in "إدارة بيانات الحالة" (state-data-management.component.js),
    by calling the consumption route GET /dropdowns/{key} for each key below.
-   Must run once, at bootstrap, BEFORE initOtherOptionDropdowns() — that
-   module decides whether to attach the "أخرى" free-text behavior based on
-   the <select>'s current options/attributes, so it needs the real list in
-   place first, not the placeholder HTML markup.
+   Options come from the localStorage reference cache when available (no
+   request), and are re-populated in place whenever the server reports a key
+   changed (EVENTS.REFERENCE_DATA_CHANGED) or an admin edits it in this tab
+   (EVENTS.DROPDOWN_OPTIONS_UPDATED). Repopulating keeps the user's current
+   selection and any "أخرى" option other-dropdowns.component.js relies on.
 
    The five location/charity keys (district, village, referral-district-
    select, referral-village-select, referral-charity-select) are NOT here —
@@ -40,27 +41,48 @@ const KEY_TO_SELECT_ID = {
   'researcher-brief-opinion': 'researcher-brief-opinion'
 };
 
-/** Populates one <select> from its GET /dropdowns/{key} options, keeping the placeholder option and any prior default selection. */
+/**
+ * Populates one <select> from its GET /dropdowns/{key} options, keeping the
+ * placeholder option and the current (or default) selection. Can run again
+ * on a live form (background refresh), so it must not drop what the user
+ * picked or a custom "أخرى" value they typed.
+ */
 function populateSelect(select, options) {
   const placeholder = select.querySelector('option[value=""]');
-  const previousSelected = select.querySelector('option[selected]:not([value=""])');
-  const previousValue = previousSelected ? previousSelected.value : null;
-
-  Array.from(select.options).forEach(opt => {
-    if (opt !== placeholder) opt.remove();
-  });
+  // First fill: only the markup's explicit default counts (select.value would
+  // just be whichever static placeholder option happens to come first).
+  // Later fills: the live value, i.e. whatever the user has picked.
+  const isRefill = select.dataset.optionsLoaded === 'true';
+  const previousDefault = select.querySelector('option[selected]:not([value=""])');
+  const previousValue = isRefill ? select.value : (previousDefault ? previousDefault.value : '');
 
   const sorted = [...options].sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+  // The server list has no "أخرى" of its own: keep the one already on the
+  // select (added by other-dropdowns.component.js, possibly holding a typed
+  // custom value) instead of deleting it.
+  const keptOther = sorted.some(o => o.isOther) ? null : select.querySelector('option[data-is-other="true"]');
+
+  Array.from(select.options).forEach(opt => {
+    if (opt !== placeholder && opt !== keptOther) opt.remove();
+  });
+
   sorted.forEach(opt => {
     const optionEl = document.createElement('option');
     optionEl.value = opt.value;
     optionEl.textContent = opt.label;
     if (opt.isOther) optionEl.dataset.isOther = 'true';
-    select.appendChild(optionEl);
+    select.insertBefore(optionEl, keptOther);
   });
 
-  if (previousValue && sorted.some(o => o.value === previousValue)) {
+  if (previousValue && Array.from(select.options).some(o => o.value === previousValue)) {
     select.value = previousValue;
+  }
+  select.dataset.optionsLoaded = 'true';
+
+  // The picked option no longer exists (deactivated on the server) — let
+  // listeners (e.g. the "أخرى" inline input) resync with the reset select.
+  if (isRefill && select.value !== previousValue) {
+    select.dispatchEvent(new Event('change', { bubbles: true }));
   }
 }
 
@@ -72,8 +94,8 @@ async function refreshOne(key) {
   if (!select) return;
 
   try {
-    // The admin mutation that triggered this already cleared the service's
-    // cache, so this is a real network hit, not a stale in-memory read.
+    // Served from the reference cache unless it's missing or stale (an admin
+    // mutation clears it; a version change marks it stale) — then fetched.
     const { options } = await DropdownsService.getOptions(key);
     populateSelect(select, options || []);
   } catch {
@@ -81,20 +103,36 @@ async function refreshOne(key) {
   }
 }
 
-let listenerRegistered = false;
+let initialLoad = null;
 
-export async function initDropdownData() {
-  const entries = Object.entries(KEY_TO_SELECT_ID);
+export function initDropdownData() {
+  if (initialLoad) return initialLoad;
 
-  await Promise.all(entries.map(([key]) => refreshOne(key)));
+  initialLoad = Promise.all(Object.keys(KEY_TO_SELECT_ID).map(refreshOne));
 
   // Live refresh: an admin adding/editing/deactivating an option in
   // "إدارة بيانات الحالة" (same tab, same session) should not require a
   // full page reload to show up here.
-  if (!listenerRegistered) {
-    EventBus.on(EVENTS.DROPDOWN_OPTIONS_UPDATED, ({ key } = {}) => {
-      if (key) refreshOne(key);
-    });
-    listenerRegistered = true;
-  }
+  EventBus.on(EVENTS.DROPDOWN_OPTIONS_UPDATED, ({ key } = {}) => {
+    if (key) refreshOne(key);
+  });
+
+  // The server says these keys changed since they were cached.
+  EventBus.on(EVENTS.REFERENCE_DATA_CHANGED, ({ keys = [] } = {}) => {
+    keys
+      .filter(entryKey => entryKey.startsWith('dropdown:'))
+      .forEach(entryKey => refreshOne(entryKey.slice('dropdown:'.length)));
+  });
+
+  return initialLoad;
+}
+
+/**
+ * Resolves once every wizard <select> has its real options (instant on a
+ * warm cache). Anything that writes values into those selects — e.g. loading
+ * an existing case for editing — must await this first, or a value missing
+ * from the placeholder markup would be treated as a free-text "أخرى".
+ */
+export function whenDropdownsReady() {
+  return initialLoad || Promise.resolve();
 }

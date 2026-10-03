@@ -14,6 +14,7 @@ import { showToast } from '../../utils/toast.js';
 import { onWorkflowRecalc } from '../../core/state.js';
 import { switchView } from '../../core/router.js';
 import { store } from '../../state/store.js';
+import { StorageService, STORAGE_KEYS } from '../../services/storage.js';
 import { DOM } from '../../utils/dom.js';
 import { parseEgyptianNationalId, normalizeNumerals } from '../../utils/nationalId.js';
 import {
@@ -30,7 +31,8 @@ import {
   validateStep1,
   clearStep1Errors,
   highlightStep1Issues,
-  validateStep6
+  validateStep6,
+  registerWizardControls
 } from '../personal-data/personal-data.api.js';
 import { messageFromError } from '../../services/errors.js';
 import { LocationsService } from '../../services/locations.service.js';
@@ -647,11 +649,7 @@ export function initWorkflowTabs() {
       savedAt: new Date().toISOString()
     };
 
-    try {
-      localStorage.setItem('nahda_support_decision_data', JSON.stringify(supportRecord));
-    } catch (err) {
-      console.warn('LocalStorage error:', err);
-    }
+    StorageService.set(STORAGE_KEYS.SUPPORT_DECISION_DATA, supportRecord);
 
     // بيانات المرحلة 5 بتتحفظ لحظيًا في الـ store، بس بنأكد الحفظ هنا برضه
     // علشان الحفظ النهائي يبقى لقطة متسقة من الاستمارة كلها.
@@ -811,6 +809,13 @@ export function initWorkflowTabs() {
   // Wire the step-2 attachment upload input to the real presigned-URL flow
   // (POST /attachments/init -> PUT storage -> POST /commit).
   wireAttachmentUpload();
+
+  // "تحميل آخر نسخة" بعد تعارض حفظ (personal-data.api.js) محتاج يصفّر
+  // الاستمارة ويرجع لنفس المرحلة — والاتنين closures هنا.
+  registerWizardControls({
+    reset: resetWizardForNewCase,
+    goToStep: (step) => activateStep(step, true)
+  });
 
   // البيانات الشخصية لازم centerId/villageId الحقيقية (GUID) عشان step 1
   // يقدر يبعتها لـ POST /cases — لو محدش جاب /locations قبل كده (المستخدم

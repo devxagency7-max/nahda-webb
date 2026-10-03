@@ -15,7 +15,7 @@ export class ApiError extends Error {
    * @param {number} [httpStatus]
    */
   constructor(code, message, details, httpStatus) {
-    super(message || FALLBACK_MESSAGES[code] || 'حدث خطأ غير متوقع');
+    super(message || FALLBACK_MESSAGES[code] || 'حدث خطأ غير متوقع، حاول مرة أخرى');
     this.name = 'ApiError';
     this.code = code;
     this.details = details;
@@ -28,39 +28,50 @@ export class ApiError extends Error {
 // read a `code` from.
 export class NetworkError extends Error {
   constructor(cause) {
-    super('تعذر الاتصال بالخادم — تحقق من الاتصال بالإنترنت');
+    super('تعذّر الوصول للخادم، تأكد من اتصالك بالإنترنت وحاول مرة أخرى');
     this.name = 'NetworkError';
     this.cause = cause;
   }
 }
 
-export const FALLBACK_MESSAGES = {
-  UNAUTHORIZED: 'انتهت صلاحية الجلسة، يرجى تسجيل الدخول مرة أخرى',
-  FORBIDDEN: 'ليس لديك صلاحية للقيام بهذا الإجراء',
-  VALIDATION_ERROR: 'بيانات غير صحيحة',
+// The server accepted the connection (or never answered) but did not finish
+// responding within the configured budget. Extends NetworkError so every
+// existing `instanceof NetworkError` handler keeps working.
+export class RequestTimeoutError extends NetworkError {
+  constructor(cause) {
+    super(cause);
+    this.name = 'RequestTimeoutError';
+    this.message = 'الخادم تأخر في الرد، حاول مرة أخرى';
+  }
+}
 
-  RATE_LIMITED: 'عدد كبير من المحاولات، حاول لاحقًا',
-  INTERNAL_ERROR: 'حدث خطأ في الخادم، حاول لاحقًا',
-  INVALID_CREDENTIALS: 'البريد الإلكتروني أو كلمة المرور غير صحيحة',
-  ACCOUNT_LOCKED: 'تم قفل الحساب مؤقتًا بعد محاولات دخول فاشلة متكررة — حاول بعد 15 دقيقة',
-  PLATFORM_NOT_ALLOWED: 'هذا الحساب غير مسموح له بالدخول من الويب',
-  SOCIAL_WORKER_WEB_BLOCKED: 'الأخصائي الاجتماعي الميداني يسجّل الدخول من تطبيق الموبايل فقط',
-  TOKEN_EXPIRED: 'انتهت صلاحية الجلسة، يرجى تسجيل الدخول مرة أخرى',
-  TOKEN_REVOKED: 'تم إنهاء الجلسة من مكان آخر، يرجى تسجيل الدخول مرة أخرى',
-  TOKEN_INVALID: 'جلسة غير صالحة، يرجى تسجيل الدخول مرة أخرى',
-  DUPLICATE_RESOURCE: 'هذا العنصر موجود بالفعل',
-  DELETE_CONFLICT: 'لا يمكن الحذف لوجود بيانات مرتبطة',
-  CASE_NOT_FOUND: 'الحالة غير موجودة أو لا يمكنك الوصول إليها',
-  DUPLICATE_NATIONAL_ID: 'يوجد حالة مسجّلة بهذا الرقم القومي بالفعل',
-  CONCURRENCY_CONFLICT: 'حصل تعارض أثناء الحفظ — حاول تاني',
-  INVALID_STATUS_TRANSITION: 'هذا الإجراء غير متاح في الحالة الحالية للملف',
-  OPINION_SLOT_LOCKED: 'تم اعتماد هذا الرأي بالفعل ولا يمكن تعديله',
-  MISSING_WORKER_OPINION: 'لم يقم الأخصائي الاجتماعي بكتابة رأيه بعد',
-  CASE_ALREADY_APPROVED: 'هذه الحالة معتمدة بالفعل ولا يمكن تعديل حالتها',
-  IDEMPOTENCY_KEY_REQUIRED: 'خطأ تقني: مفتاح العملية مفقود، أعد المحاولة',
-  FILE_TOO_LARGE: 'حجم الملف يتجاوز 10 ميجابايت',
-  UNSUPPORTED_FILE_TYPE: 'نوع الملف غير مدعوم',
-  STORAGE_UNAVAILABLE: 'خدمة تخزين الملفات غير متاحة حاليًا، حاول لاحقًا'
+export const FALLBACK_MESSAGES = {
+  UNAUTHORIZED: 'انتهت جلستك حفاظًا على أمان حسابك، سجّل الدخول من جديد للمتابعة',
+  FORBIDDEN: 'هذا الإجراء غير متاح لحسابك، تواصل مع مدير النظام إن كنت تحتاجه',
+  VALIDATION_ERROR: 'راجع البيانات المُدخلة وحاول مرة أخرى',
+
+  RATE_LIMITED: 'محاولات كثيرة في وقت قصير، انتظر قليلًا ثم حاول مرة أخرى',
+  INTERNAL_ERROR: 'حدث خلل من جانبنا، حاول بعد قليل، وإن تكرر أبلغ الدعم الفني',
+  INVALID_CREDENTIALS: 'البريد الإلكتروني أو كلمة المرور غير صحيحة، راجعهما وحاول مرة أخرى',
+  ACCOUNT_LOCKED: 'أوقفنا الدخول مؤقتًا لحماية حسابك بعد عدة محاولات غير ناجحة، حاول بعد 15 دقيقة 🔒',
+  PLATFORM_NOT_ALLOWED: 'لا يمكن لهذا الحساب الدخول من الويب، تواصل مع مدير النظام إن احتجت ذلك',
+  SOCIAL_WORKER_WEB_BLOCKED: 'الأخصائي الاجتماعي الميداني يسجّل الدخول من تطبيق الموبايل 📱',
+  TOKEN_EXPIRED: 'انتهت جلستك حفاظًا على أمان حسابك، سجّل الدخول من جديد للمتابعة',
+  TOKEN_REVOKED: 'أُنهيت هذه الجلسة من جهاز آخر، سجّل الدخول من جديد للمتابعة',
+  TOKEN_INVALID: 'تعذّر التأكد من جلستك، سجّل الدخول من جديد للمتابعة',
+  DUPLICATE_RESOURCE: 'هذا العنصر مسجّل لدينا بالفعل',
+  DELETE_CONFLICT: 'لا يمكن حذف هذا العنصر لأنه مرتبط ببيانات أخرى',
+  CASE_NOT_FOUND: 'لم نعثر على هذه الحالة، أو ليس لديك صلاحية الوصول إليها',
+  DUPLICATE_NATIONAL_ID: 'توجد حالة مسجّلة بهذا الرقم القومي بالفعل، يمكنك البحث عنها وفتحها',
+  CONCURRENCY_CONFLICT: 'تم تعديل هذه البيانات من مكان آخر أثناء عملك، حدّث الصفحة وحاول مرة أخرى',
+  INVALID_STATUS_TRANSITION: 'هذا الإجراء غير متاح لأن الحالة في مرحلة أخرى الآن',
+  OPINION_SLOT_LOCKED: 'تم اعتماد هذا الرأي مسبقًا، لذلك لا يمكن تعديله',
+  MISSING_WORKER_OPINION: 'بانتظار رأي الأخصائي الاجتماعي قبل المتابعة',
+  CASE_ALREADY_APPROVED: 'هذه الحالة معتمدة بالفعل، لذلك لا يمكن تغيير حالتها',
+  IDEMPOTENCY_KEY_REQUIRED: 'لم تكتمل العملية، حاول مرة أخرى',
+  FILE_TOO_LARGE: 'حجم الملف أكبر من 10 ميجابايت، اختر ملفًا أصغر',
+  UNSUPPORTED_FILE_TYPE: 'نوع هذا الملف غير مدعوم، جرّب صيغة أخرى',
+  STORAGE_UNAVAILABLE: 'خدمة رفع الملفات غير متاحة الآن، حاول بعد قليل'
 };
 
 /** Convenience for callers that just want something to hand `showToast`. */
@@ -71,5 +82,5 @@ export function messageFromError(err) {
   if (err instanceof NetworkError) {
     return err.message;
   }
-  return 'حدث خطأ غير متوقع';
+  return 'حدث خطأ غير متوقع، حاول مرة أخرى';
 }

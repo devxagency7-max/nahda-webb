@@ -12,33 +12,12 @@
    older comments in this codebase may say.
    -------------------------------------------------------------------------- */
 import { HttpClient } from './http.js';
+import { ReferenceData } from './reference-data.js';
 
-// Options for a key rarely change mid-session, and the server already
-// caches this same data in Redis for an hour. Backed by sessionStorage (not
-// just an in-memory Map) so a page refresh — which used to re-fire all ~18
-// dropdown requests at once on every reload — reuses what was already
-// fetched this tab session instead. Tab-scoped and cleared on close, unlike
-// localStorage, since this is fetched data, not account state.
-const CACHE_KEY = 'nahda_dropdown_cache';
-
-function readCache() {
-  try {
-    const raw = sessionStorage.getItem(CACHE_KEY);
-    return raw ? new Map(Object.entries(JSON.parse(raw))) : new Map();
-  } catch {
-    return new Map();
-  }
-}
-
-function writeCache(map) {
-  try {
-    sessionStorage.setItem(CACHE_KEY, JSON.stringify(Object.fromEntries(map)));
-  } catch {
-    // Best-effort — a full/unavailable sessionStorage just means no cache.
-  }
-}
-
-const consumptionCache = readCache();
+// Consumption options (getOptions) live in the shared localStorage reference
+// cache (services/reference-data.js): same for every user, kept across
+// reloads/logins, re-fetched only when GET /reference-data/versions says the
+// key changed.
 
 // Admin routes ("ضبط بيانات الحالة") hit their own sessionStorage cache, kept
 // separate from consumptionCache since it holds inactive options too and is
@@ -72,20 +51,17 @@ export const DropdownsService = {
    * @param {boolean} [forceRefresh]
    * @returns {Promise<{key:string, options:Array<{id,value,label,isOther,sortOrder,parentOptionId}>}>}
    */
-  async getOptions(key, forceRefresh = false) {
-    if (!forceRefresh && consumptionCache.has(key)) {
-      return consumptionCache.get(key);
-    }
-    const data = await HttpClient.get(`/dropdowns/${encodeURIComponent(key)}`);
-    consumptionCache.set(key, data);
-    writeCache(consumptionCache);
-    return data;
+  getOptions(key, forceRefresh = false) {
+    return ReferenceData.load(
+      `dropdown:${key}`,
+      () => HttpClient.get(`/dropdowns/${encodeURIComponent(key)}`),
+      { forceRefresh }
+    );
   },
 
   clearCache(key) {
-    if (key) consumptionCache.delete(key);
-    else consumptionCache.clear();
-    writeCache(consumptionCache);
+    if (key) ReferenceData.remove(`dropdown:${key}`);
+    else ReferenceData.removeByPrefix('dropdown:');
   },
 
   /**

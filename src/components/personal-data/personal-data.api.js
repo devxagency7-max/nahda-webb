@@ -18,6 +18,8 @@ import { CasesService } from '../../services/cases.service.js';
 import { AttachmentsService } from '../../services/attachments.service.js';
 import { ApiError, messageFromError } from '../../services/errors.js';
 import { parseEgyptianNationalId } from '../../utils/nationalId.js';
+import { choiceDialog } from '../../utils/dialog.js';
+import { loadCaseIntoForm } from './case-edit.loader.js';
 
 function val(id) {
   const el = DOM.qs(`#${id}`);
@@ -38,50 +40,132 @@ function currentCaseId() {
   return store.currentCase?.id || null;
 }
 
-/**
- * يجيب caseRowVersion طازة من السيرفر دايمًا قبل أي PUT من نوع "قوائم"
- * (utilities/financial/support-recommendations) — مش بس لو كانت null.
+/*
+ * أرقام النسخ (optimistic concurrency) — مؤكَّدة من الباك إند (2026-09-30):
+ *   - caseRowVersion = xmin صف الحالة. بيزيد بس مع writes أقسام القوائم
+ *     (family-members/utilities/financial/initial-needs/assessed-needs/
+ *     support-*) وعمليات الـ workflow (assign, opinions, return-*, submit —
+ *     وكمان رأي الأخصائي من تطبيق الموبايل).
+ *   - beneficiary/housing/agriculture ليهم xmin مستقل تمامًا (الـ rowVersion
+ *     في ردهم مش رقم الحالة)، والمرفقات مابتلمسش صف الحالة خالص.
  *
- * caseRowVersion عداد واحد مشترك على مستوى الحالة كلها (اتأكد فعليًا من رد
- * GET /cases/{id} الحي: أي قسم بيتحفظ — بما فيهم أقسام عندها rowVersion خاص
- * بيها زي housing/agriculture، وكمان رفع مرفقات — بيرفع نفس الرقم ده). قبل
- * كده كنا بنجيبها مرة واحدة بس (لو null) ونعتمد على كل مسار حفظ إنه يحدّثها
- * صح بعد كده، لكن أي مسار كتابة تاني (مرفقات، أو أي قسم مستقبلي) ينساها
- * بيسيب النسخة المحلية قديمة، فالسيرفر يرفض PUT التالي بـ 409 "تم تعديل هذه
- * البيانات من مستخدم آخر" رغم إن محدش تاني لمس الحالة فعليًا. جلب طازة دايمًا
- * هنا (طلب GET إضافي بسيط لكل حفظ) بيقفل الثغرة دي نهائيًا بدل ما نطارد كل
- * نقطة كتابة ممكنة واحدة واحدة.
- *
- * خلافًا لحارس المواقع (اللي بيوقف المستخدم لأن الحل يدوي)، هنا الاسترجاع
- * تلقائي بالكامل ومايظهرش للمستخدم أي حاجة.
+ * القاعدة: caseRowVersion بييجي من لحظة فتح الحالة (GET أو POST /cases)،
+ * وبيتحدّث بس من ردود writes إحنا اللي عملناها. ممنوع نجيبه من السيرفر قبل
+ * الحفظ أو ناخده من رد قسم singleton — ده بيخفي تعديلات مستخدم تاني ويخلي
+ * الحفظ يكتب فوقها في صمت بدل ما السيرفر يرجّع 409.
  */
-async function ensureCaseRowVersion(caseId) {
-  const fresh = await CasesService.getById(caseId);
-  store.setSectionVersion('caseRowVersion', fresh?.rowVersion ?? sectionVersion('caseRowVersion'));
-}
-
 function sectionVersion(key) {
   return store.currentCase?.sectionVersions?.[key] ?? null;
+}
+
+const CONFLICT_SECTION_LABELS = {
+  'family-members': 'أفراد الأسرة',
+  utilities: 'المرافق والأجهزة',
+  financial: 'الدخل والمصروفات',
+  'initial-needs': 'الاحتياجات المبدئية',
+  'assessed-needs': 'الاحتياجات',
+  'support-recommendations': 'الدعم المقترح',
+  'social-worker-assessment': 'رأي الباحث الاجتماعي',
+  beneficiary: 'بيانات رب الأسرة',
+  housing: 'السكن',
+  agriculture: 'الحيازة الزراعية'
+};
+
+/** قيم details في الـ API دايمًا string[] — بنقبل كمان قيمة مفردة احتياطيًا. */
+function firstDetail(err, key) {
+  const v = err?.details?.[key];
+  return Array.isArray(v) ? v[0] : v;
+}
+
+/**
+ * بعد 409 واختيار المستخدم الحفظ فوق التعديل التاني: ياخد الرقم الحالي من
+ * details.currentVersion لو موجود (أقسام القوائم والـ workflow)، وإلا GET.
+ */
+async function refreshCaseRowVersion(caseId, err) {
+  const fromDetails = parseInt(firstDetail(err, 'currentVersion'), 10);
+  if (Number.isFinite(fromDetails)) {
+    store.setSectionVersion('caseRowVersion', fromDetails);
+    return;
+  }
+  const fresh = await CasesService.getById(caseId);
+  store.setSectionVersion('caseRowVersion', fresh?.rowVersion);
+}
+
+// workflow.component.js بيسجّل هنا طريقة تصفير الاستمارة والرجوع لمرحلة —
+// الاتنين closures جواه، وهو اللي بيستورد الملف ده (فمينفعش العكس).
+let wizardControls = null;
+export function registerWizardControls(controls) {
+  wizardControls = controls;
+}
+
+/**
+ * "تحميل آخر نسخة" بعد تعارض: تصفير الاستمارة ثم إعادة تحميل الحالة من
+ * السيرفر، والرجوع لنفس المرحلة. بيحافظ على وضع إنشاء/تعديل زي ما كان.
+ */
+async function reloadCaseAfterConflict() {
+  const caseId = currentCaseId();
+  const wasEditMode = store.currentCase?.isEditMode === true;
+  const step = parseInt(store.activeStage, 10) || 1;
+  if (!caseId) return;
+
+  wizardControls?.reset();
+  const loaded = await loadCaseIntoForm(caseId);
+  if (!loaded) return; // loadCaseIntoForm عرض رسالة الخطأ بنفسه
+  if (!wasEditMode) store.setCurrentCase({ ...store.currentCase, isEditMode: false });
+  wizardControls?.goToStep(step);
+  showToast('تم تحميل آخر نسخة من الحالة — راجع البيانات وعدّل من جديد لو محتاج', 'info', 6000);
+}
+
+/** @returns {Promise<'reload'|'overwrite'|null>} */
+async function askConflictResolution(err) {
+  const section = CONFLICT_SECTION_LABELS[firstDetail(err, 'section')];
+  const where = section ? ` (قسم: ${section})` : '';
+  const choice = await choiceDialog({
+    title: 'الحالة اتعدّلت من مستخدم تاني',
+    message: `في حد تاني حفظ تعديلات على الحالة دي وأنت شغال${where}. `
+      + 'لو حفظت بياناتك دلوقتي هتكتب فوق تعديلاته. '
+      + 'الأأمن إنك تحمّل آخر نسخة وتراجعها، وبعدين تعدّل اللي محتاجه.',
+    confirmLabel: 'تحميل آخر نسخة',
+    secondaryLabel: 'حفظ بياناتي فوقها',
+    cancelLabel: 'إلغاء'
+  });
+  if (choice === 'confirm') return 'reload';
+  if (choice === 'secondary') return 'overwrite';
+  return null;
 }
 
 /**
  * Runs an API call, shows a toast on failure, and re-throws so the caller
  * (workflow navigation) can keep the user on the current step instead of
  * advancing past an unsaved section.
+ *
+ * 409 CONCURRENCY_CONFLICT: بيسأل المستخدم — "تحميل آخر نسخة" (الافتراضي
+ * الآمن)، أو "حفظ بياناتي فوقها" (قرار واعي: onConflict يحدّث أرقام النسخ
+ * وبنعيد نفس الحفظ)، أو إلغاء (يفضل في مكانه من غير أي تغيير).
  * @param {Object} [opts]
- * @param {Function} [opts.onConflict] - called on 409 CONCURRENCY_CONFLICT
+ * @param {Function} [opts.onConflict] - (err) => refreshes the version tokens
+ *   the save sends, before an explicit overwrite retry
  * @param {Function} [opts.onValidationDetails] - called with err.details on
  *   422 VALIDATION_ERROR when the server sends field-level details; must
  *   return a ready-to-show message string (or null/undefined to fall back
  *   to the generic message) — used to turn the specific invalid field red
  *   instead of just showing a generic toast (see applyStep1ServerValidationErrors).
  */
-async function runSave(promiseFactory, { onConflict, onValidationDetails } = {}) {
+async function runSave(promiseFactory, opts = {}) {
+  const { onConflict, onValidationDetails } = opts;
   try {
     return await promiseFactory();
   } catch (err) {
-    if (err instanceof ApiError && err.code === 'CONCURRENCY_CONFLICT' && onConflict) {
-      await onConflict();
+    if (err instanceof ApiError && err.code === 'CONCURRENCY_CONFLICT') {
+      const decision = await askConflictResolution(err);
+      if (decision === 'overwrite' && onConflict) {
+        await onConflict(err);
+        return runSave(promiseFactory, opts);
+      }
+      // مسار الإنشاء مالوش onConflict: إعادة تشغيله كانت هتبعت POST /cases
+      // تاني وتعمل حالة مكررة — فالحفظ فوقها هنا بيتعامل زي تحميل آخر نسخة.
+      if (decision === 'reload' || decision === 'overwrite') await reloadCaseAfterConflict();
+      throw err;
     }
     let message = messageFromError(err);
     if (err instanceof ApiError && err.code === 'VALIDATION_ERROR' && err.details && onValidationDetails) {
@@ -94,29 +178,85 @@ async function runSave(promiseFactory, { onConflict, onValidationDetails } = {})
 
 /* ---------------------------- Step 1 — Demographics ---------------------------- */
 
+// كل حقول جسم PUT /cases/{id}/beneficiary (غير rowVersion).
+const BENEFICIARY_PUT_FIELDS = [
+  'fullName', 'phonePrimary', 'phoneSecondary', 'religion', 'education',
+  'maritalStatus', 'healthStatus', 'employmentStatus', 'job', 'monthlyIncome',
+  'takafulBeneficiary', 'takafulAmount', 'centerId', 'villageId', 'address',
+  'headRelation', 'email', 'street', 'buildingNumber', 'floor',
+  'apartmentNumber', 'landmark', 'area', 'employer'
+];
+
+/** يحفظ نسخة السيرفر من المستفيد (من GET /cases/{id} أو رد PUT /beneficiary). */
+function rememberServerBeneficiary(beneficiary) {
+  if (!beneficiary || !store.currentCase) return;
+  store.setCurrentCase({ ...store.currentCase, beneficiary });
+}
+
+/** المركز/القرية المختارين في الفورم (بالاسم) → الـ ids الحقيقية، أو null. */
+function selectedLocationIds() {
+  const centerName = val('referral-district-select');
+  if (!centerName) return null;
+  const ids = store.locationIds || { centers: {}, villages: {} };
+  const centerId = (ids.centers || {})[centerName];
+  if (!centerId) return null;
+  const villageName = val('referral-village-select');
+  const villageId = villageName ? ((ids.villages || {})[centerName] || {})[villageName] || null : null;
+  return { centerId, villageId };
+}
+
 /**
- * حقول قسم المستفيد (PUT /cases/{id}/beneficiary) — flat، موثقة في §12.3
- * ومُتحقّق منها فعليًا على السيرفر الحي. تُستخدم لتحديث حالة موجودة بالفعل.
+ * جسم PUT /cases/{id}/beneficiary.
+ *
+ * الـ PUT استبدال كامل على السيرفر (مؤكَّد من الباك إند): أي خانة مابتتبعتش
+ * أو بتتبعت فاضية بتتمسح. فالجسم بيبدأ من نسخة السيرفر الحالية
+ * (store.currentCase.beneficiary — من GET /cases/{id} أو آخر رد PUT)، وفوقها
+ * قيم الفورم **المليانة** بس:
+ *   - خانات الفورم مابيعرضهاش (الحالة الصحية، الإيميل، تفاصيل العنوان...)
+ *     بترجع زي ما هي بدل ما تتمسح.
+ *   - خانة فاضية في الفورم ماتمسحش قيمة موجودة.
+ *   - المركز/القرية: المختارين في الفورم لو فيه، وإلا اللي على السيرفر.
  */
 function collectBeneficiaryPayload() {
-  return {
-    fullName: val('case-name'),
-    phonePrimary: val('phone1'),
-    phoneSecondary: val('phone2') || null,
-    religion: val('religion'),
-    education: val('education-level'),
-    maritalStatus: val('head-relation'),
-    healthStatus: '',
-    employmentStatus: val('work-type'),
-    job: val('job-title') || null,
-    monthlyIncome: num('head-monthly-income'),
-    takafulBeneficiary: isChecked('head-takaful-karama'),
-    takafulAmount: isChecked('head-takaful-karama') ? num('head-takaful-amount') : null,
-    address: val('address'),
-    headRelation: val('head-relation')
-    // age/gender/birthGovernorate intentionally omitted — server-derived
-    // from nationalId (§19 Frontend Must NOT #1).
+  const server = store.currentCase?.beneficiary || {};
+  const payload = {};
+  BENEFICIARY_PUT_FIELDS.forEach(field => {
+    payload[field] = server[field] ?? null;
+  });
+
+  const overlay = (field, value) => {
+    if (value === null || value === undefined) return;
+    if (typeof value === 'string' && value.trim() === '') return;
+    payload[field] = value;
   };
+
+  overlay('fullName', val('case-name'));
+  overlay('phonePrimary', val('phone1'));
+  overlay('phoneSecondary', val('phone2'));
+  overlay('religion', val('religion'));
+  overlay('education', val('education-level'));
+  overlay('employmentStatus', val('work-type'));
+  overlay('job', val('job-title'));
+  overlay('monthlyIncome', num('head-monthly-income'));
+  overlay('address', val('address'));
+  overlay('headRelation', val('head-relation'));
+  // الفورم مافيهوش حالة اجتماعية منفصلة — زمان كانت بتتملى من صلة القرابة.
+  // بنسيب قيمة السيرفر لو موجودة، وبنحافظ على السلوك القديم للحالة الجديدة بس.
+  if (!payload.maritalStatus) overlay('maritalStatus', val('head-relation'));
+
+  const takaful = isChecked('head-takaful-karama');
+  payload.takafulBeneficiary = takaful;
+  payload.takafulAmount = takaful ? (num('head-takaful-amount') ?? server.takafulAmount ?? null) : null;
+
+  const location = selectedLocationIds();
+  if (location) {
+    payload.centerId = location.centerId;
+    payload.villageId = location.villageId;
+  }
+
+  // age/gender/birthGovernorate/nationalId intentionally omitted — server-derived
+  // from nationalId (§19 Frontend Must NOT #1).
+  return payload;
 }
 
 /**
@@ -315,18 +455,20 @@ export async function saveStep1() {
         // المستخدم بدأ يكتب بيانات شخص مختلف تمامًا من غير ما نصفّر الحالة
         // القديمة (راجع التعليق فوق saveStep1).
         nationalId: val('national-id'),
-        // POST /cases لا يرجّع rowVersion — أول PUT /beneficiary بعده لازم
-        // يمر بمسار null، فنجيب النسخة الحقيقية بقراءة فورية للحالة.
-        sectionVersions: {}
+        // POST /cases بيرجّع caseRowVersion (xmin الحالة فور الكتابة) — ده
+        // مرجع التزامن لكل أقسام القوائم من هنا ورايح. caseRowVersion null
+        // كان بيرجّع 400 فاضي من السيرفر، فلازم يتخزن فورًا.
+        sectionVersions: { caseRowVersion: created.caseRowVersion ?? null }
       });
+      // rowVersion بتاع beneficiary (عدّاد مستقل) مش في رد POST، فبنقراه
+      // فورًا عشان أول PUT /beneficiary.
       const fresh = await CasesService.getById(created.id);
       store.setSectionVersion('beneficiary', fresh?.beneficiary?.rowVersion);
-      // caseRowVersion (نسخة الحالة نفسها، أعلى مستوى في الرد) لازم تتخزن
-      // من هنا فورًا — قبل كده كانت بتفضل null لحد أول نجاح في utilities/
-      // financial/support، فلو المستخدم راح مباشرة لـ step4 من step1 كان
-      // الطلب بيتبعت بـ caseRowVersion: null فيرجّع 400 فاضي بلا أي رسالة
-      // (اتأكد فعليًا على السيرفر الحي — نفس عائلة باگ roomsCount/villageId).
-      store.setSectionVersion('caseRowVersion', fresh?.rowVersion);
+      rememberServerBeneficiary(fresh?.beneficiary);
+      if (sectionVersion('caseRowVersion') == null) {
+        // احتياطي لسيرفر أقدم من commit b231666 (قبل ما POST يرجّع الرقم).
+        store.setSectionVersion('caseRowVersion', fresh?.rowVersion);
+      }
 
       // إكمال باقي بيانات رب الأسرة فورًا في نفس الحفظة — لو فشلت الخطوة
       // دي (مثلاً تعارض إصدار نادر)، الحالة فعلاً اتسجلت بالفعل، فأي محاولة
@@ -335,13 +477,11 @@ export async function saveStep1() {
         ...collectBeneficiaryPayload(),
         rowVersion: fresh?.beneficiary?.rowVersion
       });
+      // عدّاد beneficiary بس — مابيلمسش caseRowVersion.
       store.setSectionVersion('beneficiary', updated?.rowVersion ?? fresh?.beneficiary?.rowVersion);
-      store.setSectionVersion('caseRowVersion', updated?.rowVersion ?? fresh?.rowVersion);
+      rememberServerBeneficiary(updated);
 
       if (store.familyMembers && store.familyMembers.length > 0) {
-        // نفس ملحوظة مسار التحديث تحت: نجيب caseRowVersion طازة قبل PUT
-        // family-members بدل الاعتماد على رد updateBeneficiary مباشرة.
-        await ensureCaseRowVersion(created.id);
         const familyResult = await CasesService.updateFamilyMembers(
           created.id,
           collectFamilyMembersPayload(),
@@ -364,24 +504,24 @@ export async function saveStep1() {
       ...collectBeneficiaryPayload(),
       rowVersion: sectionVersion('beneficiary')
     });
+    // عدّاد beneficiary مستقل عن caseRowVersion (مؤكَّد من الباك إند) —
+    // كتابة رقمه في caseRowVersion كانت سبب الـ 409 الوهمي زمان.
     store.setSectionVersion('beneficiary', updated?.rowVersion ?? sectionVersion('beneficiary'));
-    // beneficiary.rowVersion وrowVersion الحالة نفس العداد المشترك (نفس ملحوظة
-    // saveStep3/saveStep5) — لازم يتحدّث هنا كمان، وإلا أي خطوة تانية تحتاج
-    // caseRowVersion بعد تعديل بيانات رب الأسرة هترجع 409 وهمي.
-    store.setSectionVersion('caseRowVersion', updated?.rowVersion ?? sectionVersion('caseRowVersion'));
+    // رد الـ PUT فيه المستفيد كامل — أساس الحفظ اللي بعده.
+    rememberServerBeneficiary(updated);
 
-    // family-members هو PUT من نوع "قوائم" (زي utilities/financial/support) —
-    // بنفس فلسفة ensureCaseRowVersion، بنجيب caseRowVersion طازة بقراءة GET
-    // مباشرة قبله بدل الاعتماد على رد updateBeneficiary، عشان لو
-    // beneficiary.rowVersion مش نفس عداد caseRowVersion المشترك فعليًا (أو
-    // اختلفوا لأي سبب) الطلب ميترفضش بـ 409 وهمي.
-    await ensureCaseRowVersion(currentCaseId());
-    const familyResult = await CasesService.updateFamilyMembers(
-      currentCaseId(),
-      collectFamilyMembersPayload(),
-      sectionVersion('caseRowVersion')
-    );
-    store.setSectionVersion('caseRowVersion', familyResult?.caseRowVersion ?? sectionVersion('caseRowVersion'));
+    // PUT family-members بيستبدل القائمة كلها على السيرفر، فلو الحالة مفتوحة
+    // للتعديل من غير ما قائمتها الحقيقية تتجاب (case-edit.loader.js بيعلّم
+    // familyLoaded)، إرسال store.familyMembers كان هيمسح أفراد الأسرة المسجلين.
+    const cc = store.currentCase;
+    if (!cc?.isEditMode || cc.familyLoaded === true) {
+      const familyResult = await CasesService.updateFamilyMembers(
+        currentCaseId(),
+        collectFamilyMembersPayload(),
+        sectionVersion('caseRowVersion')
+      );
+      store.setSectionVersion('caseRowVersion', familyResult?.caseRowVersion ?? sectionVersion('caseRowVersion'));
+    }
 
     showToast('تم حفظ بيانات رب الأسرة بنجاح ✅', 'success');
     return true;
@@ -390,6 +530,9 @@ export async function saveStep1() {
       const fresh = await CasesService.getById(currentCaseId());
       store.setSectionVersion('beneficiary', fresh?.beneficiary?.rowVersion);
       store.setSectionVersion('caseRowVersion', fresh?.rowVersion);
+      // "احفظ بياناتي فوقها": الخانات اللي الفورم مابيعرضهاش تاخد أحدث قيمة
+      // على السيرفر، مش النسخة القديمة اللي اتفتحت بيها الحالة.
+      rememberServerBeneficiary(fresh?.beneficiary);
     },
     onValidationDetails: applyStep1ServerValidationErrors
   }).then(() => true, () => false);
@@ -505,20 +648,13 @@ export async function saveStep3() {
   }
   return runSave(async () => {
     const updated = await CasesService.updateHousing(caseId, collectHousingPayload());
+    // xmin صف السكن بس — مابيلمسش caseRowVersion (مؤكَّد من الباك إند).
     store.setSectionVersion('housing', updated?.rowVersion);
-    // housing.rowVersion وrowVersion الحالة نفسها مصدرهم عداد واحد مشترك على
-    // مستوى الحالة كلها (اتأكد فعليًا من GET /cases/{id} الحي: أي قسم بيتحفظ
-    // بيرفع نفس الرقم، مش عداد منفصل لكل قسم) — قبل كده كان saveStep3 بيحدّث
-    // housing بس ومايلمسش caseRowVersion، فلو المستخدم مر على step3 قبل ما
-    // يوصل step4/6/7، كانت النسخة المحلية بتفضل قديمة والسيرفر يرفضها بـ 409
-    // "تم تعديل هذه البيانات من مستخدم آخر" حتى لو محدش تاني لمس الحالة فعليًا.
-    store.setSectionVersion('caseRowVersion', updated?.rowVersion ?? sectionVersion('caseRowVersion'));
     return true;
   }, {
     onConflict: async () => {
       const fresh = await CasesService.getById(caseId);
       store.setSectionVersion('housing', fresh?.housing?.rowVersion);
-      store.setSectionVersion('caseRowVersion', fresh?.rowVersion);
     }
   }).then(() => true, () => false);
 }
@@ -565,16 +701,12 @@ export async function saveStep4() {
     showToast('كمّل بيانات المرحلة الأولى (اسم ورقم قومي رب الأسرة) الأول، وبعدين ارجع هنا 🙏', 'warning');
     return false;
   }
-  await ensureCaseRowVersion(caseId);
   return runSave(async () => {
     const updated = await CasesService.updateUtilities(caseId, collectUtilitiesPayload());
     store.setSectionVersion('caseRowVersion', updated?.caseRowVersion ?? sectionVersion('caseRowVersion'));
     return true;
   }, {
-    onConflict: async () => {
-      const fresh = await CasesService.getById(caseId);
-      store.setSectionVersion('caseRowVersion', fresh?.rowVersion);
-    }
+    onConflict: (err) => refreshCaseRowVersion(caseId, err)
   }).then(() => true, () => false);
 }
 
@@ -601,21 +733,21 @@ export async function saveStep5(readAgricultureData) {
     selectedLivestock: agri.livestockTypes || [],
     livestockOther: agri.livestockOther || null,
     livestockDetails: agri.livestockDetails || null,
-    notes: agri.notes || null,
-    rowVersion: sectionVersion('agriculture')
+    notes: agri.notes || null
   };
 
   return runSave(async () => {
-    const updated = await CasesService.updateAgriculture(caseId, payload);
+    // rowVersion جوه الـ factory — إعادة المحاولة بعد تعارض لازم تبعت الرقم الجديد.
+    const updated = await CasesService.updateAgriculture(caseId, {
+      ...payload,
+      rowVersion: sectionVersion('agriculture')
+    });
     store.setSectionVersion('agriculture', updated?.rowVersion);
     // Server may have nulled dependent fields per §12.4 — re-fetch so the
     // UI doesn't keep showing values the backend just discarded.
+    // ممنوع ناخد fresh.rowVersion هنا: الزراعة مابتزوّدش caseRowVersion، فلو
+    // الرقم اختلف يبقى مستخدم تاني عدّل قسم قوائم — أخده كان هيخفي تعديله.
     const fresh = await CasesService.getById(caseId);
-    // rowVersion الحالة نفسها عداد واحد مشترك بين كل الأقسام (اتأكد فعليًا
-    // من رد GET /cases/{id} الحي) — نفس باگ saveStep3: لو مش اتحدّث هنا،
-    // أي خطوة بعدها بتحتاج caseRowVersion (utilities/financial/support)
-    // هتبعت رقم قديم وترجع 409 وهمي حتى لو محدش تاني لمس الحالة.
-    store.setSectionVersion('caseRowVersion', fresh?.rowVersion ?? sectionVersion('caseRowVersion'));
     if (fresh?.agriculture) {
       store.setAgriculture({
         hasLand: fresh.agriculture.hasLand,
@@ -635,7 +767,6 @@ export async function saveStep5(readAgricultureData) {
     onConflict: async () => {
       const fresh = await CasesService.getById(caseId);
       store.setSectionVersion('agriculture', fresh?.agriculture?.rowVersion);
-      store.setSectionVersion('caseRowVersion', fresh?.rowVersion);
     }
   }).then(() => true, () => false);
 }
@@ -740,22 +871,22 @@ export async function saveStep6() {
     showToast('كمّل بيانات المرحلة الأولى (اسم ورقم قومي رب الأسرة) الأول، وبعدين ارجع هنا 🙏', 'warning');
     return false;
   }
-  await ensureCaseRowVersion(caseId);
-  const payload = {
+  const items = {
     incomeItems: readIncomeRows(),
-    expenseItems: collectFixedExpenseItems(),
-    caseRowVersion: sectionVersion('caseRowVersion')
+    expenseItems: collectFixedExpenseItems()
   };
 
   return runSave(async () => {
-    const updated = await CasesService.updateFinancial(caseId, payload);
+    // caseRowVersion بيتقرا جوه الـ factory عشان إعادة المحاولة بعد "حفظ
+    // بياناتي فوقها" تبعت الرقم الجديد مش القديم.
+    const updated = await CasesService.updateFinancial(caseId, {
+      ...items,
+      caseRowVersion: sectionVersion('caseRowVersion')
+    });
     store.setSectionVersion('caseRowVersion', updated?.caseRowVersion ?? sectionVersion('caseRowVersion'));
     return true;
   }, {
-    onConflict: async () => {
-      const fresh = await CasesService.getById(caseId);
-      store.setSectionVersion('caseRowVersion', fresh?.rowVersion);
-    }
+    onConflict: (err) => refreshCaseRowVersion(caseId, err)
   }).then(() => true, () => false);
 }
 
@@ -790,7 +921,6 @@ export async function saveStep7() {
     showToast('كمّل بيانات المرحلة الأولى (اسم ورقم قومي رب الأسرة) الأول، وبعدين ارجع هنا 🙏', 'warning');
     return false;
   }
-  await ensureCaseRowVersion(caseId);
   return runSave(async () => {
     const updated = await CasesService.updateAssessedNeeds(
       caseId,
@@ -800,10 +930,7 @@ export async function saveStep7() {
     store.setSectionVersion('caseRowVersion', updated?.caseRowVersion ?? sectionVersion('caseRowVersion'));
     return true;
   }, {
-    onConflict: async () => {
-      const fresh = await CasesService.getById(caseId);
-      store.setSectionVersion('caseRowVersion', fresh?.rowVersion);
-    }
+    onConflict: (err) => refreshCaseRowVersion(caseId, err)
   }).then(() => true, () => false);
 }
 
@@ -833,7 +960,6 @@ export async function saveStep8() {
     showToast('اختار الرأي المختصر للباحث الاجتماعي الأول قبل كتابة التقرير التفصيلي 🙏', 'warning');
     return false;
   }
-  await ensureCaseRowVersion(caseId);
   return runSave(async () => {
     const updated = await CasesService.submitSocialWorkerAssessment(caseId, {
       briefOpinion,
@@ -846,10 +972,7 @@ export async function saveStep8() {
     }
     return true;
   }, {
-    onConflict: async () => {
-      const fresh = await CasesService.getById(caseId);
-      store.setSectionVersion('caseRowVersion', fresh?.rowVersion);
-    }
+    onConflict: (err) => refreshCaseRowVersion(caseId, err)
   }).then(() => true, () => false);
 }
 

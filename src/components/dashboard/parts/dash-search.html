@@ -14,7 +14,7 @@
           <circle cx="11" cy="11" r="8"></circle>
           <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
         </svg>
-        <input type="text" id="dash-search-input" class="dash-search-input"
+        <input type="text" id="dash-search-input" class="dash-search-input" aria-label="بحث بالرقم القومي"
           placeholder="أدخل الرقم القومي (14 رقم)..." maxlength="14" dir="rtl">
         <span id="dash-search-counter" class="dash-search-counter" style="display: none;"></span>
       </div>
@@ -29,7 +29,7 @@
           <path d="M5 21V7l8-4v18"></path>
           <path d="M19 21V11l-6-3"></path>
         </svg>
-        <select id="dash-charity-select" class="dash-search-select" dir="rtl">
+        <select id="dash-charity-select" class="dash-search-select" aria-label="اختيار الجمعية" dir="rtl">
           <option value="" selected>اختر الجمعية لعرض الحالات</option>
           <option value="nahda_bs">جمعية النهضة للتنمية والتطوير — بني سويف</option>
           <option value="khair_fashn">جمعية الخير والإحسان — الفشن</option>
@@ -44,7 +44,7 @@
           <polyline points="6 9 12 15 18 9"></polyline>
         </svg>
       </div>
-      <input type="text" id="dash-charity-select-other" class="dash-search-input other-input-field"
+      <input type="text" id="dash-charity-select-other" class="dash-search-input other-input-field" aria-label="اسم الجمعية"
         data-for="dash-charity-select" dir="rtl" placeholder="أدخل اسم الجمعية..."
         style="display: none; margin-top: 10px;">
     </div>
@@ -56,7 +56,7 @@
           <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
           <circle cx="12" cy="10" r="3"></circle>
         </svg>
-        <input type="text" id="dash-region-input" class="dash-search-input"
+        <input type="text" id="dash-region-input" class="dash-search-input" aria-label="بحث بالمركز أو القرية"
           placeholder="ابحث بالمركز أو القرية (مثال: الواسطى، إبشنا)..."
           dir="rtl" autocomplete="off">
       </div>
@@ -68,7 +68,7 @@
       <div class="dash-date-range-container">
         <div class="dash-date-fields-group">
           <div class="dash-date-field">
-            <span class="dash-date-label">من:</span>
+            <span class="dash-date-label" id="dash-date-from-label">من:</span>
             <div class="dash-search-input-wrapper">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
@@ -76,12 +76,12 @@
                 <line x1="8" y1="2" x2="8" y2="6"></line>
                 <line x1="3" y1="10" x2="21" y2="10"></line>
               </svg>
-              <input type="date" id="dash-date-from" class="dash-search-input dash-search-input--date" dir="rtl">
+              <input type="date" id="dash-date-from" aria-labelledby="dash-date-from-label" class="dash-search-input dash-search-input--date" dir="rtl">
             </div>
           </div>
 
           <div class="dash-date-field">
-            <span class="dash-date-label">إلى:</span>
+            <span class="dash-date-label" id="dash-date-to-label">إلى:</span>
             <div class="dash-search-input-wrapper">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
@@ -89,7 +89,7 @@
                 <line x1="8" y1="2" x2="8" y2="6"></line>
                 <line x1="3" y1="10" x2="21" y2="10"></line>
               </svg>
-              <input type="date" id="dash-date-to" class="dash-search-input dash-search-input--date" dir="rtl">
+              <input type="date" id="dash-date-to" aria-labelledby="dash-date-to-label" class="dash-search-input dash-search-input--date" dir="rtl">
             </div>
           </div>
         </div>

@@ -8,6 +8,28 @@
    throws 409 CONCURRENCY_CONFLICT.
    -------------------------------------------------------------------------- */
 import { HttpClient } from './http.js';
+import { ReferenceData } from './reference-data.js';
+import { fetchAllPages } from './paging.js';
+
+// In-flight GET /charities requests, keyed by their query (the management
+// screen's searchable, paged list — never cached, it carries rowVersions for
+// editing). Entries live only while the request is pending, and are dropped
+// on any local write so a reload right after a save can't join a pre-write request.
+const listInFlight = new Map();
+
+// The full roster used by pickers (dashboard search, referral cascade,
+// support filter) — kept in the shared localStorage reference cache and
+// re-fetched only when GET /reference-data/versions reports a change.
+const REFERENCE_ENTRY_KEY = 'charities';
+
+async function invalidatingWrite(request) {
+  try {
+    return await request;
+  } finally {
+    listInFlight.clear();
+    ReferenceData.remove(REFERENCE_ENTRY_KEY);
+  }
+}
 
 export const CharitiesService = {
   /**
@@ -20,9 +42,44 @@ export const CharitiesService = {
    *   CharityListItem: {id, name, governorate, centerId, villageId, phone, dateAdded, rowVersion}
    *   Note: no `address` on the list item — only on the single-entity create/update bodies.
    */
-  async list(opts = {}) {
+  list(opts = {}) {
     const { search, centerId, page, limit } = opts;
-    return HttpClient.get('/charities', { query: { search, centerId, page, limit } });
+    const key = JSON.stringify([search, centerId, page, limit]);
+    const pending = listInFlight.get(key);
+    if (pending) return pending;
+
+    const promise = HttpClient.get('/charities', { query: { search, centerId, page, limit } })
+      .finally(() => {
+        if (listInFlight.get(key) === promise) listInFlight.delete(key);
+      });
+    listInFlight.set(key, promise);
+    return promise;
+  },
+
+  /**
+   * EVERY charity matching the filters, not one page (see paging.js — the
+   * server caps a page at 100). Screens that only show part of it (the
+   * management table: 50 + "load more") slice client-side. Each page goes
+   * through list(), so concurrent identical calls still share their requests.
+   * @param {Object} [opts]
+   * @param {string} [opts.search]
+   * @param {string} [opts.centerId]
+   * @returns {Promise<{items: CharityListItem[], total: number}>}
+   */
+  listAll(opts = {}) {
+    const { search, centerId } = opts;
+    return fetchAllPages((page, limit) => CharitiesService.list({ search, centerId, page, limit }));
+  },
+
+  /**
+   * Full roster for pickers, served from the reference cache when fresh.
+   * @returns {Promise<{items: CharityListItem[], total: number}>}
+   */
+  listReference() {
+    return ReferenceData.load(
+      REFERENCE_ENTRY_KEY,
+      () => CharitiesService.listAll()
+    );
   },
 
   /**
@@ -44,7 +101,7 @@ export const CharitiesService = {
    * @throws {ApiError} VALIDATION_ERROR (bad centerId/villageId pair -> 422, not 404)
    */
   async create(data) {
-    return HttpClient.post('/charities', { body: data });
+    return invalidatingWrite(HttpClient.post('/charities', { body: data }));
   },
 
   /**
@@ -59,11 +116,11 @@ export const CharitiesService = {
    * @throws {ApiError} NOT_FOUND | CONCURRENCY_CONFLICT | VALIDATION_ERROR
    */
   async update(id, data) {
-    return HttpClient.put(`/charities/${id}`, { body: data });
+    return invalidatingWrite(HttpClient.put(`/charities/${id}`, { body: data }));
   },
 
   /** Soft delete — no dependent-data guard on this endpoint. @throws {ApiError} NOT_FOUND */
   async remove(id) {
-    return HttpClient.delete(`/charities/${id}`);
+    return invalidatingWrite(HttpClient.delete(`/charities/${id}`));
   }
 };

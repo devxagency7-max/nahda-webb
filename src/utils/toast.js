@@ -34,11 +34,15 @@ const TOAST_VARIANTS = {
  *   الحالية في التطبيق زي ما هو.
  * @param {number} [durationMs] - مدة العرض بالمللي ثانية. اختياري — لو
  *   مفيش قيمة، بيرجع للمدة الافتراضية حسب النوع (راجع duration تحت).
+ * @param {{ action?: { label: string, onClick: () => void } }} [options] -
+ *   `action` بيضيف زر داخل الـ toast (زي "إعادة المحاولة") وبيطوّل مدة
+ *   العرض لأن المستخدم محتاج وقت يقرا ويضغط.
  */
-export function showToast(message, type = 'success', durationMs) {
+export function showToast(message, type = 'success', durationMs, options = {}) {
   let toast = document.querySelector('.toast');
   if (!toast) {
-    toast = DOM.createElement('div', { className: 'toast' });
+    // live region عشان قارئ الشاشة يعلن الرسالة؛ ومعفي من inert لما modal يكون مفتوح.
+    toast = DOM.createElement('div', { className: 'toast', role: 'status', 'aria-live': 'polite', 'aria-atomic': 'true' });
     document.body.appendChild(toast);
   }
 
@@ -52,6 +56,21 @@ export function showToast(message, type = 'success', durationMs) {
     <span>${DOM.escapeHTML(message)}</span>
   `;
 
+  const { action } = options;
+  if (action && typeof action.onClick === 'function') {
+    const actionBtn = DOM.createElement('button', { type: 'button', className: 'toast__action' });
+    actionBtn.textContent = action.label;
+    actionBtn.addEventListener('click', () => {
+      toast.classList.remove('toast--visible');
+      if (activeToastTimer) {
+        clearTimeout(activeToastTimer);
+        activeToastTimer = null;
+      }
+      action.onClick();
+    });
+    toast.appendChild(actionBtn);
+  }
+
   toast.classList.add('toast--visible');
 
   if (activeToastTimer) {
@@ -59,8 +78,10 @@ export function showToast(message, type = 'success', durationMs) {
   }
 
   // رسائل الخطأ والتحذير بتفضل ظاهرة أطول شوية — المستخدم محتاج وقت
-  // يقرأها ويتصرف بدل ما تختفي بسرعة زي رسالة نجاح عابرة.
-  const duration = durationMs ?? (type === 'error' || type === 'warning' ? 4500 : 3200);
+  // يقرأها ويتصرف بدل ما تختفي بسرعة زي رسالة نجاح عابرة. ولو فيها زر
+  // إجراء بتفضل أطول كمان عشان يلحق يضغط عليه.
+  const defaultDuration = action ? 8000 : (type === 'error' || type === 'warning' ? 4500 : 3200);
+  const duration = durationMs ?? defaultDuration;
   activeToastTimer = setTimeout(() => {
     toast.classList.remove('toast--visible');
     activeToastTimer = null;

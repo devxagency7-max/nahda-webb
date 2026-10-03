@@ -14,6 +14,8 @@ import { EventBus, EVENTS } from '../../core/event-bus.js';
 import { roleLabel, currentRole } from '../../core/permissions.js';
 import { ProfileService, ALLOWED_AVATAR_MIMES, MAX_AVATAR_SIZE_BYTES } from '../../services/profile.service.js';
 import { ApiError, messageFromError } from '../../services/errors.js';
+import { confirmDialog } from '../../utils/dialog.js';
+import { onViewEnter } from '../../core/view-lifecycle.js';
 
 export const DEFAULT_AVATAR = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80';
 
@@ -115,14 +117,9 @@ export function initProfileComponent() {
   // Initial population from store
   populateForm();
 
-  // Load fresh profile on view load or activation
-  loadUserProfile();
-
-  EventBus.on(EVENTS.VIEW_CHANGED, (viewName) => {
-    if (viewName === 'profile') {
-      loadUserProfile();
-    }
-  });
+  // Fresh profile (and presigned avatar URL) each time the screen is opened.
+  // Not at boot: the router already fetches /profile after /auth/me.
+  onViewEnter('profile', () => loadUserProfile());
 
   // 1. Avatar File Upload Handler (Three-step presigned flow)
   if (avatarFileInput) {
@@ -187,7 +184,12 @@ export function initProfileComponent() {
   // 2. Avatar Delete Handler
   if (btnDeleteAvatar) {
     btnDeleteAvatar.addEventListener('click', async () => {
-      const confirmed = window.confirm('هل أنت متأكد من رغبتك في حذف صورتك الشخصية؟');
+      const confirmed = await confirmDialog({
+        title: 'حذف الصورة الشخصية',
+        message: 'هل أنت متأكد من رغبتك في حذف صورتك الشخصية؟',
+        confirmLabel: 'حذف الصورة',
+        danger: true
+      });
       if (!confirmed) return;
 
       btnDeleteAvatar.disabled = true;

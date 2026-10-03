@@ -7,10 +7,13 @@
      - on 401: refresh once (serialized across concurrent callers) and retry
        the original request exactly once; on repeated failure, force logout
      - never retry on 403 (it is never solved by refreshing — §2.5)
+     - abort any request that exceeds the timeout (config/env.js API_TIMEOUT_MS)
+       and throw RequestTimeoutError, so screens can show an error + retry
+       instead of loading forever
    -------------------------------------------------------------------------- */
-import { API_BASE_URL } from '../config/env.js';
+import { API_BASE_URL, API_TIMEOUT_MS } from '../config/env.js';
 import { TokenStore } from './tokens.js';
-import { ApiError, NetworkError } from './errors.js';
+import { ApiError, NetworkError, RequestTimeoutError } from './errors.js';
 import { EventBus, EVENTS } from '../core/event-bus.js';
 
 // Routes that must NOT go through the auth/401-retry machinery at all —
@@ -84,7 +87,15 @@ async function parseEnvelope(response) {
   throw new ApiError(error.code || 'INTERNAL_ERROR', error.message, error.details, response.status);
 }
 
-async function doFetch(path, { method = 'GET', body, query, headers = {}, signal } = {}) {
+/**
+ * Performs one fetch and reads its whole body, all under a single timeout.
+ * The timer covers headers AND body (a server can send headers and then stall),
+ * so the body is read here and callers get a minimal response-like object
+ * ({ ok, status, text() }) — which is all the parsers below use.
+ * A caller-supplied `signal` still aborts the request (surfaced as AbortError);
+ * only our own timeout becomes a RequestTimeoutError.
+ */
+async function doFetch(path, { method = 'GET', body, query, headers = {}, signal, timeoutMs = API_TIMEOUT_MS } = {}) {
   const finalHeaders = { ...headers };
   if (body !== undefined) finalHeaders['Content-Type'] = 'application/json';
 
@@ -93,20 +104,36 @@ async function doFetch(path, { method = 'GET', body, query, headers = {}, signal
     finalHeaders.Authorization = `Bearer ${accessToken}`;
   }
 
-  let response;
+  const controller = new AbortController();
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, timeoutMs);
+
+  const onCallerAbort = () => controller.abort();
+  if (signal) {
+    if (signal.aborted) controller.abort();
+    else signal.addEventListener('abort', onCallerAbort, { once: true });
+  }
+
   try {
-    response = await fetch(buildUrl(path, query), {
+    const response = await fetch(buildUrl(path, query), {
       method,
       headers: finalHeaders,
       body: body !== undefined ? JSON.stringify(body) : undefined,
-      signal
+      signal: controller.signal
     });
+    const text = await response.text();
+    return { ok: response.ok, status: response.status, text: async () => text };
   } catch (cause) {
+    if (timedOut) throw new RequestTimeoutError(cause);
     if (cause?.name === 'AbortError') throw cause;
     throw new NetworkError(cause);
+  } finally {
+    clearTimeout(timer);
+    signal?.removeEventListener('abort', onCallerAbort);
   }
-
-  return response;
 }
 
 async function refreshSession() {
@@ -145,6 +172,7 @@ function forceLogout(reason) {
  * @param {Object} [opts.headers]
  * @param {string} [opts.idempotencyKey] - required by the 8 workflow-transition routes
  * @param {AbortSignal} [opts.signal]
+ * @param {number} [opts.timeoutMs] - per-attempt timeout override (default API_TIMEOUT_MS)
  * @param {boolean} [opts.skipAuthRetry] - internal use (auth endpoints)
  * @param {boolean} [opts.raw] - success body is not the {success,data} envelope
  *   (e.g. a CSV export) — return response text as-is on 2xx, still parse the
@@ -152,7 +180,7 @@ function forceLogout(reason) {
  * @returns {Promise<*>} the unwrapped `data` payload (or raw text if `opts.raw`)
  */
 export async function request(method, path, opts = {}) {
-  const { body, query, signal, idempotencyKey, raw } = opts;
+  const { body, query, signal, idempotencyKey, raw, timeoutMs } = opts;
   const headers = { ...(opts.headers || {}) };
   const parse = raw ? parseRawOrEnvelope : parseEnvelope;
 
@@ -163,7 +191,7 @@ export async function request(method, path, opts = {}) {
     headers['Idempotency-Key'] = idempotencyKey;
   }
 
-  const response = await doFetch(path, { method, body, query, headers, signal });
+  const response = await doFetch(path, { method, body, query, headers, signal, timeoutMs });
 
   if (response.status === 401 && !AUTH_NO_RETRY_PATHS.has(path)) {
     try {
@@ -175,7 +203,7 @@ export async function request(method, path, opts = {}) {
     // Retry exactly once with the freshly-rotated access token.
     const retryHeaders = { ...headers };
     delete retryHeaders.Authorization; // doFetch re-reads the current token
-    const retryResponse = await doFetch(path, { method, body, query, headers: retryHeaders, signal });
+    const retryResponse = await doFetch(path, { method, body, query, headers: retryHeaders, signal, timeoutMs });
     if (retryResponse.status === 401) {
       forceLogout('retry_still_401');
     }

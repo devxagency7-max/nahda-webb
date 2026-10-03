@@ -92,8 +92,8 @@
                 <!-- Populated dynamically via JS from CSV data + أخرى -->
               </select>
               <div id="charity-center-other-container" style="display: none; position: relative;">
-                <input type="text" id="charity-center-other-input" class="form-input" placeholder="اكتب اسم المركز هنا..." dir="rtl" style="padding-left: 36px;">
-                <button type="button" id="btn-reset-center-select" title="الرجوع للقائمة" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,0.06); border: none; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 11px; color: #64748b;">✕</button>
+                <input type="text" id="charity-center-other-input" class="form-input" aria-label="اسم المركز" placeholder="اكتب اسم المركز هنا..." dir="rtl" style="padding-left: 36px;">
+                <button type="button" id="btn-reset-center-select" title="الرجوع للقائمة" aria-label="الرجوع لقائمة المراكز" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,0.06); border: none; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 11px; color: #64748b;">✕</button>
               </div>
             </div>
           </div>
@@ -110,8 +110,8 @@
                 <!-- Populated dynamically based on chosen center + أخرى -->
               </select>
               <div id="charity-village-other-container" style="display: none; position: relative;">
-                <input type="text" id="charity-village-other-input" class="form-input" placeholder="اكتب اسم القرية / المنطقة هنا..." dir="rtl" style="padding-left: 36px;">
-                <button type="button" id="btn-reset-village-select" title="الرجوع للقائمة" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,0.06); border: none; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 11px; color: #64748b;">✕</button>
+                <input type="text" id="charity-village-other-input" class="form-input" aria-label="اسم القرية / المنطقة" placeholder="اكتب اسم القرية / المنطقة هنا..." dir="rtl" style="padding-left: 36px;">
+                <button type="button" id="btn-reset-village-select" title="الرجوع للقائمة" aria-label="الرجوع لقائمة القرى" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,0.06); border: none; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 11px; color: #64748b;">✕</button>
               </div>
             </div>
           </div>
@@ -154,7 +154,7 @@
               <circle cx="11" cy="11" r="8"></circle>
               <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
             </svg>
-            <input type="text" id="charity-search-input" class="form-input" placeholder="ابحث باسم الجمعية، المركز، أو القرية..." dir="rtl">
+            <input type="text" id="charity-search-input" class="form-input" aria-label="بحث في الجمعيات" placeholder="ابحث باسم الجمعية، المركز، أو القرية..." dir="rtl">
           </div>
 
           <div class="charity-center-pills" id="charity-center-pills">
@@ -172,6 +172,7 @@
                 <th>اسم الجمعية</th>
                 <th>المركز والقرية</th>
                 <th>رقم الهاتف والعنوان</th>
+                <th style="width: 100px; text-align: center;">الإجراءات</th>
               </tr>
             </thead>
             <tbody id="charities-table-body">

@@ -9,7 +9,8 @@ import { showToast } from '../../utils/toast.js';
 import { EventBus, EVENTS } from '../../core/event-bus.js';
 import { can, PERMISSIONS } from '../../core/permissions.js';
 import { ReportsService, clearReportsCache } from '../../services/reports.service.js';
-import { initReportBuilder } from './reports-builder.component.js';
+import { initReportBuilder, loadBuilderDatasets } from './reports-builder.component.js';
+import { onViewEnter } from '../../core/view-lifecycle.js';
 
 let activeTab = 'executive';
 let globalDateRange = { from: '', to: '' };
@@ -53,8 +54,10 @@ export function initReportsComponent() {
   applyRolePermissionsGates();
   EventBus.on(EVENTS.USER_CHANGED, applyRolePermissionsGates);
 
-  // Trigger load when view is opened
-  EventBus.on('reports:opened', () => {
+  // Trigger load when view is opened (also when it's the view restored on a
+  // reload, which the old router-emitted 'reports:opened' event missed).
+  onViewEnter('reports', ({ firstEnter }) => {
+    if (firstEnter) loadBuilderDatasets();
     loadActiveTabData();
   });
 }

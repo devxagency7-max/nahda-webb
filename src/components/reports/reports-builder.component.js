@@ -65,20 +65,19 @@ function t(key) {
   return LABELS[key] || key;
 }
 
-/** Initialize Report Builder Component */
-export async function initReportBuilder() {
-  const datasetSelect = DOM.qs('#builder-dataset-select');
-  const addFilterBtn = DOM.qs('#btn-builder-add-filter');
-  const runBtn = DOM.qs('#btn-builder-run');
-  const exportBtn = DOM.qs('#btn-builder-export');
-  const toggleViewBtn = DOM.qs('#btn-builder-toggle-view');
+let datasetsLoad = null;
 
-  // Hide Export Button if role does not have export_reports permission (§2)
-  if (exportBtn) {
-    exportBtn.style.display = can(PERMISSIONS.EXPORT_REPORTS) ? 'inline-flex' : 'none';
-  }
+/**
+ * Loads the dataset/dimension schema from the server (once) and fills the
+ * builder's pickers. Called by reports.component.js on the first visit to
+ * the reports screen — not at boot.
+ */
+export function loadBuilderDatasets() {
+  if (!datasetsLoad) datasetsLoad = fetchDatasets().then(populateDatasets);
+  return datasetsLoad;
+}
 
-  // Load Datasets Discovery from server
+async function fetchDatasets() {
   try {
     const res = await ReportsService.getDatasets();
     datasetsMetadata = Array.isArray(res) ? res : (res?.data || []);
@@ -117,8 +116,20 @@ export async function initReportBuilder() {
       }
     ];
   }
+}
 
-  populateDatasets();
+/** Initialize Report Builder Component (DOM wiring only — see loadBuilderDatasets). */
+export function initReportBuilder() {
+  const datasetSelect = DOM.qs('#builder-dataset-select');
+  const addFilterBtn = DOM.qs('#btn-builder-add-filter');
+  const runBtn = DOM.qs('#btn-builder-run');
+  const exportBtn = DOM.qs('#btn-builder-export');
+  const toggleViewBtn = DOM.qs('#btn-builder-toggle-view');
+
+  // Hide Export Button if role does not have export_reports permission (§2)
+  if (exportBtn) {
+    exportBtn.style.display = can(PERMISSIONS.EXPORT_REPORTS) ? 'inline-flex' : 'none';
+  }
 
   if (datasetSelect) {
     datasetSelect.addEventListener('change', () => {
@@ -230,15 +241,15 @@ function renderFilterRows() {
 
   container.innerHTML = currentFilters.map((f, i) => `
     <div class="builder-filter-row" data-index="${i}">
-      <select class="reports-select filter-field-select" data-index="${i}">
+      <select class="reports-select filter-field-select" data-index="${i}" aria-label="حقل الفلتر ${i + 1}">
         ${dimOptions}
       </select>
-      <select class="reports-select filter-op-select" data-index="${i}">
+      <select class="reports-select filter-op-select" data-index="${i}" aria-label="معامل الفلتر ${i + 1}">
         ${operatorOptionsFor(currentDataset, f.field, f.operator)}
       </select>
-      <input type="text" class="reports-search-input filter-val-input" placeholder="${f.operator === 'Between' ? 'من (YYYY-MM)...' : 'القيمة...'}" value="${DOM.escapeHTML(f.value)}" data-index="${i}" dir="rtl">
-      ${f.operator === 'Between' ? `<input type="text" class="reports-search-input filter-valto-input" placeholder="إلى (YYYY-MM)..." value="${DOM.escapeHTML(f.valueTo || '')}" data-index="${i}" dir="rtl">` : ''}
-      <button type="button" class="btn btn--danger-outline btn-remove-filter" data-index="${i}" title="حذف الفلتر">
+      <input type="text" class="reports-search-input filter-val-input" aria-label="${f.operator === 'Between' ? 'بداية القيمة' : 'قيمة الفلتر'} ${i + 1}" placeholder="${f.operator === 'Between' ? 'من (YYYY-MM)...' : 'القيمة...'}" value="${DOM.escapeHTML(f.value)}" data-index="${i}" dir="rtl">
+      ${f.operator === 'Between' ? `<input type="text" class="reports-search-input filter-valto-input" aria-label="نهاية القيمة ${i + 1}" placeholder="إلى (YYYY-MM)..." value="${DOM.escapeHTML(f.valueTo || '')}" data-index="${i}" dir="rtl">` : ''}
+      <button type="button" class="btn btn--danger-outline btn-remove-filter" data-index="${i}" title="حذف الفلتر" aria-label="حذف الفلتر ${i + 1}">
         ✕
       </button>
     </div>
@@ -335,6 +346,9 @@ function hideInlineError() {
 /** Execute Report Builder Query */
 async function runBuilderQuery() {
   hideInlineError();
+  // Clicked before the schema finished loading — wait for it rather than
+  // sending a payload with no dataset.
+  if (!currentDataset) await loadBuilderDatasets();
   const runBtn = DOM.qs('#btn-builder-run');
   if (runBtn) {
     runBtn.disabled = true;

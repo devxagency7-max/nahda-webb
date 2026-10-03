@@ -33,20 +33,14 @@ const ROLE_HIERARCHY = {
 const WEB_LOGIN_ROLES = ['manager', 'reviewer', 'data_entry'];
 
 // ترحيل الجلسات القديمة: دور admin (مدير النظام) اتشال، وجلسات الأخصائي
-// مابقتش تتفتح من الويب — الاتنين بيرجعوا لأقل دور بدل ما يفضلوا شغالين.
+// مابقتش تتفتح من الويب. أي مستخدم متخزن دوره مش من أدوار الويب بيتعامل معاه
+// على إنه "مفيش مستخدم" (null) ويتمسح من localStorage — مفيش هوية بديلة
+// بتتخترع. الـ boot guard في router.js هو اللي بيقرر بعدها: يجيب الهوية
+// الحقيقية من /auth/me أو يرجّع لشاشة الدخول.
 function migrateStoredUser(user) {
-  if (!user || !WEB_LOGIN_ROLES.includes(user.roleCode)) {
-    return {
-      name: 'حسن',
-      roleLabel: 'مدخل بيانات',
-      roleCode: 'data_entry',
-      email: 'hassan@gmail.com',
-      gender: 'ذكر',
-      phone: '01055667788',
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80'
-    };
-  }
-  return user;
+  if (user && WEB_LOGIN_ROLES.includes(user.roleCode)) return user;
+  if (user) StorageService.remove(STORAGE_KEYS.CURRENT_USER);
+  return null;
 }
 
 let initialEmployees = StorageService.get(STORAGE_KEYS.EMPLOYEES, []);
@@ -158,6 +152,46 @@ class AppStore {
     this.state.currentUser = null;
     StorageService.remove(STORAGE_KEYS.CURRENT_USER);
     EventBus.emit(EVENTS.USER_CHANGED, null);
+  }
+
+  /**
+   * Wipes everything that belongs to the signed-in account or to the case /
+   * list data it was looking at — in memory AND in localStorage. Device
+   * preferences (bgSettings, sidebar collapsed) are intentionally kept.
+   * No per-field events are emitted: callers follow up with a page reload
+   * (core/session.js), so listeners would only re-render state that is about
+   * to be discarded anyway. USER_CHANGED(null) is still emitted, same as
+   * clearCurrentUser().
+   */
+  resetSessionState() {
+    this.state.activeStage = '1';
+    this.state.familyMembers = [];
+    this.state.charities = [];
+    this.state.employees = [];
+    this.state.beniSuefLocations = {};
+    this.state.locationIds = { centers: {}, villages: {} };
+    this.state.agriculture = null;
+    this.state.visitedStages = [];
+    this.state.currentCase = null;
+    this.state.incomeItems = [];
+    this.state.expenseItems = [];
+    this.state.assessedNeeds = [];
+    this.state.searchMode = 'nid';
+
+    [
+      STORAGE_KEYS.ACTIVE_STAGE,
+      STORAGE_KEYS.FAMILY_MEMBERS,
+      STORAGE_KEYS.CHARITIES,
+      STORAGE_KEYS.BENI_SUEF_LOCATIONS,
+      STORAGE_KEYS.EMPLOYEES,
+      STORAGE_KEYS.AGRICULTURE,
+      STORAGE_KEYS.VISITED_STAGES,
+      STORAGE_KEYS.CURRENT_CASE,
+      STORAGE_KEYS.LAST_VIEWED_CASE_ID,
+      STORAGE_KEYS.SUPPORT_DECISION_DATA
+    ].forEach(key => StorageService.remove(key));
+
+    this.clearCurrentUser();
   }
 
   // Location Actions

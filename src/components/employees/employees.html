@@ -159,7 +159,7 @@
               </button>
             </div>
             <div class="input-with-action">
-              <input type="email" id="employee-email-input" class="form-input form-input--generated" placeholder="يتولد تلقائياً فور كتابة الاسم..." readonly dir="ltr">
+              <input type="email" id="employee-email-input" aria-label="البريد الإلكتروني المهني" class="form-input form-input--generated" placeholder="يتولد تلقائياً فور كتابة الاسم..." readonly dir="ltr">
             </div>
             <span class="field-hint">🔒 البريد يتولد آلياً بنطاق المؤسسة ولا يُعدل يدوياً</span>
           </div>
@@ -187,8 +187,8 @@
               </div>
             </div>
             <div class="input-with-action">
-              <input type="text" id="employee-password-input" class="form-input form-input--generated" placeholder="تتولد تلقائياً كلمة مرور قوية..." readonly dir="ltr" style="letter-spacing: 1px; font-weight: 800; font-family: 'Consolas', 'Courier New', monospace; padding-left: 42px !important;">
-              <button type="button" class="btn-toggle-pw-mask" id="btn-toggle-emp-pw" title="إظهار/إخفاء كلمة المرور">👁️</button>
+              <input type="password" id="employee-password-input" aria-label="كلمة المرور السرية للموظف" class="form-input form-input--generated" placeholder="تتولد تلقائياً كلمة مرور قوية..." readonly dir="ltr" autocomplete="new-password" style="letter-spacing: 1px; font-weight: 800; font-family: 'Consolas', 'Courier New', monospace; padding-left: 42px !important;">
+              <button type="button" class="btn-toggle-pw-mask" id="btn-toggle-emp-pw" title="إظهار/إخفاء كلمة المرور" aria-label="إظهار كلمة المرور" aria-pressed="false">🔒</button>
             </div>
             <span class="field-hint">🔒 كلمة المرور مشفرة ومولدة تلقائياً وجاهزة للنسخ الفوري</span>
           </div>
@@ -236,7 +236,7 @@
               <circle cx="11" cy="11" r="8"></circle>
               <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
             </svg>
-            <input type="text" id="employee-search-input" class="emp-search-input" placeholder="ابحث باسم الموظف، البريد الإلكتروني، أو الدور..." dir="rtl">
+            <input type="text" id="employee-search-input" class="emp-search-input" aria-label="بحث في الموظفين" placeholder="ابحث باسم الموظف، البريد الإلكتروني، أو الدور..." dir="rtl">
           </div>
 
           <div class="employee-role-pills" id="employee-role-pills">

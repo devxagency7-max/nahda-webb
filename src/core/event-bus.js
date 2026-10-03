@@ -75,5 +75,9 @@ export const EVENTS = {
   // same key (personal-data wizard) can refresh live instead of waiting for
   // a full page reload. Payload: { key: string }.
   DROPDOWN_OPTIONS_UPDATED: 'dropdowns:options-updated',
+  // Emitted by services/reference-data.js when GET /reference-data/versions
+  // reports that cached lists changed on the server. Payload: { keys: string[] }
+  // — entry keys like 'dropdown:gender', 'locations', 'charities'.
+  REFERENCE_DATA_CHANGED: 'reference-data:changed',
   SESSION_EXPIRED: 'auth:session-expired'
 };

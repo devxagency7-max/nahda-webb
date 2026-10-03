@@ -33,6 +33,17 @@ export function initChipFields(scope = document) {
     const chips = DOM.qsa('.chip-btn', field);
     const otherInput = field.querySelector('.chip-field__other');
 
+    // المجموعة والحقل الحر ليهم اسم برمجي من عنوان الحقل (بدل placeholder بس).
+    const labelEl = field.querySelector('.chip-field__label');
+    if (labelEl) {
+      if (!labelEl.id) labelEl.id = `chip-field-label-${field.dataset.field || fields.indexOf(field)}`;
+      field.setAttribute('role', 'group');
+      field.setAttribute('aria-labelledby', labelEl.id);
+      if (otherInput && !otherInput.hasAttribute('aria-label')) {
+        otherInput.setAttribute('aria-label', `${labelEl.textContent.trim()} — تفاصيل أخرى`);
+      }
+    }
+
     function syncOtherVisibility() {
       const otherChip = chips.find(c => c.dataset.value === OTHER_OPTION);
       const otherActive = otherChip && otherChip.classList.contains('chip-btn--active');

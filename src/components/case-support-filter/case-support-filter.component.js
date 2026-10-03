@@ -22,7 +22,7 @@ import { CasesService } from '../../services/cases.service.js';
 import { CharitiesService } from '../../services/charities.service.js';
 import { LocationsService } from '../../services/locations.service.js';
 import { messageFromError } from '../../services/errors.js';
-import { exportCaseListToPdf } from '../../services/case-pdf.service.js';
+import { onViewEnter } from '../../core/view-lifecycle.js';
 
 // Real production values from the backend's case_support_history column,
 // stored as-is (case-sensitive, no normalization) — do not re-derive this
@@ -106,10 +106,17 @@ export function initCaseSupportFilterComponent() {
   if (!charitySelect || !chipsContainer) return; // view not mounted (non-manager build, defensive)
 
   renderSupportChips(chipsContainer);
-  ensureLocationsLoaded().then(() => {
-    updateDistrictOptions(districtSelect);
-    loadCharities(charitySelect, districtSelect, villageSelect);
-  });
+
+  // Pickers are filled when the screen is first opened, not at boot. The
+  // charity roster comes from the reference cache, so this is normally free.
+  let pickersLoaded = false;
+  onViewEnter('case-support-filter', () => {
+    pickersLoaded = true;
+    ensureLocationsLoaded().then(() => {
+      updateDistrictOptions(districtSelect);
+      loadCharities(charitySelect, districtSelect, villageSelect);
+    });
+  }, { once: true });
 
   if (districtSelect) {
     districtSelect.addEventListener('change', () => {
@@ -208,10 +215,12 @@ export function initCaseSupportFilterComponent() {
 
 
   EventBus.on(EVENTS.CHARITIES_UPDATED, () => {
+    if (!pickersLoaded) return; // first open will load the current roster anyway
     loadCharities(charitySelect, districtSelect, villageSelect);
   });
 
   EventBus.on(EVENTS.LOCATIONS_UPDATED, () => {
+    if (!pickersLoaded) return;
     updateDistrictOptions(districtSelect);
     updateVillageOptions(villageSelect, districtSelect ? districtSelect.value : '');
     // Center/village names for already-loaded charities depend on
@@ -327,7 +336,7 @@ function renderSupportChips(container) {
 
 async function loadCharities(charitySelect, districtSelect, villageSelect) {
   try {
-    const result = await CharitiesService.list({ limit: 500 });
+    const result = await CharitiesService.listReference();
     const items = (result && result.items) || [];
     allCharities = items.map(item => {
       const center = findCenterNameById(item.centerId);
@@ -507,6 +516,8 @@ async function handleExportPdf() {
   if (exportBtn) exportBtn.disabled = true;
 
   try {
+    // تحميل كسول: jsPDF + html2canvas تقيلين ومش لازمين إلا عند الضغط على تصدير.
+    const { exportCaseListToPdf } = await import('../../services/case-pdf.service.js');
     await exportCaseListToPdf(currentResults, {
       charityLabel: appliedHeader.charityName || commonLabelAcrossResults('charityName'),
       centerLabel: appliedHeader.center || commonLabelAcrossResults('centerName'),

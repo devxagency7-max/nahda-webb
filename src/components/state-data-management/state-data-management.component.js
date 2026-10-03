@@ -17,6 +17,9 @@ import { LocationsService } from '../../services/locations.service.js';
 import { DropdownsService } from '../../services/dropdowns.service.js';
 import { can, PERMISSIONS } from '../../core/permissions.js';
 import { messageFromError } from '../../services/errors.js';
+import { confirmDialog, promptDialog } from '../../utils/dialog.js';
+import { ReferenceData } from '../../services/reference-data.js';
+import { onViewEnter } from '../../core/view-lifecycle.js';
 
 export function initStateDataManagement() {
   const viewContainer = DOM.qs('#view-state-mgmt');
@@ -100,13 +103,13 @@ export function initStateDataManagement() {
               <button type="button" class="btn btn--secondary btn--sm btn-add-village-to-center" data-center="${DOM.escapeHTML(center)}">
                 <span>➕ إضافة قرية</span>
               </button>
-              <button type="button" class="btn-opt-action btn-center-edit" data-center="${DOM.escapeHTML(center)}" title="تعديل اسم المركز">
+              <button type="button" class="btn-opt-action btn-center-edit" data-center="${DOM.escapeHTML(center)}" title="تعديل اسم المركز" aria-label="تعديل اسم المركز ${DOM.escapeHTML(center)}">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                   <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                 </svg>
               </button>
-              <button type="button" class="btn-opt-action btn-center-delete" data-center="${DOM.escapeHTML(center)}" title="حذف المركز بالكامل">
+              <button type="button" class="btn-opt-action btn-center-delete" data-center="${DOM.escapeHTML(center)}" title="حذف المركز بالكامل" aria-label="حذف المركز ${DOM.escapeHTML(center)} بالكامل">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2">
                   <polyline points="3 6 5 6 21 6"></polyline>
                   <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
@@ -153,9 +156,13 @@ export function initStateDataManagement() {
     // is the correct "source of truth" move here (§22: last-write-wins by design).
     card.addEventListener('click', async (e) => {
       if (e.target.closest('#btn-add-new-center-action')) {
-        const centerName = prompt('أدخل اسم المركز الجديد المراد إضافته لمحافظة بني سويف:');
-        if (centerName && centerName.trim()) {
-          const clean = centerName.trim();
+        const centerName = await promptDialog({
+          title: 'إضافة مركز جديد',
+          label: 'أدخل اسم المركز الجديد المراد إضافته لمحافظة بني سويف:',
+          confirmLabel: 'إضافة'
+        });
+        if (centerName) {
+          const clean = centerName;
           try {
             await LocationsService.createCenter(clean);
             showToast(`تمت إضافة مركز "${clean}" بنجاح 📍`);
@@ -168,7 +175,12 @@ export function initStateDataManagement() {
       }
 
       if (e.target.closest('#btn-reset-locations-action')) {
-        if (confirm('هل أنت متأكد من استعادة التقسيم الجغرافي الافتراضي لكافة المراكز والقرى؟ هذا الإجراء لا رجعة فيه على السيرفر.')) {
+        if (await confirmDialog({
+          title: 'استعادة التقسيم الجغرافي',
+          message: 'هل أنت متأكد من استعادة التقسيم الجغرافي الافتراضي لكافة المراكز والقرى؟ هذا الإجراء لا رجعة فيه على السيرفر.',
+          confirmLabel: 'استعادة الافتراضي',
+          danger: true
+        })) {
           try {
             await LocationsService.reset();
             showToast('تمت استعادة التقسيم الجغرافي الافتراضي 🔄');
@@ -184,9 +196,13 @@ export function initStateDataManagement() {
       if (btnAddVillage) {
         const center = btnAddVillage.dataset.center;
         const centerId = store.locationIds.centers[center];
-        const villageName = prompt(`إضافة قرية جديدة لـ (${center}):`);
-        if (villageName && villageName.trim() && centerId) {
-          const clean = villageName.trim();
+        const villageName = await promptDialog({
+          title: 'إضافة قرية جديدة',
+          label: `إضافة قرية جديدة لـ (${center}):`,
+          confirmLabel: 'إضافة'
+        });
+        if (villageName && centerId) {
+          const clean = villageName;
           try {
             await LocationsService.createVillage(centerId, clean);
             showToast(`تمت إضافة قرية "${clean}" لـ ${center} 📍`);
@@ -202,9 +218,14 @@ export function initStateDataManagement() {
       if (btnEditCenter) {
         const oldCenter = btnEditCenter.dataset.center;
         const centerId = store.locationIds.centers[oldCenter];
-        const newCenter = prompt(`تعديل اسم مركز (${oldCenter}):`, oldCenter);
-        if (newCenter && newCenter.trim() && newCenter.trim() !== oldCenter && centerId) {
-          const clean = newCenter.trim();
+        const newCenter = await promptDialog({
+          title: 'تعديل اسم المركز',
+          label: `تعديل اسم مركز (${oldCenter}):`,
+          initialValue: oldCenter,
+          requireChange: true
+        });
+        if (newCenter && centerId) {
+          const clean = newCenter;
           try {
             await LocationsService.renameCenter(centerId, clean);
             showToast(`تم تعديل اسم المركز إلى "${clean}" بنجاح ✨`);
@@ -220,7 +241,12 @@ export function initStateDataManagement() {
       if (btnDeleteCenter) {
         const center = btnDeleteCenter.dataset.center;
         const centerId = store.locationIds.centers[center];
-        if (confirm(`هل أنت متأكد من حذف مركز (${center})؟`) && centerId) {
+        if (centerId && await confirmDialog({
+          title: 'حذف مركز',
+          message: `هل أنت متأكد من حذف مركز (${center})؟`,
+          confirmLabel: 'حذف',
+          danger: true
+        })) {
           try {
             await LocationsService.deleteCenter(centerId);
             showToast(`تم حذف مركز (${center}) 🗑️`);
@@ -241,9 +267,14 @@ export function initStateDataManagement() {
         const oldVillage = chip.dataset.village;
         const villageId = (store.locationIds.villages[center] || {})[oldVillage];
 
-        const newVillage = prompt(`تعديل اسم قرية (${oldVillage}) بـمركز ${center}:`, oldVillage);
-        if (newVillage && newVillage.trim() && newVillage.trim() !== oldVillage && villageId) {
-          const clean = newVillage.trim();
+        const newVillage = await promptDialog({
+          title: 'تعديل اسم القرية',
+          label: `تعديل اسم قرية (${oldVillage}) بمركز ${center}:`,
+          initialValue: oldVillage,
+          requireChange: true
+        });
+        if (newVillage && villageId) {
+          const clean = newVillage;
           try {
             await LocationsService.renameVillage(villageId, clean);
             showToast(`تم تحديث اسم القرية إلى "${clean}" ✨`);
@@ -262,7 +293,12 @@ export function initStateDataManagement() {
         const village = chip.dataset.village;
         const villageId = (store.locationIds.villages[center] || {})[village];
 
-        if (confirm(`هل أنت متأكد من حذف قرية (${village}) من مركز ${center}؟`) && villageId) {
+        if (villageId && await confirmDialog({
+          title: 'حذف قرية',
+          message: `هل أنت متأكد من حذف قرية (${village}) من مركز ${center}؟`,
+          confirmLabel: 'حذف',
+          danger: true
+        })) {
           try {
             await LocationsService.deleteVillage(villageId);
             showToast(`تم حذف قرية (${village}) 🗑️`);
@@ -316,13 +352,13 @@ export function initStateDataManagement() {
       <div class="option-item-row" data-option-id="${DOM.escapeHTML(opt.id)}">
         <span class="option-item-text">${DOM.escapeHTML(opt.label)}</span>
         <div class="option-item-actions">
-          <button type="button" class="btn-opt-action btn-opt-edit" title="تعديل اسم الخيار">
+          <button type="button" class="btn-opt-action btn-opt-edit" title="تعديل اسم الخيار" aria-label="تعديل اسم الخيار ${DOM.escapeHTML(opt.label)}">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
               <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
             </svg>
           </button>
-          <button type="button" class="btn-opt-action btn-opt-delete" title="تعطيل الخيار (لا يوجد حذف نهائي)">
+          <button type="button" class="btn-opt-action btn-opt-delete" title="تعطيل الخيار (لا يوجد حذف نهائي)" aria-label="تعطيل الخيار ${DOM.escapeHTML(opt.label)}">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2">
               <polyline points="3 6 5 6 21 6"></polyline>
               <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
@@ -352,7 +388,7 @@ export function initStateDataManagement() {
             <div style="font-size: 11px; color: #94a3b8; text-align: center; padding: 8px 4px;">قائمة ثابتة من الباك إند — لا يمكن الإضافة إليها</div>
           ` : `
             <div class="add-option-row">
-              <input type="text" class="form-input add-opt-input" placeholder="+ إضافة خيار جديد للقائمة..." style="padding: 7px 10px; font-size: 12px;">
+              <input type="text" class="form-input add-opt-input" aria-label="إضافة خيار جديد إلى ${DOM.escapeHTML(config.label || config.key || 'القائمة')}" placeholder="+ إضافة خيار جديد للقائمة..." style="padding: 7px 10px; font-size: 12px;">
               <button type="button" class="btn btn--primary btn-add-opt" style="padding: 7px 14px; font-size: 12px; font-weight: 700;">إضافة</button>
             </div>
           `}
@@ -375,7 +411,13 @@ export function initStateDataManagement() {
         const row = btn.closest('.option-item-row');
         const optionId = row.dataset.optionId;
         const optLabel = row.querySelector('.option-item-text').textContent;
-        if (!confirm(`هل أنت متأكد من تعطيل الخيار "${optLabel}"؟ يمكن إعادة تفعيله بعدين من قاعدة البيانات، لكن لا يوجد حذف نهائي.`)) return;
+        const confirmed = await confirmDialog({
+          title: 'تعطيل خيار',
+          message: `هل أنت متأكد من تعطيل الخيار "${optLabel}"؟ يمكن إعادة تفعيله بعدين من قاعدة البيانات، لكن لا يوجد حذف نهائي.`,
+          confirmLabel: 'تعطيل',
+          danger: true
+        });
+        if (!confirmed) return;
 
         try {
           await DropdownsService.deactivateOption(optionId);
@@ -394,12 +436,17 @@ export function initStateDataManagement() {
         const row = btn.closest('.option-item-row');
         const optionId = row.dataset.optionId;
         const oldLabel = row.querySelector('.option-item-text').textContent;
-        const newLabel = prompt(`تعديل اسم الخيار "${oldLabel}":`, oldLabel);
-        if (!newLabel || !newLabel.trim() || newLabel.trim() === oldLabel) return;
+        const newLabel = await promptDialog({
+          title: 'تعديل اسم الخيار',
+          label: `تعديل اسم الخيار "${oldLabel}":`,
+          initialValue: oldLabel,
+          requireChange: true
+        });
+        if (!newLabel) return;
 
         try {
-          await DropdownsService.updateOption(optionId, { label: newLabel.trim() });
-          showToast(`تم تعديل اسم الخيار إلى "${newLabel.trim()}" ✏️`);
+          await DropdownsService.updateOption(optionId, { label: newLabel });
+          showToast(`تم تعديل اسم الخيار إلى "${newLabel}" ✏️`);
           await refreshAfterMutation();
         } catch (err) {
           showToast(messageFromError(err));
@@ -454,6 +501,11 @@ export function initStateDataManagement() {
    * Render dynamic field control cards inside the Page View grid
    */
   async function renderPageView() {
+    // Only render (and hit the admin /dropdown-configs routes) while this
+    // screen is actually open — LOCATIONS_UPDATED and the initial call below
+    // fire at boot behind other views too. The MutationObserver re-renders
+    // as soon as the view becomes visible.
+    if (viewContainer.classList.contains('page-view--hidden')) return;
     gridContainer.innerHTML = '';
     const searchTerm = searchInput ? searchInput.value.trim().toLowerCase() : '';
     let visibleCount = 0;
@@ -555,10 +607,17 @@ export function initStateDataManagement() {
   // screen isn't blank while the network call is in flight)
   renderPageView();
 
-  // Then load the real list from the server — this is the only place in the
-  // app that fetches /locations, since every consumer (cascades, charity
-  // forms) reads through store.beniSuefLocations/store.locationIds.
-  reloadLocationsAndRender();
+  // On opening this admin screen, make sure the locations shown are current:
+  // an immediate (un-throttled) version check — if centers/villages changed,
+  // core/reference-sync.js re-fetches them and LOCATIONS_UPDATED re-renders.
+  // With nothing cached yet (first ever visit), load them directly.
+  onViewEnter('state-mgmt', () => {
+    if (!Object.keys(store.locationIds.centers || {}).length) {
+      reloadLocationsAndRender();
+    } else {
+      ReferenceData.revalidate({ force: true });
+    }
+  });
 
   async function reloadLocationsAndRender() {
     try {

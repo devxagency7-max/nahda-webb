@@ -7,7 +7,7 @@
 import { showToast } from '../../utils/toast.js';
 import { store } from '../../state/store.js';
 import { DOM } from '../../utils/dom.js';
-import { switchView } from '../../core/router.js';
+import { startSignedInSession } from '../../core/session.js';
 import { EventBus, EVENTS } from '../../core/event-bus.js';
 import { getTimeGreeting } from '../../utils/date.js';
 import { ROLE_LABELS } from '../../core/permissions.js';
@@ -82,6 +82,7 @@ export function initLoginScreen() {
     }
 
     setLoadingState(true);
+    let reloading = false;
     try {
       const { user } = await AuthService.login(email, password);
 
@@ -112,18 +113,22 @@ export function initLoginScreen() {
         // Non-critical background fetch failure
       }
 
-      updateUserDOM(user.fullName);
-      switchView('dashboard');
+      // Data-loading components are not initialised while signed out — reload
+      // into the app so they boot with the session (see startSignedInSession).
+      // The spinner stays up until the page is replaced.
+      reloading = true;
       const greeting = getTimeGreeting();
-      showToast(`${greeting}، ${user.fullName}! تم تسجيل الدخول بدور (${ROLE_LABELS[user.role] || user.role}) بنجاح 🚀`);
+      startSignedInSession({
+        message: `${greeting}، ${user.fullName}! تم تسجيل الدخول بدور (${ROLE_LABELS[user.role] || user.role}) بنجاح 🚀`
+      });
     } catch (err) {
       if (err instanceof ApiError) {
         showToast(LOGIN_ERROR_MESSAGES[err.code] || err.message);
       } else {
-        showToast('تعذر الاتصال بالخادم — تحقق من الاتصال بالإنترنت');
+        showToast('تعذّر الوصول للخادم، تأكد من اتصالك بالإنترنت وحاول مرة أخرى');
       }
     } finally {
-      setLoadingState(false);
+      if (!reloading) setLoadingState(false);
     }
   }
 

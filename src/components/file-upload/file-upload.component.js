@@ -51,13 +51,3 @@ function handleFileSelected(fileName) {
   }
   showToast(`تم إرفاق الملف: ${fileName}`);
 }
-
-export function initFormInteractivity() {
-  const saveBtn = DOM.qs('.btn--primary');
-  if (saveBtn) {
-    saveBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      showToast('تم حفظ التغييرات بنجاح');
-    });
-  }
-}

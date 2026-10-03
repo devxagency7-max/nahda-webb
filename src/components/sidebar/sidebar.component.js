@@ -6,6 +6,7 @@ import { DOM } from '../../utils/dom.js';
 import { store } from '../../state/store.js';
 import { EventBus, EVENTS } from '../../core/event-bus.js';
 import { can, PERMISSIONS, roleLabel, currentRole, ROLES } from '../../core/permissions.js';
+import { setExpanded } from '../../utils/a11y.js';
 
 export function initSidebarAccordion() {
   const accordionHeaders = DOM.qsa('.accordion-header');
@@ -15,6 +16,17 @@ export function initSidebarAccordion() {
     const body = group.querySelector('.accordion-body');
     if (body) body.style.maxHeight = (body.scrollHeight + 40) + 'px';
   });
+
+  // كل header بيفتح body لازم يعلن حالته (aria-expanded) ويشاور على المحتوى (aria-controls).
+  const syncAccordionAria = () => {
+    accordionHeaders.forEach(header => {
+      const group = header.closest('.accordion-group');
+      const body = group?.querySelector('.accordion-body');
+      if (!body) return;
+      setExpanded(header, body, group.classList.contains('accordion-group--open'));
+    });
+  };
+  syncAccordionAria();
 
   accordionHeaders.forEach(header => {
     header.addEventListener('click', (e) => {
@@ -48,6 +60,7 @@ export function initSidebarAccordion() {
         group.classList.add('accordion-group--open');
         body.style.maxHeight = (body.scrollHeight + 40) + 'px';
       }
+      syncAccordionAria();
     });
   });
 }
@@ -111,13 +124,23 @@ export function initSidebarUserProfile() {
   const roleEl = DOM.qs('#sidebar-user-role');
 
   function update() {
+    // store.currentUser === null حالة صحيحة ومقصودة، مش خطأ: معناها مفيش
+    // مستخدم مسجَّل دخوله (شاشة الدخول، أو بعد تسجيل خروج/انتهاء جلسة —
+    // راجع clearCurrentUser في state/store.js و router.js). فمابنقراش منها
+    // أي خاصية من غير تحقق، وبنرسم "حالة بدون مستخدم" بدل ما نستبدلها
+    // بمستخدم افتراضي وهمي. بوابات الصلاحيات تحت لازم تفضل تشتغل في
+    // الحالتين — هي اللي بتخفي أقسام التنقّل الخاصة بالأدوار.
     const user = store.currentUser;
+    const isSignedIn = Boolean(user);
     const defaultAvatar = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80';
-    if (avatarImg) avatarImg.src = user.avatar || defaultAvatar;
-    if (nameEl && user.name) nameEl.textContent = user.name;
+    if (avatarImg) avatarImg.src = (isSignedIn && user.avatar) || defaultAvatar;
+    if (nameEl) {
+      if (!isSignedIn) nameEl.textContent = '';
+      else if (user.name) nameEl.textContent = user.name;
+    }
     // الاسم المعروض يُشتق من roleCode لا من roleLabel المخزَّن، فلو الجلسة
     // المحفوظة قديمة أو ناقصة يفضل المعروض مطابقًا للصلاحيات الفعلية.
-    if (roleEl) roleEl.textContent = roleLabel(currentRole());
+    if (roleEl) roleEl.textContent = isSignedIn ? roleLabel(currentRole()) : '';
 
     // Hide navigation entries the current role has no permission to open
     const employeesGroup = DOM.qs('#sidebar-employees-group, #nav-employees-group');

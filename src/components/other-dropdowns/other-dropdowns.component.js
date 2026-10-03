@@ -18,10 +18,20 @@ export function initOtherOptionDropdowns() {
     const wrapper = select.closest('.form-select-wrapper');
     if (!wrapper) return;
 
+    // Looked up on every use rather than captured once: dropdown-data.component.js
+    // can repopulate this select's options in place (background refresh when
+    // the server's list changes), which would leave a captured reference
+    // pointing at a detached <option>. The flag makes a markup "أخرى" option
+    // still findable after its value is replaced by the user's typed text.
+    const findOtherOpt = () => {
+      const opt = Array.from(select.options).find(o => o.dataset.isOther === 'true' || o.value === 'أخرى');
+      if (opt) opt.dataset.isOther = 'true';
+      return opt || null;
+    };
+
     // Ensure select contains an "أخرى" option if allowed
-    let otherOpt = Array.from(select.options).find(opt => opt.dataset.isOther === 'true' || opt.value === 'أخرى');
-    if (!otherOpt && !select.querySelector('optgroup')) {
-      otherOpt = document.createElement('option');
+    if (!findOtherOpt() && !select.querySelector('optgroup')) {
+      const otherOpt = document.createElement('option');
       otherOpt.value = 'أخرى';
       otherOpt.textContent = 'أخرى (كتابة مخصصة...)';
       otherOpt.dataset.isOther = 'true';
@@ -61,8 +71,9 @@ export function initOtherOptionDropdowns() {
     function syncState() {
       const selectedOpt = select.selectedOptions[0];
       const isOther = selectedOpt ? (selectedOpt.dataset.isOther === 'true' || selectedOpt.value === 'أخرى') : false;
+      const otherOpt = findOtherOpt();
 
-      if (isOther) {
+      if (isOther && otherOpt) {
         select.style.display = 'none';
         if (arrowSvg) arrowSvg.style.display = 'none';
         inlineInput.style.display = 'block';
@@ -83,6 +94,7 @@ export function initOtherOptionDropdowns() {
 
     inlineInput.addEventListener('input', () => {
       const typedVal = inlineInput.value.trim();
+      const otherOpt = findOtherOpt();
       if (otherOpt) {
         otherOpt.value = typedVal || 'أخرى';
         otherOpt.textContent = typedVal ? `أخرى: ${typedVal}` : 'أخرى (كتابة مخصصة...)';
@@ -92,6 +104,7 @@ export function initOtherOptionDropdowns() {
     });
 
     resetBtn.addEventListener('click', () => {
+      const otherOpt = findOtherOpt();
       if (otherOpt) {
         otherOpt.value = 'أخرى';
         otherOpt.textContent = 'أخرى (كتابة مخصصة...)';

@@ -332,12 +332,12 @@ export function initFinancialManager() {
         style: { marginBottom: '10px', flexDirection: 'column', alignItems: 'stretch' }
       });
       const lockedAmountInput = item.auto && !hasContributors
-        ? `<input type="number" class="form-input income-auto-amount-input" data-idx="${idx}"
+        ? `<input type="number" class="form-input income-auto-amount-input" data-idx="${idx}" aria-label="مبلغ بند الدخل"
              value="${item.amount}" style="width: 110px; height: 34px; padding: 4px 8px; font-size: 12.5px; font-weight: 700;">`
         : '';
       const trailingControl = item.auto
         ? lockedAmountInput
-        : `<button class="btn btn--ghost btn--sm btn-delete-income" data-idx="${idx}" title="حذف" type="button">
+        : `<button class="btn btn--ghost btn--sm btn-delete-income" data-idx="${idx}" title="حذف" aria-label="حذف بند الدخل" type="button">
              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
            </button>`;
       // بند فيه Contributors (تكافل وكرامة) مبلغه الإجمالي محسوب من مجموع
@@ -352,7 +352,7 @@ export function initFinancialManager() {
         : '';
       const metaLine = [personLabel, amountControl].filter(Boolean).join(' • ');
       const expandControl = hasContributors
-        ? `<button class="btn btn--ghost btn--sm btn-toggle-contributors" data-idx="${idx}" title="تفاصيل المساهمين" type="button">
+        ? `<button class="btn btn--ghost btn--sm btn-toggle-contributors" data-idx="${idx}" title="تفاصيل المساهمين" aria-label="تفاصيل المساهمين" aria-expanded="${expandedTakaful.value ? 'true' : 'false'}" type="button">
              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                ${expandedTakaful.value ? '<polyline points="18 15 12 9 6 15"></polyline>' : '<polyline points="6 9 12 15 18 9"></polyline>'}
              </svg>
@@ -379,7 +379,7 @@ export function initFinancialManager() {
             ${item.contributors.map((c, cIdx) => `
               <div style="display: flex; align-items: center; justify-content: space-between; padding: 4px 0;">
                 <span style="font-size: 12.5px; font-weight: 700; color: var(--text-secondary);">${DOM.escapeHTML(c.relation)}</span>
-                <input type="number" class="form-input contributor-amount-input" data-idx="${idx}" data-contributor-idx="${cIdx}"
+                <input type="number" class="form-input contributor-amount-input" data-idx="${idx}" data-contributor-idx="${cIdx}" aria-label="مبلغ مساهمة ${DOM.escapeHTML(c.relation)}"
                   value="${c.amount}" style="width: 100px; height: 32px; padding: 4px 8px; font-size: 12px; font-weight: 800;">
               </div>
             `).join('')}
@@ -451,9 +451,9 @@ export function initFinancialManager() {
         style: { marginBottom: '10px' }
       });
       const trailingControl = item.locked
-        ? `<input type="number" class="form-input expense-locked-amount-input" data-idx="${idx}"
+        ? `<input type="number" class="form-input expense-locked-amount-input" data-idx="${idx}" aria-label="مبلغ بند المصروف"
              value="${item.amount}" style="width: 110px; height: 34px; padding: 4px 8px; font-size: 12.5px; font-weight: 700;">`
-        : `<button class="btn btn--ghost btn--sm btn-delete-expense" data-idx="${idx}" title="حذف" type="button">
+        : `<button class="btn btn--ghost btn--sm btn-delete-expense" data-idx="${idx}" title="حذف" aria-label="حذف بند المصروف" type="button">
              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
            </button>`;
       const amountControl = item.locked

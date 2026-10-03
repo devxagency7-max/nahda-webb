@@ -17,8 +17,9 @@ import { DOM } from '../../utils/dom.js';
 import { showToast } from '../../utils/toast.js';
 import { CasesService } from '../../services/cases.service.js';
 import { DashboardService } from '../../services/dashboard.service.js';
-import { messageFromError } from '../../services/errors.js';
+import { errorStateHTML, bindRetry, retryToast } from '../../utils/error-state.js';
 import { isRole, ROLES } from '../../core/permissions.js';
+import { onViewEnter } from '../../core/view-lifecycle.js';
 
 // Real backend status enum (10 values) -> the 3 status tabs this screen
 // exposes today. Anything not listed below (draft, pending_assignment,
@@ -69,9 +70,13 @@ let searchQuery = '';
 let casesList = [];
 let isLoading = false;
 let isLoadingMore = false;
+// آخر خطأ في تحميل الصفحة الأولى — بيتعرض كحالة خطأ فيها زر إعادة محاولة
+// بدل ما يتشاف كأنه "لا توجد نتائج".
+let loadError = null;
 let currentPage = 1;
 let hasMore = false;
 let searchDebounce = null;
+let loadRequestId = 0;
 // True once /dashboard/stats has given real global counts (not capped by
 // however many pages loadCases()/loadMoreCases() have fetched so far) —
 // once set, the page-local fallback stops overwriting them with a smaller number.
@@ -116,8 +121,12 @@ export function initAllCasesComponent() {
     });
   }
 
-  refreshFilterCountsFromStats();
-  loadCases();
+  // Fetched when the screen is opened (and re-fetched on every re-entry so
+  // the register reflects other users' work), not at boot behind another view.
+  onViewEnter('all-cases', () => {
+    refreshFilterCountsFromStats();
+    loadCases();
+  });
 }
 
 export function setCasesFilter(filterName) {
@@ -154,22 +163,30 @@ function fetchCasesPage(page) {
 
 /** Loads page 1 from the real API, applying the free-text search. Status stays client-side (see header note). */
 async function loadCases() {
+  // Entering the screen and a dashboard KPI click (setCasesFilter) can both
+  // start a load back to back; only the latest one may paint its result.
+  const requestId = ++loadRequestId;
   isLoading = true;
+  loadError = null;
   currentPage = 1;
   hasMore = false;
   renderAllCasesGrid();
   try {
     const result = await fetchCasesPage(1);
+    if (requestId !== loadRequestId) return;
     const items = (result && result.items) || [];
     casesList = items.map(normalizeCase);
     hasMore = Boolean(result && result.hasNext);
   } catch (err) {
+    if (requestId !== loadRequestId) return;
     casesList = [];
-    showToast(`تعذر تحميل قائمة الحالات: ${messageFromError(err)} ⚠️`);
+    loadError = err;
   } finally {
-    isLoading = false;
-    updateFilterCountsFromLoadedPage();
-    renderAllCasesGrid();
+    if (requestId === loadRequestId) {
+      isLoading = false;
+      updateFilterCountsFromLoadedPage();
+      renderAllCasesGrid();
+    }
   }
 }
 
@@ -194,7 +211,7 @@ async function loadMoreCases() {
     renderAllCasesGrid({ appendCases: newCases });
     return;
   } catch (err) {
-    showToast(`تعذر تحميل المزيد من الحالات: ${messageFromError(err)} ⚠️`);
+    showToast('تعذر تحميل المزيد من الحالات. الحالات المعروضة كما هي.', 'error', undefined, retryToast(loadMoreCases));
   } finally {
     isLoadingMore = false;
   }
@@ -293,7 +310,7 @@ function caseCardHTML(c) {
         </div>
         <div class="case-item-detail-row">
           <span class="detail-label">🏢 الجمعية والموقع:</span>
-          <span class="detail-val" style="font-size: 12px;">${DOM.escapeHTML(c.charity)} (${c.center} — ${c.village})</span>
+          <span class="detail-val" style="font-size: 12px;">${DOM.escapeHTML(c.charity)} (${DOM.escapeHTML(c.center)} — ${DOM.escapeHTML(c.village)})</span>
         </div>
         <div class="case-item-detail-row">
           <span class="detail-label">📞 الهاتف:</span>
@@ -393,6 +410,12 @@ export function renderAllCasesGrid({ appendCases } = {}) {
         <span style="font-size: 13px; color: var(--text-secondary); font-weight: 700;">⏳ جاري تحميل الحالات...</span>
       </div>
     `;
+    return;
+  }
+
+  if (loadError) {
+    casesGrid.innerHTML = `<div class="glass-card" style="grid-column: 1 / -1;">${errorStateHTML(loadError, 'الحالات')}</div>`;
+    bindRetry(casesGrid, loadCases);
     return;
   }
 

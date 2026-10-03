@@ -5,6 +5,7 @@ import { EventBus, EVENTS } from '../../core/event-bus.js';
 import { CharitiesService } from '../../services/charities.service.js';
 import { messageFromError } from '../../services/errors.js';
 import { showToast } from '../../utils/toast.js';
+import { onViewEnter } from '../../core/view-lifecycle.js';
 
 export function initLocationCascade() {
   // -------------------------------------------------------------------------
@@ -39,9 +40,10 @@ function initReferralCardCascade() {
     return match ? match[0] : '';
   }
 
+  // Reference roster — from the localStorage cache unless the server reported a change.
   async function loadReferralCharities() {
     try {
-      const result = await CharitiesService.list({ limit: 100 });
+      const result = await CharitiesService.listReference();
       const items = (result && result.items) || [];
       allCharities = items.map(item => ({
         id: item.id,
@@ -63,7 +65,7 @@ function initReferralCardCascade() {
     const currentVal = refDistrict.value;
 
     refDistrict.innerHTML = '<option value="" disabled selected>-- اختر المركز --</option>' +
-      centers.map(c => `<option value="${c}">${c}</option>`).join('');
+      centers.map(c => `<option value="${DOM.escapeHTML(c)}">${DOM.escapeHTML(c)}</option>`).join('');
 
     if (currentVal && centers.includes(currentVal)) {
       refDistrict.value = currentVal;
@@ -81,7 +83,7 @@ function initReferralCardCascade() {
     const currentVal = refVillage.value;
 
     refVillage.innerHTML = '<option value="" disabled selected>-- اختر القرية / المنطقة --</option>' +
-      villages.map(v => `<option value="${v}">${v}</option>`).join('');
+      villages.map(v => `<option value="${DOM.escapeHTML(v)}">${DOM.escapeHTML(v)}</option>`).join('');
     refVillage.disabled = false;
 
     if (currentVal && villages.includes(currentVal)) {
@@ -133,8 +135,11 @@ function initReferralCardCascade() {
     updateReferralCharities(refDistrict.value, refVillage.value);
   });
 
+  // The charity roster is loaded the first time the wizard is opened, not at boot.
+  let charitiesLoaded = false;
+
   EventBus.on(EVENTS.CHARITIES_UPDATED, () => {
-    loadReferralCharities();
+    if (charitiesLoaded) loadReferralCharities();
   });
 
   EventBus.on(EVENTS.LOCATIONS_UPDATED, () => {
@@ -143,10 +148,13 @@ function initReferralCardCascade() {
     // Center/village names for already-loaded charities depend on
     // store.locationIds, which LOCATIONS_UPDATED just (re)populated —
     // re-derive them, not just re-render with the stale names.
-    loadReferralCharities();
+    if (charitiesLoaded) loadReferralCharities();
   });
 
   // Initial population
   updateReferralDistricts();
-  loadReferralCharities();
+  onViewEnter('personal-data', () => {
+    charitiesLoaded = true;
+    loadReferralCharities();
+  }, { once: true });
 }

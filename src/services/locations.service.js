@@ -6,12 +6,13 @@
    backend design, not an oversight here.
    -------------------------------------------------------------------------- */
 import { HttpClient } from './http.js';
+import { ReferenceData } from './reference-data.js';
 
-// Unfiltered and called independently from several screens (charities,
-// dashboard, workflow, state-data-management, employees) — cache per tab
-// session so opening/switching between them doesn't re-fire GET /locations
-// each time. Cleared on any mutation below.
-let locationsCache = null;
+// Unfiltered and read by several screens (charities, dashboard, workflow,
+// state-data-management, employees) — kept in the shared localStorage
+// reference cache (services/reference-data.js), which also makes concurrent
+// callers share one request. Dropped on any mutation below.
+const ENTRY_KEY = 'locations';
 
 export const LocationsService = {
   /**
@@ -21,16 +22,17 @@ export const LocationsService = {
    *   per-center — prefer this over GET /dropdowns/district|village, which
    *   returns a flat, center-agnostic list — see §16/§22 frontend notes).
    */
-  async list(forceRefresh = false) {
-    if (!forceRefresh && locationsCache) {
-      return locationsCache;
-    }
-    locationsCache = await HttpClient.get('/locations');
-    return locationsCache;
+  list(forceRefresh = false) {
+    return ReferenceData.load(ENTRY_KEY, () => HttpClient.get('/locations'), { forceRefresh });
+  },
+
+  /** Synchronous read of the cached list (possibly stale), or undefined. */
+  peekCached() {
+    return ReferenceData.peek(ENTRY_KEY);
   },
 
   clearCache() {
-    locationsCache = null;
+    ReferenceData.remove(ENTRY_KEY);
   },
 
   /** @returns {Promise<string>} new center's id */

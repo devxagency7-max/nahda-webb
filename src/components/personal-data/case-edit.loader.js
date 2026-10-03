@@ -22,6 +22,7 @@ import { messageFromError } from '../../services/errors.js';
 import { restoreAgricultureManager } from '../agriculture/agriculture.component.js';
 import { loadFamilyMembersManager } from '../family-members/family-members.component.js';
 import { loadFinancialManager } from '../financial-ledger/financial-ledger.component.js';
+import { whenDropdownsReady } from './dropdown-data.component.js';
 
 function setVal(id, value) {
   const el = DOM.qs(`#${id}`);
@@ -79,11 +80,6 @@ function activateChip(fieldSelector, value) {
       }
     }
   }
-}
-
-/** يفعّل أكتر من شيب في نفس الحقل (للحقول اللي بتسمح باختيار متعدد فعليًا، زي المواشي). */
-function activateChips(fieldSelector, values) {
-  (values || []).forEach(v => activateChip(fieldSelector, v));
 }
 
 /** id -> اسم (المركز/القرية) عن طريق store.locationIds، نفس اللي case-details.component.js بيستخدمها. */
@@ -355,17 +351,30 @@ function mapMembersFromApi(members) {
  */
 export async function loadCaseIntoForm(caseId) {
   try {
+    // family-members وassessed-needs بيتحفظوا بـ PUT "استبدال القائمة كلها".
+    // لو فشل جلب واحد منهم اتحوّل لقائمة فاضية، أول "التالي" كان بيبعت
+    // القائمة الفاضية ويمسح بيانات الحالة الحقيقية على السيرفر في صمت —
+    // فالفشل هنا لازم يوقف التحميل كله. المرفقات بس هي اللي ممكن تفضل فاضية:
+    // مابتتبعتش في أي PUT (الرفع بيحصل فوريًا لكل ملف لوحده).
+    // whenDropdownsReady: الـ selects لازم تكون فيها خياراتها الحقيقية قبل ما
+    // نحط فيها قيم الحالة، وإلا أي قيمة مش في الـ HTML المبدئي هتتحط كـ "أخرى"
+    // حرة (setSelectValue). فوري لو الخيارات متخزنة؛ بيستنى بس في أول تحميل.
     const [detail, familyRes, supportRes, attachmentsRes] = await Promise.all([
       CasesService.getById(caseId),
-      CasesService.getFamilyMembers(caseId).catch(() => ({ members: [] })),
-      CasesService.getSupport(caseId).catch(() => ({ recommendations: [] })),
-      AttachmentsService.listForCase(caseId).catch(() => ({ items: [] }))
+      CasesService.getFamilyMembers(caseId),
+      CasesService.getSupport(caseId).catch(err => ({ loadError: err })),
+      AttachmentsService.listForCase(caseId).catch(() => ({ items: [] })),
+      whenDropdownsReady()
     ]);
 
-    // نفس عداد النسخة المشترك على مستوى الحالة كلها (rowVersion) بيتستخدم
-    // لكل قسم قايمة (utilities/financial/support) — راجع ملحوظة caseRowVersion
-    // في personal-data.api.js. الأقسام اللي عندها rowVersion خاص بيها
-    // (housing/agriculture) بتتخزن بنفس القيمة كمان لنفس السبب.
+    // الدعم القديم مطلوب بس كمصدر احتياطي لتاب 7 في الحالات اللي لسه
+    // ماعندهاش assessedNeeds — غير كده فشله مايأثرش على أي حاجة بتتحفظ.
+    const hasAssessedNeeds = Boolean(detail.assessedNeeds?.needs?.length);
+    if (!hasAssessedNeeds && supportRes?.loadError) throw supportRes.loadError;
+
+    // caseRowVersion = rowVersion الحالة لحظة الفتح — مرجع التزامن لكل أقسام
+    // القوائم لحد ما حفظ من عندنا يرجّع رقم أحدث. beneficiary/housing/
+    // agriculture ليهم عدّاد مستقل كل واحد (راجع الملحوظة في personal-data.api.js).
     store.setCurrentCase({
       id: detail.id,
       caseNumber: detail.caseNumber,
@@ -375,6 +384,13 @@ export async function loadCaseIntoForm(caseId) {
       // بيستخدمها في نهاية الاستمارة عشان يقرر يرجع لصفحة تفاصيل الحالة
       // (تعديل) بدل الرئيسية مع مسح الفورم (إنشاء).
       isEditMode: true,
+      // saveStep1 مابيبعتش PUT family-members في وضع التعديل غير لو القائمة
+      // دي اتجابت فعلًا من السيرفر — حماية إضافية ضد إرسال قائمة فاضية بالغلط.
+      familyLoaded: true,
+      // المستفيد كما هو على السيرفر — أساس جسم PUT /beneficiary (استبدال
+      // كامل) حتى لا يمسح الحفظ خانات الفورم مابيعرضهاش (راجع
+      // collectBeneficiaryPayload في personal-data.api.js).
+      beneficiary: detail.beneficiary || null,
       sectionVersions: {
         beneficiary: detail.beneficiary?.rowVersion,
         housing: detail.housing?.rowVersion,
@@ -395,7 +411,7 @@ export async function loadCaseIntoForm(caseId) {
     // بنعرض الاحتياجات الجديدة لو موجودة، ولو الحالة لسه ما اتحفظتش
     // بالشكل الجديد بنرجع نقرا من الدعم القديم عشان الـ checkboxes متفضلش فاضية.
     const legacyRecommendations = supportRes?.recommendations || supportRes?.supportRecommendations || [];
-    fillStep7(detail.assessedNeeds?.needs?.length ? detail.assessedNeeds.needs : legacyRecommendations);
+    fillStep7(hasAssessedNeeds ? detail.assessedNeeds.needs : legacyRecommendations);
 
     triggerWorkflowRecalc();
     return true;

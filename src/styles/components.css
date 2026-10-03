@@ -790,6 +790,45 @@
   background: rgba(255, 255, 255, 0.25);
 }
 
+/* confirmDialog / promptDialog (utils/dialog.js) */
+.modal-card--dialog {
+  max-width: 440px;
+}
+
+.dialog-message {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  line-height: 1.8;
+  color: var(--text-body);
+}
+
+.dialog-label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  color: var(--text-body);
+}
+
+.dialog-error {
+  margin-top: 8px;
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  color: #dc2626;
+}
+
+.btn--danger {
+  background: #dc2626;
+  color: #ffffff;
+  font-weight: 800;
+  box-shadow: 0 6px 20px rgba(220, 38, 38, 0.35);
+}
+
+.btn--danger:hover {
+  background: #b91c1c;
+  transform: translateY(-2px);
+}
+
 /* --------------------------------------------------------------------------
    INLINE ADD-MEMBER FORM (opens inside the family members card, not a modal)
    -------------------------------------------------------------------------- */
@@ -1938,3 +1977,56 @@ body.sidebar-is-collapsed .state-mgmt-page-grid,
 .step-pane:focus {
   outline: none;
 }
+
+/* زر الإجراء داخل الـ toast (مثلًا "إعادة المحاولة") — راجع showToast(options.action). */
+.toast__action {
+  margin-inline-start: 8px;
+  padding: 6px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  font: inherit;
+  font-size: var(--font-size-xs);
+  font-weight: 800;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background var(--transition-normal);
+}
+.toast__action:hover { background: rgba(255, 255, 255, 0.28); }
+.toast__action:focus-visible { outline: 2px solid #ffffff; outline-offset: 2px; }
+
+/* --------------------------------------------------------------------------
+   LOAD ERROR STATE (utils/error-state.js) — حالة فشل تحميل قائمة + زر إعادة محاولة
+   -------------------------------------------------------------------------- */
+.load-error {
+  padding: 40px 24px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.load-error--compact { padding: 24px 16px; }
+.load-error__icon { font-size: 36px; line-height: 1; margin-bottom: 4px; }
+.load-error--compact .load-error__icon { font-size: 28px; }
+.load-error__title {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  font-weight: 800;
+  color: var(--text-primary);
+}
+.load-error__hint {
+  margin: 0 0 12px;
+  max-width: 420px;
+  font-size: var(--font-size-sm);
+  line-height: 1.7;
+  color: var(--text-secondary);
+}
+.load-error .btn-retry-load {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 800;
+}
+.load-error .btn-retry-load[disabled] { opacity: 0.7; cursor: progress; }

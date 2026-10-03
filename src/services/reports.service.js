@@ -5,6 +5,8 @@
    -------------------------------------------------------------------------- */
 import { HttpClient } from './http.js';
 import { TokenStore } from './tokens.js';
+import { RequestTimeoutError } from './errors.js';
+import { API_EXPORT_TIMEOUT_MS } from '../config/env.js';
 import { toWireRequest } from '../utils/report-enums.js';
 
 const CACHE_TTL_MS = 45000; // 45 seconds client-side cache
@@ -213,30 +215,46 @@ export const ReportsService = {
     const baseUrl = import.meta.env?.VITE_API_BASE_URL || '/api/v1';
     const token = TokenStore.getAccessToken();
 
-    const response = await fetch(`${baseUrl}/reports/export`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Client-Type': 'web',
-        ...(token ? { Authorization: `Bearer ${token}` } : {})
-      },
-      body: JSON.stringify(toWireRequest(requestBody))
-    });
+    // Bypasses HttpClient (binary download), so it needs its own timeout —
+    // covering the body download too, with a longer budget than normal calls.
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), API_EXPORT_TIMEOUT_MS);
 
-    if (!response.ok) {
-      let errorData;
-      try {
-        errorData = await response.json();
-      } catch {
-        errorData = { error: { message: `HTTP ${response.status}` } };
+    let response;
+    let blob;
+    try {
+      response = await fetch(`${baseUrl}/reports/export`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Client-Type': 'web',
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify(toWireRequest(requestBody)),
+        signal: controller.signal
+      });
+
+      if (!response.ok) {
+        let errorData;
+        try {
+          errorData = await response.json();
+        } catch {
+          errorData = { error: { message: `HTTP ${response.status}` } };
+        }
+        const err = new Error(errorData?.error?.message || 'تعذر تصدير ملف CSV');
+        err.status = response.status;
+        err.data = errorData;
+        throw err;
       }
-      const err = new Error(errorData?.error?.message || 'تعذر تصدير ملف CSV');
-      err.status = response.status;
-      err.data = errorData;
-      throw err;
+
+      blob = await response.blob();
+    } catch (cause) {
+      if (cause?.name === 'AbortError') throw new RequestTimeoutError(cause);
+      throw cause;
+    } finally {
+      clearTimeout(timer);
     }
 
-    const blob = await response.blob();
     const disposition = response.headers.get('content-disposition');
     let filename = 'report.csv';
     if (disposition && disposition.includes('filename=')) {

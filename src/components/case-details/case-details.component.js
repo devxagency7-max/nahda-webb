@@ -15,7 +15,6 @@ import { AttachmentsService } from '../../services/attachments.service.js';
 import { DropdownsService } from '../../services/dropdowns.service.js';
 import { messageFromError } from '../../services/errors.js';
 import { formatLocalDate, formatCairoDateTime } from '../../utils/date.js';
-import { exportCaseToPdf } from '../../services/case-pdf.service.js';
 import { StorageService, STORAGE_KEYS } from '../../services/storage.js';
 
 let currentActiveCase = null;
@@ -137,6 +136,8 @@ function bindExportPdfButton() {
 
     try {
       const liveCase = captureLiveCaseEdits(currentActiveCase);
+      // تحميل كسول: jsPDF + html2canvas تقيلين ومش لازمين إلا عند الضغط على تصدير.
+      const { exportCaseToPdf } = await import('../../services/case-pdf.service.js');
       await exportCaseToPdf(liveCase);
       showToast('تم تحميل وتجهيز ملف الحالة PDF بنجاح 📄', 'success');
     } catch (err) {
@@ -1620,7 +1621,7 @@ function askReturnReason() {
       <div class="case-modal" role="dialog" aria-modal="true" aria-labelledby="return-modal-title">
         <h3 class="case-modal__title" id="return-modal-title">🟡 إعادة الحالة للأخصائي</h3>
         <p class="case-modal__desc">اكتب سبب الإعادة — سيظهر للأخصائي في تطبيقه ليستكمل المطلوب.</p>
-        <textarea id="return-reason-input" class="case-modal__input" rows="4" dir="rtl"
+        <textarea id="return-reason-input" aria-label="سبب إعادة الحالة للأخصائي" aria-describedby="return-reason-error" class="case-modal__input" rows="4" dir="rtl"
                   placeholder="مثال: صور السكن غير واضحة، ومطلوب إثبات دخل محدَّث..."></textarea>
         <p class="case-modal__error" id="return-reason-error" hidden>السبب مطلوب قبل الإعادة.</p>
         <div class="case-modal__actions">

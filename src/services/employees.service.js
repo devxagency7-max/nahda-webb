@@ -7,6 +7,7 @@
    client-side, same as today.
    -------------------------------------------------------------------------- */
 import { HttpClient } from './http.js';
+import { fetchAllPages } from './paging.js';
 
 export const EmployeesService = {
   /**
@@ -20,6 +21,20 @@ export const EmployeesService = {
   async list(opts = {}) {
     const { search, role, page, limit } = opts;
     return HttpClient.get('/employees', { query: { search, role, page, limit } });
+  },
+
+  /**
+   * EVERY employee matching the filters, not one page (see paging.js — the
+   * server caps a page at 100). The management table draws the first 50 and
+   * reveals more client-side.
+   * @param {Object} [opts]
+   * @param {string} [opts.search]
+   * @param {string} [opts.role]
+   * @returns {Promise<{items: EmployeeListItem[], total: number}>}
+   */
+  listAll(opts = {}) {
+    const { search, role } = opts;
+    return fetchAllPages((page, limit) => EmployeesService.list({ search, role, page, limit }));
   },
 
   /**

@@ -15,6 +15,9 @@ import { EventBus, EVENTS } from '../../core/event-bus.js';
 import { CharitiesService } from '../../services/charities.service.js';
 import { LocationsService } from '../../services/locations.service.js';
 import { messageFromError } from '../../services/errors.js';
+import { errorStateHTML, bindRetry } from '../../utils/error-state.js';
+import { confirmDialog } from '../../utils/dialog.js';
+import { onViewEnter } from '../../core/view-lifecycle.js';
 
 /** Field-level validation details -> one readable Arabic line. */
 function detailsToMessage(details) {
@@ -62,22 +65,36 @@ export function initCharitiesManager() {
   const statTotal = DOM.qs('#stat-total-charities');
   const btnExport = DOM.qs('#btn-export-charities');
 
+  // The whole roster is fetched (CharitiesService.listAll) but only the first
+  // PAGE_SIZE rows are drawn; "تحميل المزيد" reveals another PAGE_SIZE locally.
+  const PAGE_SIZE = 50;
+
   let activeCenterFilter = 'all';
   let searchQuery = '';
 
   // Live roster fetched from the server — replaces the old store.charities mock array.
   let charitiesList = [];
+  let visibleCount = PAGE_SIZE;
+  // Guards against an older, slower response overwriting a newer one (fetching
+  // every page makes overlapping loads — fast typing, pill clicks — likelier).
+  let loadSeq = 0;
   let isLoading = false;
+  // آخر خطأ في تحميل القائمة — بيتعرض كحالة خطأ فيها "إعادة المحاولة" بدل "لا توجد جمعيات".
+  let loadError = null;
   let submitBtn = null;
 
-  // 1. Initialize Cascading Center & Village Dropdowns from server-backed names
-  ensureLocationsLoaded().then(() => {
-    initCenterAndVillageOptions();
-    initCenterFilterPills();
+  // 1-3. Center/village pickers and the charities table load when the
+  // screen is opened (the table re-fetches on every entry to pick up other
+  // users' edits), not at boot behind another view.
+  onViewEnter('charities', ({ firstEnter }) => {
+    if (firstEnter) {
+      ensureLocationsLoaded().then(() => {
+        initCenterAndVillageOptions();
+        initCenterFilterPills();
+      });
+    }
+    loadCharities();
   });
-
-  // 3. Initial Render of Charities Table & Stats
-  loadCharities();
 
   // 4. Form Submit Handler (Add / Edit)
   if (form) {
@@ -188,7 +205,7 @@ export function initCharitiesManager() {
 
     // Populate Centers Dropdown + أخرى
     centerSelect.innerHTML = '<option value="" selected disabled>-- اختر المركز --</option>' +
-      centers.map(center => `<option value="${center}">${center}</option>`).join('') +
+      centers.map(center => `<option value="${DOM.escapeHTML(center)}">${DOM.escapeHTML(center)}</option>`).join('') +
       '<option value="أخرى" data-is-other="true">أخرى</option>';
 
     // Handle Cascading Center Change
@@ -243,7 +260,7 @@ export function initCharitiesManager() {
 
     const villages = DataService.getVillagesByCenter(center);
     villageSelect.innerHTML = '<option value="" selected disabled>-- اختر القرية / المنطقة --</option>' +
-      villages.map(v => `<option value="${v}" ${v === selectedVillage ? 'selected' : ''}>${v}</option>`).join('') +
+      villages.map(v => `<option value="${DOM.escapeHTML(v)}" ${v === selectedVillage ? 'selected' : ''}>${DOM.escapeHTML(v)}</option>`).join('') +
       '<option value="أخرى" data-is-other="true">أخرى</option>';
     villageSelect.disabled = false;
 
@@ -265,7 +282,7 @@ export function initCharitiesManager() {
     const centers = DataService.getCenters();
     const pillsHtml = [
       `<button type="button" class="charity-center-pill charity-center-pill--active" data-center-filter="all">الكل</button>`,
-      ...centers.map(c => `<button type="button" class="charity-center-pill" data-center-filter="${c}">مركز ${c}</button>`)
+      ...centers.map(c => `<button type="button" class="charity-center-pill" data-center-filter="${DOM.escapeHTML(c)}">مركز ${DOM.escapeHTML(c)}</button>`)
     ].join('');
 
     centerPillsContainer.innerHTML = pillsHtml;
@@ -281,17 +298,24 @@ export function initCharitiesManager() {
     });
   }
 
-  /** Loads the current page from the real API, applying the active center filter + search. */
-  async function loadCharities() {
+  /**
+   * Loads every matching charity from the real API, applying the active center
+   * filter + search. The visible window resets to the first PAGE_SIZE rows
+   * unless `keepPaging` (reload after a save/delete, where the user is mid-list).
+   */
+  async function loadCharities({ keepPaging = false } = {}) {
+    const seq = ++loadSeq;
+    if (!keepPaging) visibleCount = PAGE_SIZE;
     isLoading = true;
+    loadError = null;
     renderCharities();
     try {
       const centerId = activeCenterFilter !== 'all' ? resolveCenterId(activeCenterFilter) : undefined;
-      const result = await CharitiesService.list({
+      const result = await CharitiesService.listAll({
         search: searchQuery || undefined,
-        centerId: centerId || undefined,
-        limit: 100
+        centerId: centerId || undefined
       });
+      if (seq !== loadSeq) return;
       const items = (result && result.items) || [];
       charitiesList = items.map(item => ({
         id: item.id,
@@ -307,11 +331,14 @@ export function initCharitiesManager() {
         rowVersion: item.rowVersion
       }));
     } catch (err) {
+      if (seq !== loadSeq) return;
       charitiesList = [];
-      reportError(err, 'تعذر تحميل قائمة الجمعيات: ');
+      loadError = err;
     } finally {
-      isLoading = false;
-      renderCharities();
+      if (seq === loadSeq) {
+        isLoading = false;
+        renderCharities();
+      }
     }
   }
 
@@ -323,7 +350,14 @@ export function initCharitiesManager() {
     if (!tableBody) return;
 
     if (isLoading) {
-      tableBody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding: 32px; color:#64748b;">⏳ جاري تحميل بيانات الجمعيات...</td></tr>`;
+      tableBody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 32px; color:#64748b;">⏳ جاري تحميل بيانات الجمعيات...</td></tr>`;
+      if (emptyState) emptyState.style.display = 'none';
+      return;
+    }
+
+    if (loadError) {
+      tableBody.innerHTML = `<tr><td colspan="5">${errorStateHTML(loadError, 'الجمعيات', { compact: true })}</td></tr>`;
+      bindRetry(tableBody, loadCharities);
       if (emptyState) emptyState.style.display = 'none';
       return;
     }
@@ -350,7 +384,10 @@ export function initCharitiesManager() {
 
     if (emptyState) emptyState.style.display = 'none';
 
-    tableBody.innerHTML = filtered.map((charity, index) => {
+    const visible = filtered.slice(0, visibleCount);
+    const remaining = filtered.length - visible.length;
+
+    const rowsHtml = visible.map((charity, index) => {
       return `
         <tr data-charity-id="${charity.id}">
           <td style="text-align: center;">
@@ -376,9 +413,27 @@ export function initCharitiesManager() {
               ${charity.address ? `<span class="charity-address" title="${DOM.escapeHTML(charity.address)}">📍 ${DOM.escapeHTML(charity.address)}</span>` : ''}
             </div>
           </td>
+          <td>
+            <div class="charity-actions-cell">
+              <button type="button" class="btn-action-icon btn-action-edit" data-action="edit" data-id="${DOM.escapeHTML(charity.id)}" title="تعديل الجمعية" aria-label="تعديل ${DOM.escapeHTML(charity.name)}">✏️</button>
+              <button type="button" class="btn-action-icon btn-action-delete" data-action="delete" data-id="${DOM.escapeHTML(charity.id)}" title="حذف الجمعية" aria-label="حذف ${DOM.escapeHTML(charity.name)}">🗑️</button>
+            </div>
+          </td>
         </tr>
       `;
     }).join('');
+
+    const loadMoreHtml = remaining > 0 ? `
+      <tr class="charities-load-more-row">
+        <td colspan="5" style="text-align: center; padding: 20px;">
+          <button type="button" class="btn btn--secondary btn-load-more-charities" style="font-weight: 800;">
+            تحميل المزيد (عرض ${visible.length} من ${filtered.length}) ⬇️
+          </button>
+        </td>
+      </tr>
+    ` : '';
+
+    tableBody.innerHTML = rowsHtml + loadMoreHtml;
   }
 
   async function handleFormSubmit(e) {
@@ -458,7 +513,7 @@ export function initCharitiesManager() {
         showToast(`تمت إضافة جمعية "${name}" بنجاح 🏢`);
       }
       resetFormToAddMode();
-      await loadCharities();
+      await loadCharities({ keepPaging: true });
     } catch (err) {
       reportError(err, editId ? 'تعذر تحديث بيانات الجمعية: ' : 'تعذر إضافة الجمعية: ');
     } finally {
@@ -466,7 +521,13 @@ export function initCharitiesManager() {
     }
   }
 
-  function handleTableAction(e) {
+  async function handleTableAction(e) {
+    if (e.target.closest('.btn-load-more-charities')) {
+      visibleCount += PAGE_SIZE;
+      renderCharities();
+      return;
+    }
+
     const btn = e.target.closest('.btn-action-icon');
     if (!btn) return;
 
@@ -479,9 +540,13 @@ export function initCharitiesManager() {
     if (action === 'edit') {
       startEditCharity(charity);
     } else if (action === 'delete') {
-      if (window.confirm(`هل أنت متأكد من حذف "${charity.name}" من سجل الجمعيات؟`)) {
-        deleteCharity(charity);
-      }
+      const confirmed = await confirmDialog({
+        title: 'حذف جمعية',
+        message: `هل أنت متأكد من حذف "${charity.name}" من سجل الجمعيات؟`,
+        confirmLabel: 'حذف',
+        danger: true
+      });
+      if (confirmed) deleteCharity(charity);
     }
   }
 
@@ -492,7 +557,7 @@ export function initCharitiesManager() {
         resetFormToAddMode();
       }
       showToast(`تم حذف "${charity.name}" من السجل 🗑️`);
-      await loadCharities();
+      await loadCharities({ keepPaging: true });
     } catch (err) {
       reportError(err, 'تعذر حذف الجمعية: ');
     }

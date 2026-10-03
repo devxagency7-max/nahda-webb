@@ -135,13 +135,19 @@ const VIEW_PERMISSIONS = {
    PUBLIC API
    -------------------------------------------------------------------------- */
 
+/** Is this one of the roles allowed to sign in on the web? */
+export function isWebRole(roleCode) {
+  return Object.prototype.hasOwnProperty.call(ROLE_PERMISSIONS, roleCode);
+}
+
 /**
- * Current user's role code, normalised against the known roles.
- * Unknown or missing roles fall back to the least-privileged role.
+ * Current user's role code, or null when nobody is signed in or the stored
+ * role is unknown. There is deliberately NO fallback role: an unrecognised
+ * role means an invalid session, and can() denies everything for it.
  */
 export function currentRole() {
-  const code = (store.currentUser && store.currentUser.roleCode) || '';
-  return ROLE_PERMISSIONS[code] ? code : ROLES.DATA_ENTRY;
+  const code = store.currentUser && store.currentUser.roleCode;
+  return isWebRole(code) ? code : null;
 }
 
 /**
@@ -158,10 +164,11 @@ export function currentRole() {
  * @param {string} permission - a value from PERMISSIONS
  */
 export function can(permission) {
+  const role = currentRole();
+  if (!role) return false;
   const serverGranted = store.currentUser && store.currentUser.permissions;
   if (Array.isArray(serverGranted)) {
     if (serverGranted.includes(permission)) return true;
-    const role = currentRole();
     if (role === ROLES.MANAGER) {
       if (permission === PERMISSIONS.VIEW_CASE_SUPPORT_FILTER) return true;
     }
@@ -174,8 +181,7 @@ export function can(permission) {
     }
     return false;
   }
-  const granted = ROLE_PERMISSIONS[currentRole()] || [];
-  return granted.includes(permission);
+  return ROLE_PERMISSIONS[role].includes(permission);
 }
 
 /**

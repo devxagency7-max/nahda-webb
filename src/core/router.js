@@ -6,11 +6,12 @@
 import { store } from '../state/store.js';
 import { showToast } from '../utils/toast.js';
 import { DOM } from '../utils/dom.js';
-import { canAccessView, ROLE_LABELS } from './permissions.js';
+import { canAccessView, isWebRole, ROLE_LABELS } from './permissions.js';
 import { AuthService } from '../services/auth.service.js';
 import { ProfileService } from '../services/profile.service.js';
 import { TokenStore } from '../services/tokens.js';
 import { EventBus, EVENTS } from './event-bus.js';
+import { clearSessionData, endSession, takePostReloadToast } from './session.js';
 import { StorageService, STORAGE_KEYS } from '../services/storage.js';
 
 export function switchView(viewName, saveToStorage = true) {
@@ -124,8 +125,6 @@ export function switchView(viewName, saveToStorage = true) {
       const body = group.querySelector('.accordion-body');
       if (body) body.style.maxHeight = null;
     });
-
-    EventBus.emit('reports:opened');
   } else if (viewName === 'case-support-filter') {
     if (viewCaseSupportFilter) viewCaseSupportFilter.classList.remove('page-view--hidden');
     if (breadcrumb) {
@@ -268,7 +267,7 @@ export function switchView(viewName, saveToStorage = true) {
  * the login screen. Shared by the manual "تسجيل الخروج" click and by an
  * involuntary session expiry (http.js's refresh-failed path).
  */
-async function performLogout() {
+async function performLogout(message) {
   store.clearCurrentUser();
   switchView('login');
   try {
@@ -277,7 +276,13 @@ async function performLogout() {
     // Best-effort — tokens are already cleared client-side either way, and
     // the backend's logout is idempotent/never reveals failures (§2.3).
   }
+  // Wipe every account-scoped cache/state and reload so the next login starts
+  // clean (see core/session.js). Must come after the revoke call above — the
+  // reload would abort it in flight.
+  endSession({ message });
 }
+
+let sessionEnding = false;
 
 export function initPageViewNavigation() {
   const btnBack = DOM.qs('#btn-back-to-personal-data');
@@ -286,11 +291,16 @@ export function initPageViewNavigation() {
   // attempt. Tokens are already cleared there — just reset UI state and go
   // back to the login screen with an explanation.
   EventBus.on(EVENTS.SESSION_EXPIRED, () => {
-    if (store.currentView === 'login') return;
-    store.clearCurrentUser();
+    // Several in-flight requests can 401 together; only the first one acts.
+    if (sessionEnding || store.currentView === 'login') return;
+    sessionEnding = true;
     switchView('login');
-    showToast('انتهت صلاحية الجلسة، يرجى تسجيل الدخول مرة أخرى');
+    endSession({ message: 'انتهت جلستك حفاظًا على أمان حسابك، سجّل الدخول من جديد للمتابعة' });
   });
+
+  // Message left behind by endSession() before its reload.
+  const postReloadToast = takePostReloadToast();
+  if (postReloadToast) showToast(postReloadToast);
 
   // Make switchView globally accessible for backward compatibility
   window.switchView = switchView;
@@ -325,14 +335,30 @@ export function initPageViewNavigation() {
   // of what was last open. A token that exists gets verified against
   // /auth/me in the background (catches a since-deactivated account) —
   // the saved view opens immediately so the app doesn't stall on that call.
+  //
+  // No fake fallback identity: if a token exists but there is no valid stored
+  // user (missing, corrupted, or an unknown role), the login screen stays up
+  // until /auth/me returns the real identity. If /auth/me fails, or returns a
+  // role the web doesn't accept, the session is treated as invalid -> logout.
   if (!TokenStore.hasSession()) {
-    store.clearCurrentUser();
+    // Also sweeps leftovers from a tab that died mid-session or an older build.
+    clearSessionData();
     switchView('login', false);
   } else {
     const savedView = store.currentView || 'dashboard';
-    switchView(savedView, false);
+    const hasValidStoredUser = Boolean(store.currentUser);
+    if (hasValidStoredUser) {
+      switchView(savedView, false);
+    } else {
+      switchView('login', false);
+    }
     AuthService.me()
       .then(async (user) => {
+        if (!isWebRole(user.role)) {
+          // Role the web doesn't accept (e.g. social_worker, or unknown).
+          await performLogout('لا يمكن لهذا الحساب استخدام نسخة الويب، سجّل الدخول بحساب آخر أو تواصل مع مدير النظام');
+          return;
+        }
         store.replaceCurrentUser({
           name: user.fullName,
           roleLabel: ROLE_LABELS[user.role] || 'موظف',
@@ -342,6 +368,12 @@ export function initPageViewNavigation() {
           permissions: user.permissions || [],
           avatar: store.currentUser?.avatar || null
         });
+
+        // The login screen was held up while we had no trusted identity —
+        // now that /auth/me confirmed one, open the view the user left off on.
+        if (!hasValidStoredUser) {
+          switchView(savedView === 'login' ? 'dashboard' : savedView, false);
+        }
 
         // Enrich with fresh presigned avatarUrl and profile fields
         try {
@@ -357,9 +389,22 @@ export function initPageViewNavigation() {
           // Non-critical background refresh failure
         }
       })
-      .catch(() => {
+      .catch(async () => {
         // Invalid/expired/account gone — http.js already tried a refresh
         // and, on failure, already emitted SESSION_EXPIRED (handled above).
+        // With no trusted stored identity there is nothing to keep working
+        // with (e.g. a network error), so end the session instead of guessing.
+        if (!hasValidStoredUser && !store.currentUser) {
+          const stillHasSession = TokenStore.hasSession();
+          switchView('login', false);
+          if (stillHasSession) {
+            // Revoke first: clearing the session drops the refresh token it needs.
+            await AuthService.logout().catch(() => {});
+            endSession({ message: 'لم نتمكن من التحقق من جلستك، سجّل الدخول من جديد للمتابعة' });
+          } else {
+            clearSessionData();
+          }
+        }
       });
   }
 

@@ -17,6 +17,8 @@ import { CasesService } from '../../services/cases.service.js';
 import { CharitiesService } from '../../services/charities.service.js';
 import { LocationsService } from '../../services/locations.service.js';
 import { messageFromError } from '../../services/errors.js';
+import { errorStateHTML, bindRetry } from '../../utils/error-state.js';
+import { onViewEnter } from '../../core/view-lifecycle.js';
 
 export function updateDashboardHero() {
   const dateEl = DOM.qs('#dash-current-date');
@@ -29,7 +31,7 @@ export function updateDashboardHero() {
   const heroTitle = DOM.qs('.dash-hero-card__title');
   const heroDesc = DOM.qs('.dash-hero-card__desc');
   const currentUser = store.currentUser || {};
-  const currentUserName = currentUser.name || 'حسن';
+  const currentUserName = currentUser.name || '';
   const greeting = getTimeGreeting();
 
   if (greetingEl) {
@@ -185,10 +187,11 @@ export async function updateDashboardKPIs() {
     // Cards degrade to a visible error state rather than silently showing
     // stale/zeroed numbers a manager might mistake for a real "0".
     kpisGrid.innerHTML = `
-      <div class="glass-card dash-stat-card" style="grid-column: 1 / -1; text-align: center; color: #be123c;">
-        تعذر تحميل مؤشرات لوحة التحكم: ${DOM.escapeHTML(messageFromError(err))}
+      <div class="glass-card dash-stat-card" style="grid-column: 1 / -1;">
+        ${errorStateHTML(err, 'مؤشرات لوحة التحكم', { compact: true })}
       </div>
     `;
+    bindRetry(kpisGrid, updateDashboardKPIs);
     return;
   }
 
@@ -312,11 +315,8 @@ export async function updateRecentCases() {
     cases = (page.items || []).slice().sort((a, b) =>
       new Date(b.createdAtUtc || 0) - new Date(a.createdAtUtc || 0));
   } catch (err) {
-    listEl.innerHTML = `
-      <div style="padding: 28px 20px; text-align: center; color: #be123c;">
-        تعذر تحميل قائمة المهام: ${DOM.escapeHTML(messageFromError(err))}
-      </div>
-    `;
+    listEl.innerHTML = errorStateHTML(err, 'قائمة المهام', { compact: true });
+    bindRetry(listEl, updateRecentCases);
     return;
   }
 
@@ -348,29 +348,34 @@ export async function updateRecentCases() {
 }
 
 export function initDashboardInteractivity() {
-  // Update Live Arabic Date, Dynamic Time-Based Greeting, KPIs & work queue
+  // Hero (date/greeting/name) is local — always kept current.
   updateDashboardHero();
-  updateDashboardKPIs();
-  updateRecentCases();
+  EventBus.on(EVENTS.USER_CHANGED, updateDashboardHero);
 
-  // Listen to user and view changes to keep hero, KPIs & queue updated
+  // KPIs & work queue are fetched only while the dashboard is the open view
+  // (each time it's entered), not at boot behind another screen.
+  // USER_CHANGED fires several times at boot (/auth/me, then /profile) and on
+  // every profile/avatar edit — the numbers only depend on the role, so they
+  // are re-fetched only when the role actually changed.
+  let loadedForRole = null;
+  const refreshDashboardData = () => {
+    loadedForRole = store.currentUser?.roleCode || null;
+    updateDashboardKPIs();
+    updateRecentCases();
+  };
+
+  // (The onViewEnter('dashboard') hook that calls this is registered further
+  // down, once the search-panel state it also loads is declared.)
+
   EventBus.on(EVENTS.USER_CHANGED, () => {
-    updateDashboardHero();
-    updateDashboardKPIs();
-    updateRecentCases();
-  });
-  EventBus.on(EVENTS.VIEW_CHANGED, (view) => {
-    if (view === 'dashboard') {
-      updateDashboardHero();
-      updateDashboardKPIs();
-      updateRecentCases();
-    }
+    if (store.currentView !== 'dashboard' || !store.currentUser) return;
+    if ((store.currentUser.roleCode || null) !== loadedForRole) refreshDashboardData();
   });
 
-  // أي قرار يتسجّل على حالة بيحرّك أرقام الدور وقائمة شغله فورًا
+  // أي قرار يتسجّل على حالة بيحرّك أرقام الدور وقائمة شغله فورًا — لو
+  // الرئيسية مفتوحة؛ غير كده هتتحدّث لوحدها أول ما تتفتح.
   EventBus.on(EVENTS.CASE_UPDATED, () => {
-    updateDashboardKPIs();
-    updateRecentCases();
+    if (store.currentView === 'dashboard') refreshDashboardData();
   });
 
   // Multi-Criteria Search Elements
@@ -444,13 +449,15 @@ export function initDashboardInteractivity() {
     return opt ? opt.text : '';
   }
 
+  // Reference roster — served from the localStorage cache, so calling this on
+  // every dashboard entry costs no request unless the server reported a change.
   async function loadDashboardCharities() {
     try {
       if (!Object.keys(store.locationIds.centers || {}).length) {
         const centers = await LocationsService.list();
         store.applyLocationsFromServer(centers);
       }
-      const result = await CharitiesService.list({ limit: 100 });
+      const result = await CharitiesService.listReference();
       dashboardCharities = (result && result.items) || [];
     } catch (err) {
       dashboardCharities = [];
@@ -459,9 +466,15 @@ export function initDashboardInteractivity() {
     updateDashboardCharitySelect();
   }
 
-  loadDashboardCharities();
-  EventBus.on(EVENTS.VIEW_CHANGED, (view) => {
-    if (view === 'dashboard') loadDashboardCharities();
+  onViewEnter('dashboard', () => {
+    updateDashboardHero();
+    refreshDashboardData();
+    loadDashboardCharities();
+  });
+
+  // Roster changed server-side while the dashboard is open.
+  EventBus.on(EVENTS.CHARITIES_UPDATED, () => {
+    if (store.currentView === 'dashboard') loadDashboardCharities();
   });
 
   // Initialize Region Autocomplete Options & Date Presets
