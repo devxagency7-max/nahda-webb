@@ -117,7 +117,7 @@ export const AttachmentsService = {
    */
   async commit(attachmentId, checksum, idempotencyKey = crypto.randomUUID()) {
     return HttpClient.post(`/attachments/${attachmentId}/commit`, {
-      body: checksum ? { checksum } : undefined,
+      body: checksum ? { checksum } : {},
       idempotencyKey
     });
   },

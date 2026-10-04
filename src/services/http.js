@@ -97,6 +97,12 @@ async function parseEnvelope(response) {
  */
 async function doFetch(path, { method = 'GET', body, query, headers = {}, signal, timeoutMs = API_TIMEOUT_MS } = {}) {
   const finalHeaders = { ...headers };
+  // ASP.NET falls back to a generic 404 («المسار المطلوب غير موجود») on a
+  // POST/PUT/PATCH that has no JSON Content-Type — it hit attachment commit
+  // (no checksum => no body). So every write carries a JSON body, `{}` if empty.
+  if (body === undefined && (method === 'POST' || method === 'PUT' || method === 'PATCH')) {
+    body = {};
+  }
   if (body !== undefined) finalHeaders['Content-Type'] = 'application/json';
 
   const accessToken = TokenStore.getAccessToken();
