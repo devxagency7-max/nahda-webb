@@ -521,6 +521,12 @@ export async function saveStep1() {
     store.setSectionVersion('beneficiary', updated?.rowVersion ?? sectionVersion('beneficiary'));
     // رد الـ PUT فيه المستفيد كامل — أساس الحفظ اللي بعده.
     rememberServerBeneficiary(updated);
+    // الباك إند (2026-10-05) بيأكد إن PUT /beneficiary ممكن يزوّد caseRowVersion
+    // ويرجّعه في الرد. لو رجع، هو رقمنا الجديد (من write إحنا عملناه، فمش بيخفي
+    // تعديل حد تاني) — من غيره PUT family-members اللي بعده كان بيرجّع 409 وهمي.
+    if (updated?.caseRowVersion != null) {
+      store.setSectionVersion('caseRowVersion', updated.caseRowVersion);
+    }
 
     // PUT family-members بيستبدل القائمة كلها على السيرفر، فلو الحالة مفتوحة
     // للتعديل من غير ما قائمتها الحقيقية تتجاب (case-edit.loader.js بيعلّم
