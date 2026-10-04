@@ -487,14 +487,19 @@ export async function saveStep1() {
       store.setSectionVersion('beneficiary', updated?.rowVersion ?? fresh?.beneficiary?.rowVersion);
       rememberServerBeneficiary(updated);
 
+      // الحالة لسه متعملة في نفس الضغطة ومفيش حد غيرنا يعرفها، فنقرا رقمها
+      // تاني بعد PUT /beneficiary — دايمًا، حتى من غير أفراد أسرة: السيرفر بيزوّد
+      // caseRowVersion مع كل حفظ قسم، والرقم القديم كان هيطلّع "حد تاني عدّل"
+      // على أول قسم قوائم (المرافق) في حالة إحنا اللي لسه عاملينها.
+      if (updated?.caseRowVersion != null) {
+        store.setSectionVersion('caseRowVersion', updated.caseRowVersion);
+      }
+      const afterBeneficiary = await CasesService.getById(created.id);
+      if (afterBeneficiary?.rowVersion != null) {
+        store.setSectionVersion('caseRowVersion', afterBeneficiary.rowVersion);
+      }
+
       if (store.familyMembers && store.familyMembers.length > 0) {
-        // الحالة لسه متعملة في نفس الضغطة ومفيش حد غيرنا يعرفها، فنقرا رقمها
-        // تاني بعد PUT /beneficiary: لو السيرفر لمس صف الحالة في الخطوة دي،
-        // الرقم القديم كان هيطلّع "حد تاني عدّل" على حالة إحنا اللي لسه عاملينها.
-        const afterBeneficiary = await CasesService.getById(created.id);
-        if (afterBeneficiary?.rowVersion != null) {
-          store.setSectionVersion('caseRowVersion', afterBeneficiary.rowVersion);
-        }
         const familyResult = await CasesService.updateFamilyMembers(
           created.id,
           collectFamilyMembersPayload(),
