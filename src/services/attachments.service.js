@@ -20,6 +20,7 @@
    -------------------------------------------------------------------------- */
 import { HttpClient } from './http.js';
 import { ApiError } from './errors.js';
+import { documentTypeCode } from './document-types.js';
 
 const ALLOWED_MIME_TYPES = new Set([
   'image/jpeg',
@@ -56,18 +57,27 @@ export const AttachmentsService = {
     onProgress?.({ stage: 'init' });
     const initRes = await this.init({
       caseId,
-      documentType,
+      documentType: documentTypeCode(documentType),
       fileName: file.name,
       mimeType: file.type,
       fileSize: file.size,
       description
     });
 
+    // Without this, commit() would hit /attachments/undefined/commit and the
+    // server answers a misleading 404 «المسار المطلوب غير موجود».
+    if (!initRes?.attachmentId || !initRes?.uploadUrl) {
+      console.error('[attachments] unexpected /attachments/init response shape:', Object.keys(initRes || {}));
+      throw new ApiError('INTERNAL_ERROR', 'استجابة بدء الرفع غير مكتملة من الخادم، حاول مرة أخرى');
+    }
+
     onProgress?.({ stage: 'uploading' });
     await this.uploadToStorage(initRes.uploadUrl, file, initRes.mimeType);
 
     onProgress?.({ stage: 'commit' });
-    const commitRes = await this.commit(initRes.attachmentId);
+    // One key per logical upload: a network-level retry of this same commit
+    // must reuse it, a brand-new upload gets a fresh one.
+    const commitRes = await this.commit(initRes.attachmentId, undefined, crypto.randomUUID());
 
     onProgress?.({ stage: 'done' });
     return commitRes;
@@ -98,15 +108,17 @@ export const AttachmentsService = {
   },
 
   /**
-   * Step 3 — idempotent by attachment id (no Idempotency-Key header needed
-   * or accepted here). Calling again on an already-complete attachment
-   * returns 200 with alreadyComplete:true and no side effect.
+   * Step 3 — requires an Idempotency-Key (FRONTEND_COMPLETE_GUIDE.md §13 and
+   * §19.8: "Idempotency-Key: مطلوب"). Calling again on an already-complete
+   * attachment returns 200 with alreadyComplete:true and no side effect.
    * @param {string} attachmentId
    * @param {string} [checksum]
+   * @param {string} [idempotencyKey] - UUID; generated here if the caller has none
    */
-  async commit(attachmentId, checksum) {
+  async commit(attachmentId, checksum, idempotencyKey = crypto.randomUUID()) {
     return HttpClient.post(`/attachments/${attachmentId}/commit`, {
-      body: checksum ? { checksum } : undefined
+      body: checksum ? { checksum } : undefined,
+      idempotencyKey
     });
   },
 

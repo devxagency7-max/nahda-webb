@@ -14,6 +14,7 @@ import { CasesService } from '../../services/cases.service.js';
 import { AttachmentsService } from '../../services/attachments.service.js';
 import { DropdownsService } from '../../services/dropdowns.service.js';
 import { messageFromError } from '../../services/errors.js';
+import { documentTypeLabel } from '../../services/document-types.js';
 import { formatLocalDate, formatCairoDateTime } from '../../utils/date.js';
 import { StorageService, STORAGE_KEYS } from '../../services/storage.js';
 import { supportTypeLabel } from '../../utils/support-labels.js';
@@ -318,7 +319,7 @@ function normalizeApiCase(detail, familyRes, supportRes, attachmentsRes, applian
     })),
     attachments: attachments.map(a => ({
       title: a.fileName,
-      docType: a.documentType,
+      docType: documentTypeLabel(a.documentType),
       fileName: a.fileName,
       uploadedAt: a.uploadedAtUtc ? a.uploadedAtUtc.slice(0, 10) : '',
       status: a.status === 'complete' ? 'مستوفاة ✅' : (a.status || '')

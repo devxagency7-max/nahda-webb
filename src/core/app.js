@@ -10,7 +10,6 @@ import { initWorkflowTabs } from '../components/workflow/workflow.component.js';
 import { initInPageBackgroundStudio } from '../components/bg-studio/bg-studio.component.js';
 import { initFileUpload } from '../components/file-upload/file-upload.component.js';
 import { initFamilyMembersManager } from '../components/family-members/family-members.component.js';
-import { initAttachmentsManager } from '../components/attachments/attachments.component.js';
 import { initLocationCascade } from '../components/location-cascade/location-cascade.component.js';
 import { initDropdownData } from '../components/personal-data/dropdown-data.component.js';
 import { initReferenceDataSync } from './reference-sync.js';
@@ -116,7 +115,6 @@ export function bootstrapApp() {
     runInit('fileUpload', initFileUpload);
     runInit('inPageBackgroundStudio', initInPageBackgroundStudio);
     runInit('familyMembersManager', initFamilyMembersManager);
-    runInit('attachmentsManager', initAttachmentsManager);
     runDataInit('locationCascade', initLocationCascade);
     runInit('otherOptionDropdowns', initOtherOptionDropdowns);
     runInit('chipFields', initChipFields);

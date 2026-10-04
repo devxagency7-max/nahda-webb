@@ -20,6 +20,7 @@ import { ApiError, messageFromError } from '../../services/errors.js';
 import { parseEgyptianNationalId } from '../../utils/nationalId.js';
 import { choiceDialog } from '../../utils/dialog.js';
 import { loadCaseIntoForm } from './case-edit.loader.js';
+import { addUploadedAttachmentRow } from '../attachments/attachments.component.js';
 
 function val(id) {
   const el = DOM.qs(`#${id}`);
@@ -600,7 +601,15 @@ export function wireAttachmentUpload() {
 
     try {
       showToast('جاري رفع الملف... ⏳', 'info');
-      await AttachmentsService.upload({ caseId, documentType, file });
+      const committed = await AttachmentsService.upload({ caseId, documentType, file });
+      addUploadedAttachmentRow({
+        id: committed.attachmentId,
+        fileName: committed.fileName || file.name,
+        documentType,
+        size: committed.fileSizeBytes ?? file.size
+      });
+      // جاهز لاختيار تصنيف جديد للملف اللي بعده — بعد نجاح الرفع بس.
+      if (docTypeSelect) docTypeSelect.selectedIndex = 0;
       showToast('تم رفع المرفق بنجاح ✅', 'success');
       EventBusRefreshAttachments();
     } catch (err) {

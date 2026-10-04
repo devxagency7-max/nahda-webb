@@ -19,6 +19,7 @@ import { triggerWorkflowRecalc } from '../../core/state.js';
 import { CasesService } from '../../services/cases.service.js';
 import { AttachmentsService } from '../../services/attachments.service.js';
 import { messageFromError } from '../../services/errors.js';
+import { documentTypeLabel } from '../../services/document-types.js';
 import { restoreAgricultureManager } from '../agriculture/agriculture.component.js';
 import { loadFamilyMembersManager } from '../family-members/family-members.component.js';
 import { loadFinancialManager } from '../financial-ledger/financial-ledger.component.js';
@@ -180,7 +181,7 @@ function fillStep2(attachments) {
 
     const info = DOM.createElement('span', {}, null);
     info.innerHTML = `📎 <strong>${DOM.escapeHTML(item.fileName || '')}</strong>` +
-      (item.documentType ? ` — ${DOM.escapeHTML(item.documentType)}` : '');
+      (item.documentType ? ` — ${DOM.escapeHTML(documentTypeLabel(item.documentType))}` : '');
 
     const actions = DOM.createElement('span', { style: { display: 'flex', alignItems: 'center', gap: '10px' } });
 

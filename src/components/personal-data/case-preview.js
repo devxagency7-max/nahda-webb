@@ -13,6 +13,7 @@ import { DOM } from '../../utils/dom.js';
 import { store } from '../../state/store.js';
 import { CasesService } from '../../services/cases.service.js';
 import { AttachmentsService } from '../../services/attachments.service.js';
+import { documentTypeLabel } from '../../services/document-types.js';
 import { formatLocalDate } from '../../utils/date.js';
 
 /** قيمة حقل نصي/منسدل، أو '' لو فاضي أو غير موجود. */
@@ -279,7 +280,7 @@ function mapServerCaseToViewModel(serverCase, { support, attachments } = {}) {
     attachments: (attachments?.items || []).map(att => ({
       id: att.id,
       title: att.description || att.fileName || '',
-      docType: att.documentType || '',
+      docType: documentTypeLabel(att.documentType),
       fileName: att.fileName || '',
       uploadedAt: att.createdAtUtc || '',
       status: att.status === 'complete' ? 'مرفوعة' : att.status

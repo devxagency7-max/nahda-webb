@@ -16,6 +16,7 @@ import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 import { DOM } from '../utils/dom.js';
 import { supportTypeLabel } from '../utils/support-labels.js';
+import { documentTypeLabel } from './document-types.js';
 
 /** Safe value formatter — never outputs null or undefined */
 function val(v, fallback = '—') {
@@ -975,7 +976,7 @@ function buildCaseSections(c) {
               ${attachments.map(a => `
                 <tr>
                   <td><strong>${DOM.escapeHTML(val(a.fileName || a.title))}</strong></td>
-                  <td>${DOM.escapeHTML(val(a.docType || a.documentType))}</td>
+                  <td>${DOM.escapeHTML(val(documentTypeLabel(a.docType || a.documentType)))}</td>
                   <td>${formatDate(a.uploadedAt || a.createdAt)}</td>
                   <td><span class="pdf-badge pdf-badge--success">${DOM.escapeHTML(val(a.status, 'مكتمل'))}</span></td>
                 </tr>
