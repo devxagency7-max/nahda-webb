@@ -136,9 +136,36 @@ async function doFetch(path, { method = 'GET', body, query, headers = {}, signal
   }
 }
 
-async function refreshSession() {
+/**
+ * Runs `fn` under a lock shared by every tab/window of this origin. The
+ * in-memory `refreshInFlight` below only serializes callers inside ONE tab;
+ * the tokens live in localStorage and are shared, so two tabs hitting a 401
+ * together would each POST /auth/refresh with the same refresh token and the
+ * server would treat the loser as token theft and revoke the whole chain.
+ * Browsers without the Web Locks API fall back to per-tab serialization.
+ */
+function withCrossTabLock(fn) {
+  const locks = typeof navigator !== 'undefined' ? navigator.locks : null;
+  if (locks && typeof locks.request === 'function') {
+    return locks.request('nahda-auth-refresh', fn);
+  }
+  return fn();
+}
+
+/**
+ * @param {string|null} staleAccessToken - the access token the 401'd request
+ *   was sent with. If storage holds a different one by the time we own the
+ *   lock, another caller/tab already rotated the session and we must not
+ *   spend the (now newer) refresh token again.
+ */
+async function refreshSession(staleAccessToken) {
   if (!refreshInFlight) {
-    refreshInFlight = (async () => {
+    refreshInFlight = withCrossTabLock(async () => {
+      const currentAccess = TokenStore.getAccessToken();
+      if (staleAccessToken && currentAccess && currentAccess !== staleAccessToken) {
+        return null;
+      }
+
       const refreshToken = TokenStore.getRefreshToken();
       if (!refreshToken) throw new ApiError('TOKEN_INVALID', 'لا توجد جلسة نشطة');
 
@@ -151,11 +178,20 @@ async function refreshSession() {
       // immediately, before anything else can read a stale token.
       TokenStore.setSession(data);
       return data;
-    })().finally(() => {
+    }).finally(() => {
       refreshInFlight = null;
     });
   }
   return refreshInFlight;
+}
+
+/** Network drops, timeouts, 5xx and rate limits say nothing about the session itself. */
+function isTransientRefreshFailure(err) {
+  if (err instanceof NetworkError) return true;
+  if (err instanceof ApiError) {
+    return err.httpStatus >= 500 || err.httpStatus === 429;
+  }
+  return err?.name === 'AbortError';
 }
 
 function forceLogout(reason) {
@@ -191,13 +227,18 @@ export async function request(method, path, opts = {}) {
     headers['Idempotency-Key'] = idempotencyKey;
   }
 
+  // Remembered so a late 401 (request sent before another caller/tab already
+  // rotated the session) retries with the new token instead of refreshing again.
+  const sentAccessToken = TokenStore.getAccessToken();
   const response = await doFetch(path, { method, body, query, headers, signal, timeoutMs });
 
   if (response.status === 401 && !AUTH_NO_RETRY_PATHS.has(path)) {
     try {
-      await refreshSession();
+      await refreshSession(sentAccessToken);
     } catch (refreshErr) {
-      forceLogout('refresh_failed');
+      // A flaky connection must not end the session — only a definitive
+      // rejection from the server does.
+      if (!isTransientRefreshFailure(refreshErr)) forceLogout('refresh_failed');
       throw refreshErr;
     }
     // Retry exactly once with the freshly-rotated access token.
