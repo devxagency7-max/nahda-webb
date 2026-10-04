@@ -11,6 +11,7 @@ import { can, PERMISSIONS } from '../../core/permissions.js';
 import { ReportsService, clearReportsCache } from '../../services/reports.service.js';
 import { initReportBuilder, loadBuilderDatasets } from './reports-builder.component.js';
 import { onViewEnter } from '../../core/view-lifecycle.js';
+import { supportTypeLabel } from '../../utils/support-labels.js';
 
 let activeTab = 'executive';
 let globalDateRange = { from: '', to: '' };
@@ -411,7 +412,7 @@ async function loadSupportData() {
         const avg = r.count > 0 ? Math.round(r.totalAmount / r.count) : 0;
         return `
           <tr>
-            <td style="font-weight: 700;">🎁 ${DOM.escapeHTML(r.supportType || 'عام')}</td>
+            <td style="font-weight: 700;">🎁 ${DOM.escapeHTML(supportTypeLabel(r.supportType) || 'عام')}</td>
             <td><strong>${r.count || 0}</strong> حالة</td>
             <td><strong style="color: #059669;">${(r.totalAmount || 0).toLocaleString('ar-EG')} ج.م</strong></td>
             <td>${avg.toLocaleString('ar-EG')} ج.م</td>

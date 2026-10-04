@@ -16,6 +16,7 @@ import { DropdownsService } from '../../services/dropdowns.service.js';
 import { messageFromError } from '../../services/errors.js';
 import { formatLocalDate, formatCairoDateTime } from '../../utils/date.js';
 import { StorageService, STORAGE_KEYS } from '../../services/storage.js';
+import { supportTypeLabel } from '../../utils/support-labels.js';
 
 let currentActiveCase = null;
 
@@ -379,13 +380,13 @@ function normalizeApiCase(detail, familyRes, supportRes, attachmentsRes, applian
     })),
     support: {
       types: recommendations.map(r => ({
-        title: r.supportType,
+        title: supportTypeLabel(r.supportType),
         option: r.supportCategory,
         amount: r.proposedAmount,
         urgency: r.priorityLevel
       })),
       approvedSupport: approved ? {
-        type: approved.approvedSupportType,
+        type: supportTypeLabel(approved.approvedSupportType),
         amount: approved.approvedAmount,
         beneficiary: approved.beneficiary,
         approvedAt: approved.approvedAtUtc ? approved.approvedAtUtc.slice(0, 10) : '',
@@ -396,7 +397,7 @@ function normalizeApiCase(detail, familyRes, supportRes, attachmentsRes, applian
       // support-type × quantity handed to the recipient, e.g. legacy imports
       // that logged several disbursements over time.
       history: supportHistory.map(hst => ({
-        supportType: hst.supportType,
+        supportType: supportTypeLabel(hst.supportType),
         quantity: hst.quantity,
         recipientName: hst.recipientName,
         date: hst.date || hst.disbursedAtUtc

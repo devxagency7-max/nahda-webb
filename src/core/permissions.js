@@ -131,6 +131,9 @@ const VIEW_PERMISSIONS = {
   'personal-data': PERMISSIONS.CREATE_CASE
 };
 
+/** شاشات مخفية عن دور المدير بالكامل. */
+const MANAGER_HIDDEN_VIEWS = ['state-mgmt', 'charities'];
+
 /* --------------------------------------------------------------------------
    PUBLIC API
    -------------------------------------------------------------------------- */
@@ -189,6 +192,9 @@ export function can(permission) {
  * @param {string} viewName - the router view key
  */
 export function canAccessView(viewName) {
+  // قرار منتج: المدير مايشوفش «إدارة بيانات الحالة» ولا «إدارة الجمعيات» (لا في الشريط
+  // الجانبي ولا بفتح الشاشة مباشرة)، بغض النظر عن الصلاحيات اللي راجعة من الباك إند.
+  if (MANAGER_HIDDEN_VIEWS.includes(viewName) && currentRole() === ROLES.MANAGER) return false;
   const required = VIEW_PERMISSIONS[viewName];
   return required ? can(required) : true;
 }

@@ -23,6 +23,7 @@ import { CharitiesService } from '../../services/charities.service.js';
 import { LocationsService } from '../../services/locations.service.js';
 import { messageFromError } from '../../services/errors.js';
 import { onViewEnter } from '../../core/view-lifecycle.js';
+import { supportTypeLabel } from '../../utils/support-labels.js';
 
 // Real production values from the backend's case_support_history column,
 // stored as-is (case-sensitive, no normalization) — do not re-derive this
@@ -329,7 +330,7 @@ function renderSupportChips(container) {
   container.innerHTML = SUPPORT_TYPES.map(type => `
     <label class="csf-support-chip">
       <input type="checkbox" value="${DOM.escapeHTML(type)}">
-      <span>${DOM.escapeHTML(type)}</span>
+      <span>${DOM.escapeHTML(supportTypeLabel(type))}</span>
     </label>
   `).join('');
 }
@@ -440,7 +441,7 @@ async function applyFilter() {
   }
 }
 
-/** Total quantity across every matched support record (e.g. 3 "لحمة" + 2 "كرتونة" -> 5) — the roster's "الكمية" column is one number, not per-type pills. */
+/** Total quantity across every matched support record (e.g. 3 "لحوم" + 2 "كرتونة" -> 5) — the roster's "الكمية" column is one number, not per-type pills. */
 function totalMatchedQuantity(matchedSupport) {
   if (!Array.isArray(matchedSupport) || matchedSupport.length === 0) return 0;
   return matchedSupport.reduce((sum, m) => sum + (m.totalCount ?? 0), 0);

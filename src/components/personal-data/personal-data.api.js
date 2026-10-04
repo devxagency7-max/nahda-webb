@@ -465,9 +465,14 @@ export async function saveStep1() {
       const fresh = await CasesService.getById(created.id);
       store.setSectionVersion('beneficiary', fresh?.beneficiary?.rowVersion);
       rememberServerBeneficiary(fresh?.beneficiary);
-      if (sectionVersion('caseRowVersion') == null) {
-        // احتياطي لسيرفر أقدم من commit b231666 (قبل ما POST يرجّع الرقم).
-        store.setSectionVersion('caseRowVersion', fresh?.rowVersion);
+      // الحالة لسه متعملة من لحظات ومفيش حد غيرنا يعرف رقمها، فرقمها الحالي من
+      // GET هو الأصح: السيرفر ممكن يكتب على صف الحالة بعد ما يحسب
+      // caseRowVersion الراجع من POST (مثلاً تسجيل المنشئ كمالك للحالة)، وساعتها
+      // رقم POST كان بيخلي PUT family-members ترجّع 409 وهمي على حالة جديدة.
+      // ده مختلف عن "ممنوع نجيبه قبل الحفظ" فوق — ده للحالات المفتوحة، اللي
+      // ممكن مستخدم تاني يكون عدّل فيها فعلاً.
+      if (fresh?.rowVersion != null) {
+        store.setSectionVersion('caseRowVersion', fresh.rowVersion);
       }
 
       // إكمال باقي بيانات رب الأسرة فورًا في نفس الحفظة — لو فشلت الخطوة
@@ -482,6 +487,13 @@ export async function saveStep1() {
       rememberServerBeneficiary(updated);
 
       if (store.familyMembers && store.familyMembers.length > 0) {
+        // الحالة لسه متعملة في نفس الضغطة ومفيش حد غيرنا يعرفها، فنقرا رقمها
+        // تاني بعد PUT /beneficiary: لو السيرفر لمس صف الحالة في الخطوة دي،
+        // الرقم القديم كان هيطلّع "حد تاني عدّل" على حالة إحنا اللي لسه عاملينها.
+        const afterBeneficiary = await CasesService.getById(created.id);
+        if (afterBeneficiary?.rowVersion != null) {
+          store.setSectionVersion('caseRowVersion', afterBeneficiary.rowVersion);
+        }
         const familyResult = await CasesService.updateFamilyMembers(
           created.id,
           collectFamilyMembersPayload(),

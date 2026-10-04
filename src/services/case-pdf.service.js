@@ -15,6 +15,7 @@
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 import { DOM } from '../utils/dom.js';
+import { supportTypeLabel } from '../utils/support-labels.js';
 
 /** Safe value formatter — never outputs null or undefined */
 function val(v, fallback = '—') {
@@ -56,18 +57,43 @@ const DECISION_META = {
 /** Renders a decision enum as a colored Arabic <span>, or a muted fallback if not recorded. */
 function decisionHtml(decision, fallback = 'مسجل') {
   const meta = DECISION_META[decision];
-  if (!meta) return DOM.escapeHTML(val(decision, fallback));
+  // أي قيمة قرار غير معروفة (إنجليزية من الباك إند) تتعرض بنص عربي عام بدل الكلمة الخام.
+  if (!meta) return DOM.escapeHTML(/[A-Za-z]/.test(String(decision || '')) ? fallback : val(decision, fallback));
   return `<span style="color: ${meta.color}; font-weight: 800;">${meta.label}</span>`;
+}
+
+/** True when an opinion has a decision or any notes — otherwise it's treated as "not recorded yet". */
+function hasOpinion(op) {
+  return Boolean(op && (op.decision || (op.notes && String(op.notes).trim())));
+}
+
+/** Reviewer/manager opinion card — always rendered; shows an explicit empty state when nothing is recorded. */
+function opinionCardHtml(op, { title, color, roleLabel, emptyText }) {
+  if (!hasOpinion(op)) {
+    return `
+      <div class="pdf-opinion pdf-opinion--empty">
+        <div style="font-size: 10.5px; font-weight: 800; color: ${color}; margin-bottom: 2px;">${title}:</div>
+        <div class="pdf-opinion__empty-text">${emptyText}</div>
+      </div>
+    `;
+  }
+  return `
+    <div class="pdf-opinion">
+      <div style="font-size: 10.5px; font-weight: 800; color: ${color}; margin-bottom: 2px;">${title}: ${decisionHtml(op.decision)}</div>
+      <div style="font-size: 10px; color: #334155;">${DOM.escapeHTML(val(op.notes, 'لا توجد ملاحظات'))}</div>
+      ${op.author && !op.isLegacyImport ? `<div style="font-size: 9px; color: #64748b; margin-top: 2px;">${roleLabel}: ${DOM.escapeHTML(op.author)}</div>` : ''}
+    </div>
+  `;
 }
 
 /** Sanitize file name for filesystem safety */
 function sanitizeFileName(caseId, name) {
-  const safeId = String(caseId || 'CASE').replace(/[/\\?%*:|"<>]/g, '-').trim();
+  const safeId = String(caseId || 'بدون_رقم').replace(/[/\\?%*:|"<>]/g, '-').trim();
   const safeName = String(name || 'مستفيد')
     .replace(/[/\\?%*:|"<>]/g, '-')
     .replace(/\s+/g, '_')
     .trim();
-  return `Case_${safeId}_${safeName}.pdf`;
+  return `حالة_${safeId}_${safeName}.pdf`;
 }
 
 /** Format date string nicely into DD/MM/YYYY */
@@ -100,7 +126,7 @@ function currentTimestamp() {
 
 /** Build official Header HTML */
 function buildHeaderHtml(c, exportTime) {
-  const code = val(c.id, 'CASE');
+  const code = val(c.id, 'بدون رقم');
   const creationDate = formatDate(c.registrationDate || c.createdAtUtc);
 
   return `
@@ -110,7 +136,7 @@ function buildHeaderHtml(c, exportTime) {
           <h1 class="pdf-header__org-title">مؤسسه نهضة بني سويف</h1>
           <p class="pdf-header__license">المشهرة برقم 1079 لسنة 2009</p>
         </div>
-        <img src="/assets/logo.png" alt="Logo" class="pdf-header__logo" onerror="this.style.display='none'">
+        <img src="/assets/logo.png" alt="شعار المؤسسة" class="pdf-header__logo" onerror="this.style.display='none'">
       </div>
       <div class="pdf-header__meta-strip">
         <div class="pdf-header__meta-item">
@@ -140,9 +166,9 @@ function buildFooterHtml(pageNum, totalPages, exportTime) {
         <span>${exportTime}</span>
       </div>
       <div class="pdf-footer__partners">
-        <img src="/assets/devx_logo.jpg" alt="DevX" class="pdf-footer__partner-logo" onerror="this.style.display='none'">
-        <span class="pdf-footer__partners-amp">&amp;</span>
-        <img src="/assets/delmon_logo.jpeg" alt="Delmon" class="pdf-footer__partner-logo pdf-footer__partner-logo--round" onerror="this.style.display='none'">
+        <img src="/assets/devx_logo.jpg" alt="شعار الشريك التقني" class="pdf-footer__partner-logo" onerror="this.style.display='none'">
+        <span class="pdf-footer__partners-amp">و</span>
+        <img src="/assets/delmon_logo.jpeg" alt="شعار الشريك" class="pdf-footer__partner-logo pdf-footer__partner-logo--round" onerror="this.style.display='none'">
       </div>
     </div>
   `;
@@ -154,7 +180,7 @@ function buildFooterHtml(pageNum, totalPages, exportTime) {
  * type was picked (e.g. charity-only filter, or several types at once).
  */
 function deliveryRosterTitle(meta) {
-  const types = Array.isArray(meta.supportTypes) ? meta.supportTypes.filter(Boolean) : [];
+  const types = Array.isArray(meta.supportTypes) ? meta.supportTypes.filter(Boolean).map(supportTypeLabel) : [];
   if (types.length === 1) return `كشف ${types[0]}`;
   if (types.length > 1) return `كشف ${types.join(' / ')}`;
   return 'كشف الدعم';
@@ -164,7 +190,8 @@ function deliveryRosterTitle(meta) {
  * Header for the "كشف تسليم/استلام دعم" roster — official layout matching
  * the charity's printed delivery-roster convention:
  *   - top-right: institution name + registration number + mission line
- *   - top-left: charity seal placeholder stacked above مركز/قرية labels+values
+ *   - top-center: the institution logo
+ *   - top-left: مركز/قرية/جمعية labels+values
  *   - a centered doc title driven by the selected support type(s)
  */
 function buildListHeaderHtml(meta) {
@@ -176,8 +203,8 @@ function buildListHeaderHtml(meta) {
           <p class="pdf-header__license">المشهرة برقم 1079 لسنة 2009</p>
           <p class="pdf-header__mission">التنمية الشاملة المستدامة</p>
         </div>
+        <img src="/assets/logo.png" alt="شعار المؤسسة" class="pdf-header__seal" onerror="this.style.display='none'">
         <div class="pdf-header__roster-left">
-          <img src="/assets/logo.png" alt="ختم الجمعية" class="pdf-header__seal" onerror="this.style.display='none'">
           <div class="pdf-header__roster-left-meta">
             <div class="pdf-header__meta-item">
               <span>المركز:</span>
@@ -235,7 +262,7 @@ function caseListRowHtml(row, index, heightPx) {
 // Fixed page size (product requirement) — the table shrinks to fit this
 // many rows, rather than the row count adapting to available space.
 const ROSTER_ROWS_PER_PAGE = 20;
-const ROSTER_DEFAULT_FONT_PX = 12.5;
+const ROSTER_DEFAULT_FONT_PX = 14;
 const ROSTER_DEFAULT_PADDING = { v: 6, h: 8 };
 const ROSTER_MIN_FONT_PX = 8; // floor — below this the roster stops shrinking and may overflow rather than become unreadable.
 // Sub-pixel rounding across 20 rows adds up; this cushion keeps the last row
@@ -247,12 +274,12 @@ function rosterTableStyle(fontPx, padV) {
 }
 
 /**
- * Splits rows into fixed 20-line pages (the last one padded with blank
- * lines) and sizes every line so the table exactly fills the space between
- * the header and the acknowledgement block — no empty band left above the
- * pinned footer. Measured on real roster pages, so wrapped names are
- * accounted for; the table font only shrinks when 20 natural-height lines
- * can't fit at all.
+ * Splits rows into pages of up to 20 lines. Full pages have their line
+ * heights stretched so the table fills the space above the acknowledgement
+ * block; the last (partial) page is NOT padded with blank lines — it just
+ * ends and leaves empty space. Measured on real roster pages, so wrapped
+ * names are accounted for; the table font only shrinks when 20
+ * natural-height lines can't fit at all.
  */
 function packRosterRows(rows, meta) {
   const stage = document.createElement('div');
@@ -278,22 +305,22 @@ function packRosterRows(rows, meta) {
   function measureAt(fontPx, padV) {
     const tableStyle = rosterTableStyle(fontPx, padV);
 
-    // Room for tbody lines = the gap between the ack block and the pinned
-    // footer on a page whose table has no rows at all.
+    // Room for tbody lines = the gap between the (empty) table and the
+    // acknowledgement block, which is pinned to the bottom of the page above
+    // the footer. 6px is the minimum breathing gap kept above the block.
     const emptyPage = mountMeasurePage([], tableStyle);
     const ack = emptyPage.querySelector('.pdf-roster-ack');
-    const footer = emptyPage.querySelector('.pdf-footer');
-    const rowSpace = footer.offsetTop - (ack.offsetTop + ack.offsetHeight) - ROSTER_FIT_SAFETY_PX;
+    const body = emptyPage.querySelector('.pdf-body');
+    const rowSpace = ack.offsetTop - (body.offsetTop + body.offsetHeight) - 6 - ROSTER_FIT_SAFETY_PX;
     emptyPage.remove();
 
-    // Natural height of every real row plus one blank filler (last entry).
-    // The roster table uses fixed column widths, so a row wraps here exactly
-    // as it will on its real page.
-    const fullPage = mountMeasurePage([...rows, null], tableStyle);
+    // Natural height of every real row. The roster table uses fixed column
+    // widths, so a row wraps here exactly as it will on its real page.
+    const fullPage = mountMeasurePage(rows, tableStyle);
     const heights = [...fullPage.querySelectorAll('tbody tr')].map(tr => tr.offsetHeight);
     fullPage.remove();
 
-    return { tableStyle, rowSpace, rowHeights: heights.slice(0, rows.length), blankHeight: heights[heights.length - 1] };
+    return { tableStyle, rowSpace, rowHeights: heights };
   }
 
   const chunks = [];
@@ -303,7 +330,7 @@ function packRosterRows(rows, meta) {
   if (chunks.length === 0) chunks.push({ start: 0, count: 0 });
 
   const naturalPageHeight = (m, { start, count }) => {
-    let sum = (ROSTER_ROWS_PER_PAGE - count) * m.blankHeight;
+    let sum = 0;
     for (let i = start; i < start + count; i++) sum += m.rowHeights[i];
     return sum;
   };
@@ -321,13 +348,15 @@ function packRosterRows(rows, meta) {
   stage.remove();
 
   const pages = chunks.map(chunk => {
+    // الصفحة الأخيرة (أقل من 20 حالة) ما بتتملاش بصفوف فاضية — بيفضل تحت الجدول مسافة فاضية.
     const pageRows = rows.slice(chunk.start, chunk.start + chunk.count);
-    while (pageRows.length < ROSTER_ROWS_PER_PAGE) pageRows.push(null);
 
-    const extraPerRow = Math.max(0, m.rowSpace - naturalPageHeight(m, chunk)) / ROSTER_ROWS_PER_PAGE;
-    const heights = pageRows.map((row, i) =>
-      (row ? m.rowHeights[chunk.start + i] : m.blankHeight) + extraPerRow
-    );
+    // الصفحات الكاملة (20 صف) بس هي اللي بنوزّع عليها المساحة المتبقية.
+    const isFull = chunk.count === ROSTER_ROWS_PER_PAGE;
+    const extraPerRow = isFull
+      ? Math.max(0, m.rowSpace - naturalPageHeight(m, chunk)) / ROSTER_ROWS_PER_PAGE
+      : 0;
+    const heights = pageRows.map((row, i) => m.rowHeights[chunk.start + i] + extraPerRow);
 
     return { rows: pageRows, heights, dataCount: chunk.count };
   });
@@ -520,8 +549,10 @@ function buildCaseSections(c) {
   const appliances = Array.isArray(c.appliances) ? c.appliances : [];
   const ag = c.agriculture || {};
   const fin = c.financial || {};
-  const incomeItems = Array.isArray(fin.incomeItems) ? fin.incomeItems : [];
-  const expenseItems = Array.isArray(fin.expenseItems) ? fin.expenseItems : [];
+  // البنود بمبلغ صفر (أو فاضي) مابتظهرش في الجداول — الإجماليات تحت بتفضل زي ما هي.
+  const nonZero = i => Number(i && i.amount) > 0;
+  const incomeItems = (Array.isArray(fin.incomeItems) ? fin.incomeItems : []).filter(nonZero);
+  const expenseItems = (Array.isArray(fin.expenseItems) ? fin.expenseItems : []).filter(nonZero);
   const sup = c.support || {};
   const supportTypes = Array.isArray(sup.types) ? sup.types : [];
   const approved = sup.approvedSupport;
@@ -536,13 +567,13 @@ function buildCaseSections(c) {
   sections.push({
     id: 'case-meta',
     html: `
-      <div class="pdf-section" style="background: #f8fafc; border: 1.5px solid #cbd5e1;">
+      <div class="pdf-section pdf-section--heavy" style="background: #f8fafc; border: 1.5px solid #cbd5e1;">
         <div class="pdf-section-title">
           <span>📋 بيانات الحالة</span>
           <span class="pdf-badge pdf-badge--info">${DOM.escapeHTML(statusLabel)}</span>
         </div>
         <div class="pdf-grid pdf-grid--3col">
-          <div class="pdf-row"><span class="pdf-row__label">اسم المستفيد:</span> <span class="pdf-row__value" style="font-weight: 800; color: #1e3a8a;">${DOM.escapeHTML(val(c.name))}</span></div>
+          <div class="pdf-row"><span class="pdf-row__label">اسم المستفيد:</span> <span class="pdf-row__value" style="color: #1e3a8a;">${DOM.escapeHTML(val(c.name))}</span></div>
           <div class="pdf-row"><span class="pdf-row__label">الرقم القومي:</span> <span class="pdf-row__value">${DOM.escapeHTML(val(c.nid))}</span></div>
           <div class="pdf-row"><span class="pdf-row__label">الديانة:</span> <span class="pdf-row__value">${DOM.escapeHTML(val(d.religion))}</span></div>
           <div class="pdf-row"><span class="pdf-row__label">المحافظة / المركز:</span> <span class="pdf-row__value">${DOM.escapeHTML(val(c.center || c.governorate))}</span></div>
@@ -573,8 +604,8 @@ function buildCaseSections(c) {
           <div class="pdf-row"><span class="pdf-row__label">الحالة الاجتماعية:</span> <span class="pdf-row__value">${DOM.escapeHTML(val(d.maritalStatus))}</span></div>
           <div class="pdf-row"><span class="pdf-row__label">المؤهل الدراسي:</span> <span class="pdf-row__value">${DOM.escapeHTML(val(d.education))}</span></div>
           <div class="pdf-row"><span class="pdf-row__label">المهنة / العمل:</span> <span class="pdf-row__value">${DOM.escapeHTML(val(d.job || d.employmentStatus))}</span></div>
-          <div class="pdf-row"><span class="pdf-row__label">الهاتف الأساسي:</span> <span class="pdf-row__value">${DOM.escapeHTML(val(d.phonePrimary || c.phone))}</span></div>
-          <div class="pdf-row"><span class="pdf-row__label">الهاتف البديل:</span> <span class="pdf-row__value">${DOM.escapeHTML(val(d.phoneSecondary))}</span></div>
+          <div class="pdf-row"><span class="pdf-row__label">الهاتف الأساسي:</span> <span class="pdf-row__value pdf-row__value--phone">${DOM.escapeHTML(val(d.phonePrimary || c.phone))}</span></div>
+          <div class="pdf-row"><span class="pdf-row__label">الهاتف البديل:</span> <span class="pdf-row__value pdf-row__value--phone">${DOM.escapeHTML(val(d.phoneSecondary))}</span></div>
           <div class="pdf-row"><span class="pdf-row__label">تكافل وكرامة:</span> <span class="pdf-row__value">${yesNo(d.takafulBeneficiary)} ${d.takafulBeneficiary && d.takafulAmount ? `(${money(d.takafulAmount)})` : ''}</span></div>
           <div class="pdf-row"><span class="pdf-row__label">الحالة الصحية:</span> <span class="pdf-row__value">${DOM.escapeHTML(val(d.healthStatus))}</span></div>
           <div class="pdf-row pdf-grid--full"><span class="pdf-row__label">العنوان بالتفصيل:</span> <span class="pdf-row__value">${DOM.escapeHTML(val(d.address))}</span></div>
@@ -824,7 +855,7 @@ function buildCaseSections(c) {
           <span>📋 القسم السادس — التقييم والبحث الاجتماعي والتوصيات</span>
         </div>
 
-        ${workerOp ? `
+        ${hasOpinion(workerOp) ? `
           <div class="pdf-section-subtitle" style="display: flex; justify-content: space-between;">
             <span>رأي وتقرير الأخصائي الاجتماعي الميداني:</span>
             <span class="pdf-badge pdf-badge--info">${decisionHtml(workerOp.decision)}</span>
@@ -837,7 +868,10 @@ function buildCaseSections(c) {
               الأخصائي: ${DOM.escapeHTML(workerOp.author)} ${workerOp.date ? `(${formatDate(workerOp.date)})` : ''}
             </div>
           ` : ''}
-        ` : ''}
+        ` : `
+          <div class="pdf-section-subtitle">رأي وتقرير الأخصائي الاجتماعي الميداني:</div>
+          <div class="pdf-opinion pdf-opinion--empty"><span class="pdf-opinion__empty-text">لا يوجد رأي مسجل من الأخصائي بعد</span></div>
+        `}
 
         ${supportTypes.length > 0 ? `
           <div class="pdf-section-subtitle" style="margin-top: 8px;">أنواع الدعم المقترحة من الأخصائي:</div>
@@ -875,24 +909,10 @@ function buildCaseSections(c) {
           </div>
         ` : ''}
 
-        ${(reviewerOp && reviewerOp.decision) || (managerOp && managerOp.decision) ? `
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px;">
-            ${reviewerOp && reviewerOp.decision ? `
-              <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; padding: 6px 8px;">
-                <div style="font-size: 10.5px; font-weight: 800; color: #1d4ed8; margin-bottom: 2px;">قرار وتوصية المراجع: ${decisionHtml(reviewerOp.decision)}</div>
-                <div style="font-size: 10px; color: #334155;">${DOM.escapeHTML(val(reviewerOp.notes))}</div>
-                ${reviewerOp.author && !reviewerOp.isLegacyImport ? `<div style="font-size: 9px; color: #64748b; margin-top: 2px;">المراجع: ${DOM.escapeHTML(reviewerOp.author)}</div>` : ''}
-              </div>
-            ` : '<div></div>'}
-            ${managerOp && managerOp.decision ? `
-              <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; padding: 6px 8px;">
-                <div style="font-size: 10.5px; font-weight: 800; color: #047857; margin-bottom: 2px;">الاعتماد النهائي للمدير: ${decisionHtml(managerOp.decision)}</div>
-                <div style="font-size: 10px; color: #334155;">${DOM.escapeHTML(val(managerOp.notes))}</div>
-                ${managerOp.author && !managerOp.isLegacyImport ? `<div style="font-size: 9px; color: #64748b; margin-top: 2px;">المدير: ${DOM.escapeHTML(managerOp.author)}</div>` : ''}
-              </div>
-            ` : '<div></div>'}
-          </div>
-        ` : ''}
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px;">
+          ${opinionCardHtml(reviewerOp, { title: 'قرار وتوصية المراجع', color: '#1d4ed8', roleLabel: 'المراجع', emptyText: 'لا يوجد رأي مسجل من المراجع بعد' })}
+          ${opinionCardHtml(managerOp, { title: 'الاعتماد النهائي للمدير', color: '#047857', roleLabel: 'المدير', emptyText: 'لا يوجد اعتماد مسجل من المدير بعد' })}
+        </div>
       </div>
     `
   });
@@ -1041,9 +1061,9 @@ function buildCaseSections(c) {
  * into pages to guarantee no mid-section cuts and consistent headers/footers.
  */
 function packSectionsIntoPages(sections, headerHeight = 100, footerHeight = 40) {
-  // A4 = 1123px height. Padding = 44px. Header = 100px. Footer = 40px.
+  // A4 = 1123px height. Padding = 44px. Header = 136px (شعار 84px). Footer = 40px.
   // Net safe page budget:
-  const PAGE_CAPACITY = 880;
+  const PAGE_CAPACITY = 845;
 
   const stage = document.createElement('div');
   stage.className = 'pdf-export-stage';

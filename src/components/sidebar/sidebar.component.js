@@ -5,7 +5,7 @@
 import { DOM } from '../../utils/dom.js';
 import { store } from '../../state/store.js';
 import { EventBus, EVENTS } from '../../core/event-bus.js';
-import { can, PERMISSIONS, roleLabel, currentRole, ROLES } from '../../core/permissions.js';
+import { can, canAccessView, PERMISSIONS, roleLabel, currentRole, ROLES } from '../../core/permissions.js';
 import { setExpanded } from '../../utils/a11y.js';
 
 export function initSidebarAccordion() {
@@ -153,6 +153,12 @@ export function initSidebarUserProfile() {
       const isUserAdmin = currentRole() === ROLES.MANAGER || currentRole() === 'admin' || can(PERMISSIONS.VIEW_EMPLOYEES);
       reportsGroup.style.display = isUserAdmin ? 'block' : 'none';
     }
+
+    // «إدارة بيانات الحالة» و«إدارة الجمعيات» — مخفيين عن دور المدير (قرار المنتج).
+    // الحجب الفعلي للشاشتين كمان في canAccessView جوه permissions.js.
+    DOM.qsa('.sidebar-sublink[data-view-target="state-mgmt"], .sidebar-sublink[data-view-target="charities"]').forEach(link => {
+      link.style.display = canAccessView(link.dataset.viewTarget) ? '' : 'none';
+    });
 
     // "فلترة الحالات بالدعم" — manager-only (per product decision, narrower
     // than the general reports/view_reports permission).

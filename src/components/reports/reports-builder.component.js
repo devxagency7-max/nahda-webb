@@ -8,6 +8,7 @@ import { showToast } from '../../utils/toast.js';
 import { can, PERMISSIONS } from '../../core/permissions.js';
 import { ReportsService } from '../../services/reports.service.js';
 import { allowedOperatorsFor } from '../../utils/report-enums.js';
+import { supportTypeLabel } from '../../utils/support-labels.js';
 
 let datasetsMetadata = [];
 let currentDataset = null;
@@ -465,7 +466,7 @@ function renderResults() {
               return `
                 <tr>
                   <td>${idx + 1}</td>
-                  <td style="font-weight: 700;">${DOM.escapeHTML(row.dimensionValue || 'غير محدد')}</td>
+                  <td style="font-weight: 700;">${DOM.escapeHTML(supportTypeLabel(row.dimensionValue) || 'غير محدد')}</td>
                   <td><strong style="color: #2563eb;">${formattedVal}</strong></td>
                   <td>
                     <div class="rep-progress-wrap">
@@ -494,8 +495,8 @@ function renderResults() {
           const formattedVal = typeof val === 'number' ? Number(val.toFixed(2)).toLocaleString('ar-EG') : val;
           return `
             <div class="builder-chart-bar-row">
-              <div class="builder-chart-label" title="${DOM.escapeHTML(r.dimensionValue || 'غير محدد')}">
-                ${DOM.escapeHTML(r.dimensionValue || 'غير محدد')}
+              <div class="builder-chart-label" title="${DOM.escapeHTML(supportTypeLabel(r.dimensionValue) || 'غير محدد')}">
+                ${DOM.escapeHTML(supportTypeLabel(r.dimensionValue) || 'غير محدد')}
               </div>
               <div class="builder-chart-track">
                 <div class="builder-chart-fill" style="width: ${pct}%;">

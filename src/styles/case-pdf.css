@@ -92,7 +92,7 @@
 }
 
 .pdf-header__logo {
-  height: 48px;
+  height: 84px;
   width: auto;
   object-fit: contain;
 }
@@ -190,6 +190,41 @@
   font-weight: 600;
   color: #0f172a;
   word-break: break-word;
+}
+
+/* قسم «بيانات الحالة»: خط ثقيل (أقصى وزن محمّل من Cairo = 800) للعناوين والقيم. */
+.pdf-section--heavy .pdf-row__label,
+.pdf-section--heavy .pdf-row__value {
+  font-weight: 800;
+  font-size: 12.5px;
+  color: #0f172a;
+}
+
+/* أرقام الهاتف (الأساسي والبديل) بنفس الخط والوزن بالظبط. */
+.pdf-row__value--phone {
+  font-family: inherit;
+  font-weight: 600;
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+/* حالة «لا يوجد رأي مسجل» لبطاقات رأي الأخصائي/المراجع/المدير. */
+.pdf-opinion {
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 6px 8px;
+}
+
+.pdf-opinion--empty {
+  background: #fafafa;
+  border-style: dashed;
+}
+
+.pdf-opinion__empty-text {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #94a3b8;
 }
 
 /* --------------------------------------------------------------------------
@@ -387,30 +422,41 @@
    the top-left, institution identity on the top-right, doc title centered
    beneath both.
    -------------------------------------------------------------------------- */
+/* ثلاثة أعمدة: بيانات المؤسسة (يمين) | اللوجو (منتصف) | المركز/القرية/الجمعية (يسار). */
 .pdf-header--roster .pdf-header__top {
-  align-items: flex-start;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 12px;
+}
+
+.pdf-header--roster .pdf-header__org-title {
+  font-size: 21px;
+}
+
+.pdf-header--roster .pdf-header__license,
+.pdf-header--roster .pdf-header__mission {
+  font-size: 12px;
 }
 
 .pdf-header__roster-left {
   display: flex;
   align-items: flex-start;
-  gap: 10px;
+  justify-self: end;
 }
 
 .pdf-header__seal {
-  height: 56px;
-  width: 56px;
+  height: 84px;
+  width: 84px;
   object-fit: contain;
-  border-radius: 50%;
-  border: 1.5px solid #cbd5e1;
-  flex-shrink: 0;
+  justify-self: center;
 }
 
 .pdf-header__roster-left-meta {
   display: flex;
   flex-direction: column;
   gap: 3px;
-  font-size: 10.5px;
+  font-size: 12px;
 }
 
 .pdf-header__roster-left-meta .pdf-header__meta-item {
@@ -443,14 +489,14 @@
 }
 
 .pdf-header__roster-title h2 {
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 800;
   color: #1e3a8a;
   margin: 0;
 }
 
 .pdf-header__roster-count {
-  font-size: 10.5px;
+  font-size: 12px;
   font-weight: 700;
   color: #1d4ed8;
 }
@@ -461,7 +507,7 @@
 /* Fixed column widths (via <colgroup>) so a row wraps identically on the
    measuring page and on its real page — row heights are computed from it. */
 .pdf-roster-table {
-  --roster-font-size: 12.5px;
+  --roster-font-size: 14px;
   --roster-cell-padding: 6px 8px;
   font-size: var(--roster-font-size);
   table-layout: fixed;
@@ -487,8 +533,13 @@
   flex: none;
 }
 
-.pdf-page--roster .pdf-footer {
+/* الإقرار والتوقيعات دايمًا أسفل الصفحة (فوق الفوتر مباشرة)، حتى لو الجدول قصير. */
+.pdf-page--roster .pdf-roster-ack {
   margin-top: auto;
+}
+
+.pdf-page--roster .pdf-footer {
+  margin-top: 6px;
 }
 
 /* --------------------------------------------------------------------------
@@ -501,7 +552,7 @@
 }
 
 .pdf-roster-ack__statement {
-  font-size: 10.5px;
+  font-size: 12px;
   font-weight: 800;
   color: #0f172a;
   margin: 0 0 4px 0;
@@ -509,7 +560,7 @@
 }
 
 .pdf-roster-ack__note {
-  font-size: 9.5px;
+  font-size: 11px;
   font-weight: 700;
   color: #b45309;
   margin: 0 0 8px 0;
