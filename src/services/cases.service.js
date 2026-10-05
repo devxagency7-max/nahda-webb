@@ -99,6 +99,17 @@ export const CasesService = {
     return HttpClient.post('/cases', { body: data });
   },
 
+  /**
+   * §8.1 — link the case to a charity (or unlink with null). Guarded by the
+   * case aggregate's caseRowVersion.
+   * @param {string} caseId
+   * @param {string|null} charityId - GUID from GET /charities, or null
+   * @param {number} caseRowVersion
+   */
+  async updateCharity(caseId, charityId, caseRowVersion) {
+    return HttpClient.put(`/cases/${caseId}/charity`, { body: { charityId, caseRowVersion } });
+  },
+
   /** @returns {Promise<Object>} full case detail, including per-section rowVersion/caseRowVersion values. */
   async getById(id) {
     return HttpClient.get(`/cases/${id}`);

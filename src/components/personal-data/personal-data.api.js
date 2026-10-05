@@ -194,6 +194,39 @@ function rememberServerBeneficiary(beneficiary) {
   store.setCurrentCase({ ...store.currentCase, beneficiary });
 }
 
+const GUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * الجمعية المختارة في الفورم:
+ *   - GUID جمعية حقيقية → الـ id.
+ *   - «أخرى» → null (من غير جمعية مسجلة).
+ *   - مفيش اختيار (القايمة لسه بتتحمّل أو فشلت) → undefined = ماتلمسش اللي على السيرفر.
+ */
+function selectedCharityId() {
+  const value = val('referral-charity-select');
+  if (GUID_RE.test(value)) return value;
+  if (value === 'أخرى') return null;
+  return undefined;
+}
+
+/**
+ * PUT /cases/{id}/charity لو الجمعية المختارة غير اللي على السيرفر. بيتنادى
+ * بعد باقي أقسام المرحلة الأولى عشان ياخد أحدث caseRowVersion.
+ */
+async function syncCaseCharity(caseId) {
+  const chosen = selectedCharityId();
+  if (chosen === undefined || chosen === (store.currentCase?.charityId ?? null)) return;
+  const result = await CasesService.updateCharity(caseId, chosen, sectionVersion('caseRowVersion'));
+  store.setCurrentCase({ ...store.currentCase, charityId: chosen });
+  if (result?.caseRowVersion != null) {
+    store.setSectionVersion('caseRowVersion', result.caseRowVersion);
+  } else {
+    // شكل الرد مش موثّق بالكامل — نقرا الرقم من السيرفر عشان أول PUT بعده مايرجّعش 409 وهمي.
+    const fresh = await CasesService.getById(caseId);
+    if (fresh?.rowVersion != null) store.setSectionVersion('caseRowVersion', fresh.rowVersion);
+  }
+}
+
 /** المركز/القرية المختارين في الفورم (بالاسم) → الـ ids الحقيقية، أو null. */
 function selectedLocationIds() {
   const centerName = val('referral-district-select');
@@ -303,7 +336,7 @@ function collectCreateCasePayload() {
       phonePrimary: val('phone1') || null,
       address: val('address') || null
     },
-    charityId: null,
+    charityId: selectedCharityId() ?? null,
     priority: 'medium'
     // لا age/gender/birthGovernorate/status — محسوبة سيرفر-سايد بالكامل.
   };
@@ -447,11 +480,13 @@ export async function saveStep1() {
 
   if (!currentCaseId()) {
     return runSave(async () => {
-      const created = await CasesService.create(collectCreateCasePayload());
+      const createPayload = collectCreateCasePayload();
+      const created = await CasesService.create(createPayload);
       store.setCurrentCase({
         id: created.id,
         caseNumber: created.caseNumber,
         status: created.status,
+        charityId: createPayload.charityId,
         // بنخزّن الرقم القومي اللي اتسجّلت بيه الحالة عشان نقدر نكتشف لو
         // المستخدم بدأ يكتب بيانات شخص مختلف تمامًا من غير ما نصفّر الحالة
         // القديمة (راجع التعليق فوق saveStep1).
@@ -547,6 +582,8 @@ export async function saveStep1() {
       store.setSectionVersion('caseRowVersion', familyResult?.caseRowVersion ?? sectionVersion('caseRowVersion'));
     }
 
+    await syncCaseCharity(currentCaseId());
+
     showToast('تم حفظ بيانات رب الأسرة بنجاح ✅', 'success');
     return true;
   }, {
@@ -557,6 +594,7 @@ export async function saveStep1() {
       // "احفظ بياناتي فوقها": الخانات اللي الفورم مابيعرضهاش تاخد أحدث قيمة
       // على السيرفر، مش النسخة القديمة اللي اتفتحت بيها الحالة.
       rememberServerBeneficiary(fresh?.beneficiary);
+      store.setCurrentCase({ ...store.currentCase, charityId: fresh?.charityId || null });
     },
     onValidationDetails: applyStep1ServerValidationErrors
   }).then(() => true, () => false);

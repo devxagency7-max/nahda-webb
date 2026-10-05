@@ -92,7 +92,9 @@ function initReferralCardCascade() {
   }
 
   function updateReferralCharities(center = '', village = '') {
-    const currentVal = refCharity.value;
+    // A saved case's charity (set by case-edit.loader.js) wins over whatever
+    // was picked before — it may arrive before the roster has loaded.
+    const currentVal = refCharity.dataset.pendingValue || refCharity.value;
 
     let matching = allCharities;
     if (center) {
@@ -103,6 +105,12 @@ function initReferralCardCascade() {
       if (villageMatches.length > 0) {
         matching = villageMatches;
       }
+    }
+    // Keep the chosen/saved charity selectable even if it belongs to another
+    // center — otherwise re-filtering would silently drop it.
+    const chosen = currentVal && allCharities.find(c => c.id === currentVal);
+    if (chosen && !matching.includes(chosen)) {
+      matching = [chosen, ...matching];
     }
 
     if (allCharities.length === 0) {
@@ -123,6 +131,7 @@ function initReferralCardCascade() {
 
     if (currentVal && [...refCharity.options].some(o => o.value === currentVal)) {
       refCharity.value = currentVal;
+      delete refCharity.dataset.pendingValue;
     }
   }
 
@@ -132,6 +141,12 @@ function initReferralCardCascade() {
   });
 
   refVillage.addEventListener('change', () => {
+    updateReferralCharities(refDistrict.value, refVillage.value);
+  });
+
+  // case-edit.loader.js fires this after setting data-pending-value, so a
+  // saved charity shows even when the roster is already loaded.
+  refCharity.addEventListener('charity:sync', () => {
     updateReferralCharities(refDistrict.value, refVillage.value);
   });
 

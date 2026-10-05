@@ -134,6 +134,18 @@ function fillStep1(detail) {
     setSelectValue('referral-village-select', villageName);
   }
 
+  // الجمعية بتتعامل بالـ id، وقايمتها ممكن تكون لسه بتتحمّل — فبنسيب القيمة
+  // معلّقة والـ cascade (location-cascade.component.js) يختارها أول ما تبقى موجودة.
+  const charitySelect = DOM.qs('#referral-charity-select');
+  if (charitySelect) {
+    if (detail.charityId) charitySelect.dataset.pendingValue = detail.charityId;
+    else {
+      delete charitySelect.dataset.pendingValue;
+      charitySelect.value = '';
+    }
+    charitySelect.dispatchEvent(new Event('charity:sync'));
+  }
+
   triggerWorkflowRecalc();
 }
 
@@ -392,6 +404,8 @@ export async function loadCaseIntoForm(caseId) {
       // كامل) حتى لا يمسح الحفظ خانات الفورم مابيعرضهاش (راجع
       // collectBeneficiaryPayload في personal-data.api.js).
       beneficiary: detail.beneficiary || null,
+      // الجمعية المربوطة على السيرفر — saveStep1 بيبعت PUT /charity بس لو اتغيرت.
+      charityId: detail.charityId || null,
       sectionVersions: {
         beneficiary: detail.beneficiary?.rowVersion,
         housing: detail.housing?.rowVersion,
