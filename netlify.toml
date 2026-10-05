@@ -15,3 +15,11 @@
   to = "https://srv1990155.hstgr.cloud/api/:splat"
   status = 200
   force = true
+
+# SignalR hub. Netlify/Vercel rewrites don't proxy WebSockets, so SignalR falls back
+# to long polling there; nginx (Dockerfile) and the Vite dev server do proxy them.
+[[redirects]]
+  from = "/hubs/*"
+  to = "https://srv1990155.hstgr.cloud/hubs/:splat"
+  status = 200
+  force = true

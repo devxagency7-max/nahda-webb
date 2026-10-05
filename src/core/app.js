@@ -27,6 +27,7 @@ import { initAllCasesComponent } from '../components/all-cases/all-cases.compone
 import { initCaseDetailsComponent } from '../components/case-details/case-details.component.js';
 import { initReportsComponent } from '../components/reports/reports.component.js';
 import { initCaseSupportFilterComponent } from '../components/case-support-filter/case-support-filter.component.js';
+import { initNotifications } from '../components/notifications/notifications.component.js';
 import { Lifecycle } from './lifecycle.js';
 import { initNumericInputNormalization } from '../utils/numeric-inputs.js';
 import { initDialogA11y, initToggleStateA11y, initDisclosureA11y } from '../utils/a11y.js';
@@ -129,6 +130,7 @@ export function bootstrapApp() {
     runDataInit('caseDetailsComponent', initCaseDetailsComponent);
     runDataInit('reportsComponent', initReportsComponent);
     runDataInit('caseSupportFilterComponent', initCaseSupportFilterComponent);
+    runDataInit('notifications', initNotifications);
     runInit('numericInputNormalization', initNumericInputNormalization);
     runInit('dialogA11y', initDialogA11y);
     runInit('toggleStateA11y', initToggleStateA11y);

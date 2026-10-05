@@ -18,3 +18,8 @@ function readTimeout(raw, fallback) {
 export const API_TIMEOUT_MS = readTimeout(import.meta.env.VITE_API_TIMEOUT_MS, 30000);
 // Longer budget for streaming downloads such as the CSV report export.
 export const API_EXPORT_TIMEOUT_MS = readTimeout(import.meta.env.VITE_API_EXPORT_TIMEOUT_MS, 120000);
+
+// SignalR hub for live notifications. Same-origin by default (proxied by Vite
+// in dev and by nginx in production — see vite.config.js / nginx.conf), for the
+// same reason as the API: the backend sends no CORS headers.
+export const NOTIFICATIONS_HUB_URL = import.meta.env.VITE_NOTIFICATIONS_HUB_URL || '/hubs/notifications';

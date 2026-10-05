@@ -7,6 +7,7 @@
    -------------------------------------------------------------------------- */
 import { HttpClient } from './http.js';
 import { TokenStore } from './tokens.js';
+import { WebPush } from './web-push.service.js';
 
 export const AuthService = {
   /**
@@ -39,6 +40,8 @@ export const AuthService = {
   async logout() {
     const refreshToken = TokenStore.getRefreshToken();
     try {
+      // Best-effort and before the revoke below — it needs the live access token.
+      await WebPush.detachFromAccount().catch(() => {});
       if (refreshToken) {
         await HttpClient.post('/auth/logout', { body: { refreshToken } });
       }

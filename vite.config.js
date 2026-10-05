@@ -16,6 +16,13 @@ export default {
         target: API_TARGET,
         changeOrigin: true,
         secure: false
+      },
+      // SignalR notifications hub (negotiate + WebSocket).
+      '/hubs': {
+        target: API_TARGET,
+        changeOrigin: true,
+        secure: false,
+        ws: true
       }
     }
   }
