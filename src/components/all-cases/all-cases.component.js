@@ -331,33 +331,52 @@ function fetchCasesPage(page) {
   if (activeFilter === 'mine') {
     return CasesService.list({ createdByMe: true, page, limit: PAGE_SIZE });
   }
-  const q = serverQuery();
   const review = activeReviewFilters();
-  // Review tab without search text: GET /cases filters center/village by
-  // exact id. /search/cases only has `region` (partial name match, so "ناصر"
-  // would also catch "عزبة ناصر" in another center) — used only when a
-  // search text needs `q`, which /cases doesn't have.
-  const locationIdsResolved = (!review.centerName || review.centerId) && (!review.villageName || review.villageId);
-  if (activeFilter === REVIEW_FILTER_TAB && !q && locationIdsResolved) {
-    return CasesService.list({
-      status: FILTER_STATUSES[activeFilter][0],
-      charityId: review.charityId,
-      socialWorkerId: review.socialWorkerId,
-      centerId: review.centerId,
-      villageId: review.villageId,
-      page,
-      limit: PAGE_SIZE
-    });
-  }
-  return CasesService.search({
-    q,
+  // Always /search/cases: checked on the live server (2026-10-05) — GET /cases
+  // ignores charityId/socialWorkerId/centerId/villageId, /search/cases honours
+  // status, charityId and region (center or village name).
+  const query = {
+    q: serverQuery(),
     status: FILTER_STATUSES[activeFilter],
     charityId: review.charityId,
     socialWorkerId: review.socialWorkerId,
     region: review.villageName || review.centerName,
     page,
     limit: PAGE_SIZE
-  });
+  };
+  return review.socialWorkerId ? fetchFilteredByWorker(query) : CasesService.search(query);
+}
+
+// Safety cap for the worker fallback below — the review queue is small
+// (~150 cases), this only stops a runaway loop.
+const WORKER_FALLBACK_MAX_PAGES = 20;
+
+/**
+ * /search/cases currently IGNORES `socialWorkerId` (checked on the live server
+ * 2026-10-05). If the first page comes back with another worker's case, the
+ * server didn't filter: walk every page of the same query (still narrowed by
+ * status/charity/region) and keep this worker's cases, as one unpaged result.
+ * Once the backend honours the param, the first page already matches and
+ * this is a plain single request.
+ */
+async function fetchFilteredByWorker(query) {
+  const matches = item => item.assignedToUserId === query.socialWorkerId;
+  const first = await CasesService.search(query);
+  const firstItems = (first && first.items) || [];
+  if (firstItems.every(matches)) return first;
+
+  // Re-walk from page 1 at the max page size (a different page size than the
+  // first request would skip or repeat cases between pages).
+  const all = [];
+  let result;
+  let page = 0;
+  do {
+    page += 1;
+    result = await CasesService.search({ ...query, page, limit: 100 });
+    all.push(...((result && result.items) || []));
+  } while (result && result.hasNext && page < WORKER_FALLBACK_MAX_PAGES);
+  const items = all.filter(matches);
+  return { items, total: items.length, page: 1, hasNext: false };
 }
 
 /** Loads page 1 from the real API for the active tab + search text. */
