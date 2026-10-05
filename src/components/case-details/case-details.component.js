@@ -1155,8 +1155,8 @@ function renderManagerApprovalCard(c) {
 
 /* --------------------------------------------------------------------------
    FLOATING ACTIONS + FORM BINDING
-   المراجع: «حفظ كمسودة» و«إرسال للمدير» — الحفظ يخزّن الرأي وهو تحت يده،
-   والإرسال يقفله ويحوّل الحالة لقائمة المدير.
+   المراجع: «إعادة للأخصائي» و«إرسال للمدير» — الإرسال يقفل الرأي ويحوّل
+   الحالة لقائمة المدير.
    المدير: «موافقة» و«رفض» — قرار نهائي يقفل كل خانات الرأي.
    -------------------------------------------------------------------------- */
 
@@ -1718,8 +1718,6 @@ function renderFloatActions(c) {
       ${off && reviewerGate.reason ? `<span class="case-float-hint">🔒 ${DOM.escapeHTML(reviewerGate.reason)}</span>` : ''}
       ${floatBtn({ id: 'btn-reviewer-return', variant: 'return', label: 'إعادة للأخصائي', icon: '🟡',
                    disabled: off, title: off ? reviewerGate.reason : 'إرجاع الملف للأخصائي مع بيان السبب' })}
-      ${floatBtn({ id: 'btn-reviewer-save', variant: 'save', label: 'حفظ كمسودة', icon: '📝',
-                   disabled: off, title: off ? reviewerGate.reason : 'حفظ الرأي دون إرساله للمدير' })}
       ${floatBtn({ id: 'btn-reviewer-submit', variant: 'send', label: 'إرسال للمدير', icon: '⚖️',
                    disabled: off, title: off ? reviewerGate.reason : 'إرسال الرأي للمدير للاعتماد النهائي' })}
     `;
@@ -1763,7 +1761,6 @@ function bindFloatActions(container, c) {
   // /opinions/reviewer، /return-to-worker، /opinions/manager،
   // /return-for-completion) دايمًا، بغض النظر عن apiBacked.
   onAsync('btn-reviewer-return', () => returnCaseToWorker(container, c));
-  onAsync('btn-reviewer-save', () => commitReviewerOpinion(container, c, { submit: false }));
   onAsync('btn-reviewer-submit', () => commitReviewerOpinion(container, c, { submit: true }));
 
   onAsync('btn-manager-approve', () => {
