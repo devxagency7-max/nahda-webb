@@ -127,7 +127,7 @@ function kpiSpecsFromStats(stats) {
         target: 'pending', hint: 'الحالات التي سجّل الأخصائي رأيه فيها وتنتظر مراجعتك' },
       totalCasesCard(stats.totalCases ?? 0),
       { title: 'أعدتها للأخصائي', value: stats.returnedToWorker ?? 0, icon: 'alert', tone: 'amber',
-        target: 'pending', hint: 'الحالات التي أرجعتها للأخصائي لاستكمال البحث' },
+        target: 'returned', hint: 'الحالات التي أرجعتها للأخصائي لاستكمال البحث' },
       { title: 'راجعتها', value: stats.reviewedByMe ?? 0, icon: 'scale', tone: 'blue',
         target: 'all', hint: 'الحالات التي سجّلت رأيك فيها' },
       { title: 'مقبولة', value: stats.acceptedCases ?? 0, icon: 'check', tone: 'green',

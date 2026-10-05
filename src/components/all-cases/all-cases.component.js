@@ -34,7 +34,7 @@ const STATUS_DISPLAY = {
   accepted: { label: 'مقبولة من الأخصائي', pillClass: 'dash-status-pill--info', tab: null },
   in_research: { label: 'قيد البحث الميداني', pillClass: 'dash-status-pill--info', tab: null },
   pending_review: { label: 'بانتظار المراجعة', pillClass: 'dash-status-pill--warning', tab: 'pending' },
-  returned_to_worker: { label: 'أعيدت للأخصائي', pillClass: 'dash-status-pill--warning', tab: null },
+  returned_to_worker: { label: 'أعيدت للأخصائي', pillClass: 'dash-status-pill--warning', tab: 'returned' },
   pending_approval: { label: 'قيد الاعتماد', pillClass: 'dash-status-pill--warning', tab: null },
   approved: { label: 'معتمدة', pillClass: 'dash-status-pill--success', tab: 'accepted' },
   rejected: { label: 'مرفوضة', pillClass: 'dash-status-pill--danger', tab: 'rejected' }
@@ -80,6 +80,7 @@ const PAGE_SIZE = 50;
 const FILTER_STATUSES = {
   pending: ['pending_review'],
   awaiting_approval: ['pending_approval'],
+  returned: ['returned_to_worker'],
   accepted: ['approved'],
   rejected: ['rejected']
 };
@@ -234,7 +235,7 @@ function setFilterCount(key, value) {
 
 /** Tabs the current role can see — the hidden ones aren't worth a request. */
 function visibleFilters() {
-  const filters = ['all', 'pending', 'accepted', 'rejected'];
+  const filters = ['all', 'pending', 'returned', 'accepted', 'rejected'];
   if (isRole(ROLES.MANAGER)) filters.push('awaiting_approval');
   if (isRole(ROLES.DATA_ENTRY)) filters.push('mine');
   return filters;
