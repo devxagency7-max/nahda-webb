@@ -56,8 +56,12 @@
     <select id="review-filter-worker" class="all-cases-review-filters__field" aria-label="فلترة بالأخصائي">
       <option value="">كل الأخصائيين</option>
     </select>
-    <input type="text" id="review-filter-region" class="all-cases-review-filters__field" dir="rtl"
-      placeholder="المنطقة (مركز أو قرية)..." aria-label="فلترة بالمنطقة: مركز أو قرية">
+    <select id="review-filter-center" class="all-cases-review-filters__field" aria-label="فلترة بالمركز">
+      <option value="">كل المراكز</option>
+    </select>
+    <select id="review-filter-village" class="all-cases-review-filters__field" aria-label="فلترة بالقرية" disabled>
+      <option value="">كل القرى</option>
+    </select>
     <button type="button" class="btn btn--secondary btn--sm" id="btn-review-filters-clear" style="font-weight: 700;">مسح الفلاتر</button>
     <span class="all-cases-review-filters__count" id="review-filters-count"></span>
   </div>

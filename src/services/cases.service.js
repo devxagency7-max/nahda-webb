@@ -72,14 +72,18 @@ export const CasesService = {
    * @param {boolean} [opts.createdByMe]
    * @param {string} [opts.status]
    * @param {boolean} [opts.bookmarked]
+   * @param {string} [opts.charityId] - exact GUID match
+   * @param {string} [opts.socialWorkerId] - exact GUID match on the assigned social worker
+   * @param {string} [opts.centerId] - exact GUID match on the beneficiary's center
+   * @param {string} [opts.villageId] - exact GUID match on the beneficiary's village
    * @param {number} [opts.page]
    * @param {number} [opts.limit]
    * @returns {Promise<PagedResult<Object>>} same item shape as search().
    */
   async list(opts = {}) {
-    const { createdByMe, status, bookmarked, page, limit } = opts;
+    const { createdByMe, status, bookmarked, charityId, socialWorkerId, centerId, villageId, page, limit } = opts;
     return HttpClient.get('/cases', {
-      query: { createdByMe, status, bookmarked, page, limit }
+      query: { createdByMe, status, bookmarked, charityId, socialWorkerId, centerId, villageId, page, limit }
     });
   },
 

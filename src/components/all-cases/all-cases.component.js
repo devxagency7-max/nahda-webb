@@ -22,6 +22,9 @@ import { EmployeesService } from '../../services/employees.service.js';
 import { errorStateHTML, bindRetry, retryToast } from '../../utils/error-state.js';
 import { isRole, ROLES } from '../../core/permissions.js';
 import { onViewEnter } from '../../core/view-lifecycle.js';
+import { DataService } from '../../services/data.js';
+import { store } from '../../state/store.js';
+import { EventBus, EVENTS } from '../../core/event-bus.js';
 
 // Real backend status enum (10 values) -> label + pill + status tab.
 // Every wire value gets its own label — a status must never be shown as a
@@ -102,11 +105,11 @@ let searchDebounce = null;
 let loadRequestId = 0;
 
 // "قيد المراجعة"-only filters, all applied by the server (AND with status/q).
-// region is free text (center or village, contains, min 2 chars).
+// center/village are picked by NAME (same lists as the intake form) and
+// resolved to ids via store.locationIds.
 const REVIEW_FILTER_TAB = 'pending';
-const reviewFilters = { charityId: '', socialWorkerId: '', region: '' };
+const reviewFilters = { charityId: '', socialWorkerId: '', center: '', village: '' };
 let reviewOptionsLoaded = false;
-let regionDebounce = null;
 
 export function initAllCasesComponent() {
   const searchInput = DOM.qs('#all-cases-search-input');
@@ -174,19 +177,45 @@ function serverQuery() {
    REVIEW FILTERS — «قيد المراجعة»: الجمعية + الأخصائي المسند + المنطقة
    -------------------------------------------------------------------------- */
 
-/** The review filters actually sent; empty unless the review tab is active. */
+/** The review filters in effect; empty unless the review tab is active. */
 function activeReviewFilters() {
   if (activeFilter !== REVIEW_FILTER_TAB) return {};
-  const region = reviewFilters.region.trim();
+  const ids = store.locationIds || {};
+  const { center, village } = reviewFilters;
   return {
     charityId: reviewFilters.charityId || undefined,
     socialWorkerId: reviewFilters.socialWorkerId || undefined,
-    region: region.length >= 2 ? region : undefined
+    centerId: (center && (ids.centers || {})[center]) || undefined,
+    villageId: (center && village && ((ids.villages || {})[center] || {})[village]) || undefined,
+    // Names, for /search/cases (which only has the text `region` filter).
+    centerName: center || undefined,
+    villageName: village || undefined
   };
 }
 
 function hasActiveReviewFilters() {
-  return Object.values(activeReviewFilters()).some(Boolean);
+  const f = activeReviewFilters();
+  return Boolean(f.charityId || f.socialWorkerId || f.centerName);
+}
+
+function fillLocationSelect(select, placeholder, names) {
+  const current = select.value;
+  select.innerHTML = `<option value="">${placeholder}</option>` +
+    names.map(n => `<option value="${DOM.escapeHTML(n)}">${DOM.escapeHTML(n)}</option>`).join('');
+  if (current && names.includes(current)) select.value = current;
+}
+
+/** Center list + the chosen center's villages (village disabled until a center is picked). */
+function renderReviewLocationOptions() {
+  const centerSelect = DOM.qs('#review-filter-center');
+  const villageSelect = DOM.qs('#review-filter-village');
+  if (!centerSelect || !villageSelect) return;
+  fillLocationSelect(centerSelect, 'كل المراكز', DataService.getCenters());
+  reviewFilters.center = centerSelect.value;
+  const villages = reviewFilters.center ? DataService.getVillagesByCenter(reviewFilters.center) : [];
+  fillLocationSelect(villageSelect, 'كل القرى', villages);
+  villageSelect.disabled = !reviewFilters.center;
+  reviewFilters.village = villageSelect.value;
 }
 
 /** Shows the bar only on the review tab; loads its pickers the first time. */
@@ -194,6 +223,7 @@ function syncReviewFiltersBar() {
   const bar = DOM.qs('#all-cases-review-filters');
   if (!bar) return;
   bar.hidden = activeFilter !== REVIEW_FILTER_TAB;
+  if (!bar.hidden) renderReviewLocationOptions();
   if (!bar.hidden && !reviewOptionsLoaded) loadReviewFilterOptions();
 }
 
@@ -237,7 +267,8 @@ async function loadReviewFilterOptions() {
 function bindReviewFilters() {
   const charitySelect = DOM.qs('#review-filter-charity');
   const workerSelect = DOM.qs('#review-filter-worker');
-  const regionInput = DOM.qs('#review-filter-region');
+  const centerSelect = DOM.qs('#review-filter-center');
+  const villageSelect = DOM.qs('#review-filter-village');
   const clearBtn = DOM.qs('#btn-review-filters-clear');
 
   if (charitySelect) {
@@ -252,21 +283,33 @@ function bindReviewFilters() {
       loadCases();
     });
   }
-  if (regionInput) {
-    regionInput.addEventListener('input', () => {
-      reviewFilters.region = regionInput.value;
-      clearTimeout(regionDebounce);
-      regionDebounce = setTimeout(() => loadCases(), 350);
+  if (centerSelect) {
+    centerSelect.addEventListener('change', () => {
+      // A village only makes sense inside its own center.
+      if (villageSelect) villageSelect.value = '';
+      renderReviewLocationOptions();
+      loadCases();
     });
   }
+  if (villageSelect) {
+    villageSelect.addEventListener('change', () => {
+      reviewFilters.village = villageSelect.value;
+      loadCases();
+    });
+  }
+  // Centers/villages arrive (or change) via the reference sync.
+  EventBus.on(EVENTS.LOCATIONS_UPDATED, renderReviewLocationOptions);
   if (clearBtn) {
     clearBtn.addEventListener('click', () => {
       reviewFilters.charityId = '';
       reviewFilters.socialWorkerId = '';
-      reviewFilters.region = '';
+      reviewFilters.center = '';
+      reviewFilters.village = '';
       if (charitySelect) charitySelect.value = '';
       if (workerSelect) workerSelect.value = '';
-      if (regionInput) regionInput.value = '';
+      if (centerSelect) centerSelect.value = '';
+      if (villageSelect) villageSelect.value = '';
+      renderReviewLocationOptions();
       loadCases();
     });
   }
@@ -288,10 +331,30 @@ function fetchCasesPage(page) {
   if (activeFilter === 'mine') {
     return CasesService.list({ createdByMe: true, page, limit: PAGE_SIZE });
   }
+  const q = serverQuery();
+  const review = activeReviewFilters();
+  // Review tab without search text: GET /cases filters center/village by
+  // exact id. /search/cases only has `region` (partial name match, so "ناصر"
+  // would also catch "عزبة ناصر" in another center) — used only when a
+  // search text needs `q`, which /cases doesn't have.
+  const locationIdsResolved = (!review.centerName || review.centerId) && (!review.villageName || review.villageId);
+  if (activeFilter === REVIEW_FILTER_TAB && !q && locationIdsResolved) {
+    return CasesService.list({
+      status: FILTER_STATUSES[activeFilter][0],
+      charityId: review.charityId,
+      socialWorkerId: review.socialWorkerId,
+      centerId: review.centerId,
+      villageId: review.villageId,
+      page,
+      limit: PAGE_SIZE
+    });
+  }
   return CasesService.search({
-    q: serverQuery(),
+    q,
     status: FILTER_STATUSES[activeFilter],
-    ...activeReviewFilters(),
+    charityId: review.charityId,
+    socialWorkerId: review.socialWorkerId,
+    region: review.villageName || review.centerName,
     page,
     limit: PAGE_SIZE
   });
