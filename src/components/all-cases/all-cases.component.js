@@ -21,26 +21,36 @@ import { errorStateHTML, bindRetry, retryToast } from '../../utils/error-state.j
 import { isRole, ROLES } from '../../core/permissions.js';
 import { onViewEnter } from '../../core/view-lifecycle.js';
 
-// Real backend status enum (10 values) -> the 3 status tabs this screen
-// exposes today. Anything not listed below (draft, pending_assignment,
-// assigned, accepted, in_research) falls back to a neutral "قيد المراجعة"
-// label rather than being hidden, since the tabs are a simplification of a
-// richer workflow, not the full state machine.
+// Real backend status enum (10 values) -> label + pill + status tab.
+// Every wire value gets its own label — a status must never be shown as a
+// different one (a reviewer-created `draft` used to fall back to
+// "قيد المراجعة"). `tab` is the tab the case is listed under besides
+// "جميع الحالات"; `null` = only under "جميع الحالات". The "pending"
+// (قيد المراجعة) tab is exactly `pending_review`, nothing else.
 const STATUS_DISPLAY = {
-  pending_review: { label: 'قيد المراجعة', pillClass: 'dash-status-pill--warning', tab: 'pending' },
-  returned_to_worker: { label: 'مرتجعة للأخصائي', pillClass: 'dash-status-pill--warning', tab: 'pending' },
-  pending_approval: { label: 'قيد الاعتماد', pillClass: 'dash-status-pill--warning', tab: 'pending' },
+  draft: { label: 'مسودة', pillClass: 'dash-status-pill--info', tab: null },
+  pending_assignment: { label: 'بانتظار الإسناد', pillClass: 'dash-status-pill--info', tab: null },
+  assigned: { label: 'مسندة لأخصائي', pillClass: 'dash-status-pill--info', tab: null },
+  accepted: { label: 'مقبولة من الأخصائي', pillClass: 'dash-status-pill--info', tab: null },
+  in_research: { label: 'قيد البحث الميداني', pillClass: 'dash-status-pill--info', tab: null },
+  pending_review: { label: 'بانتظار المراجعة', pillClass: 'dash-status-pill--warning', tab: 'pending' },
+  returned_to_worker: { label: 'أعيدت للأخصائي', pillClass: 'dash-status-pill--warning', tab: null },
+  pending_approval: { label: 'قيد الاعتماد', pillClass: 'dash-status-pill--warning', tab: null },
   approved: { label: 'معتمدة', pillClass: 'dash-status-pill--success', tab: 'accepted' },
   rejected: { label: 'مرفوضة', pillClass: 'dash-status-pill--danger', tab: 'rejected' }
 };
 
-function displayForStatus(status) {
-  return STATUS_DISPLAY[status] || { label: 'قيد المراجعة', pillClass: 'dash-status-pill--warning', tab: 'pending' };
+function displayForStatus(status, apiLabel) {
+  const known = STATUS_DISPLAY[status];
+  if (known) return { ...known, label: apiLabel || known.label };
+  // Unknown wire value (backend added a status): show the server's label if
+  // it sent one, never pretend it's "under review".
+  return { label: apiLabel || status || '—', pillClass: 'dash-status-pill--info', tab: null };
 }
 
 /** Normalizes one CaseSearchResultItem (real API) into the shape the render/modal code expects. */
 function normalizeCase(item) {
-  const statusInfo = displayForStatus(item.status);
+  const statusInfo = displayForStatus(item.status, item.statusLabel);
   return {
     id: item.displayId || item.caseNumber || item.id,
     rawId: item.id,
@@ -56,9 +66,7 @@ function normalizeCase(item) {
     statusLabel: statusInfo.label,
     statusClass: statusInfo.pillClass,
     // Real backend status enum value (ungrouped) — needed by the manager-only
-    // "awaiting_approval" tab, which must match exactly `pending_approval`
-    // and not the broader "pending" tab grouping (pending_review +
-    // returned_to_worker + pending_approval) used everywhere else.
+    // "awaiting_approval" tab, which matches exactly `pending_approval`.
     rawStatus: item.status
   };
 }
