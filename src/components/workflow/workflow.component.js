@@ -14,6 +14,7 @@ import { showToast } from '../../utils/toast.js';
 import { onWorkflowRecalc } from '../../core/state.js';
 import { switchView } from '../../core/router.js';
 import { store } from '../../state/store.js';
+import { isRole, ROLES } from '../../core/permissions.js';
 import { StorageService, STORAGE_KEYS } from '../../services/storage.js';
 import { DOM } from '../../utils/dom.js';
 import { parseEgyptianNationalId, normalizeNumerals } from '../../utils/nationalId.js';
@@ -61,6 +62,11 @@ let currentPercentages = [0, 0, 0, 0, 0, 0, 0, 0];
 // نفس الشرط هنا عشان نمنع الضغطة من الأساس بدل ما نسيب المستخدم يتفاجئ
 // برسالة خطأ بعد المحاولة (راجع WEB_API_DOCUMENTATION.md §"POST .../assign").
 const ASSIGNABLE_STATUSES = new Set(['draft', 'pending_assignment']);
+
+// قرار منتج: زرار "إرسال لأخصائي" لمدخل البيانات بس — المراجع والمدير مايشوفوهوش.
+function canAssignSpecialist() {
+  return !isRole(ROLES.REVIEWER) && !isRole(ROLES.MANAGER);
+}
 
 const CASE_STATUS_LABEL = {
   draft: 'مسودة', pending_assignment: 'بانتظار الإسناد', assigned: 'مسندة لأخصائي',
@@ -592,8 +598,12 @@ export function initWorkflowTabs() {
       // 1. Show "إرسال لأخصائي" button above it — وفعّله/عطّله حسب حالة
       // الملف الحالية بدل ما يفضل شغال دايمًا لمجرد إننا في آخر خطوة.
       if (btnAssignSpecialist) {
-        btnAssignSpecialist.style.display = 'flex';
-        syncAssignButtonEligibility(btnAssignSpecialist);
+        if (canAssignSpecialist()) {
+          btnAssignSpecialist.style.display = 'flex';
+          syncAssignButtonEligibility(btnAssignSpecialist);
+        } else {
+          btnAssignSpecialist.style.display = 'none';
+        }
       }
 
       // 2. Next Button becomes active "حفظ" button
@@ -1191,7 +1201,7 @@ function initSpecialistAssignmentModal() {
   if (btnFloatingAssign) {
     btnFloatingAssign.addEventListener('click', async (e) => {
       e.preventDefault();
-      if (btnFloatingAssign.disabled) return;
+      if (btnFloatingAssign.disabled || !canAssignSpecialist()) return;
 
       const caseId = store.currentCase?.id;
       if (!caseId) {
