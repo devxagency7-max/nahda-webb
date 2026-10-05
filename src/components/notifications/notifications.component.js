@@ -71,7 +71,7 @@ function renderList() {
       <span class="notif-item__body">
         <span class="notif-item__title">${DOM.escapeHTML(n.title || '')}</span>
         ${n.subtitle ? `<span class="notif-item__subtitle">${DOM.escapeHTML(n.subtitle)}</span>` : ''}
-        <span class="notif-item__time">${DOM.escapeHTML(formatTime(n.createdAt))}</span>
+        <span class="notif-item__time">${DOM.escapeHTML(formatTime(n.createdAtUtc ?? n.createdAt))}</span>
       </span>
     </button>`).join('');
 }
@@ -82,12 +82,13 @@ async function loadPage(nextPage) {
   renderList();
   try {
     const data = await NotificationsService.list({ page: nextPage, limit: PAGE_SIZE });
-    const fetched = (data && data.items) || [];
+    // Backend shape: { page: { items, page, limit, total, totalPages, hasNext }, unreadCount }.
+    const pageData = data?.page ?? data;
+    const fetched = pageData?.items || [];
     items = nextPage === 1 ? fetched : [...items, ...fetched.filter(n => !items.some(i => i.id === n.id))];
     page = nextPage;
     if (typeof data?.unreadCount === 'number') unreadCount = data.unreadCount;
-    const totalPages = data?.totalPages;
-    hasMore = totalPages ? nextPage < totalPages : fetched.length === PAGE_SIZE;
+    hasMore = typeof pageData?.hasNext === 'boolean' ? pageData.hasNext : fetched.length === PAGE_SIZE;
   } catch (err) {
     console.error('[notifications] list failed:', err);
     showToast('تعذّر تحميل الإشعارات', 'error');
