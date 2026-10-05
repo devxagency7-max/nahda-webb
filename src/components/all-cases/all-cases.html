@@ -48,6 +48,20 @@
     </div>
   </div>
 
+  <!-- "قيد المراجعة" filters — shown only on that tab, filtered server-side -->
+  <div class="glass-card all-cases-review-filters" id="all-cases-review-filters" hidden>
+    <select id="review-filter-charity" class="all-cases-review-filters__field" aria-label="فلترة بالجمعية">
+      <option value="">كل الجمعيات</option>
+    </select>
+    <select id="review-filter-worker" class="all-cases-review-filters__field" aria-label="فلترة بالأخصائي">
+      <option value="">كل الأخصائيين</option>
+    </select>
+    <input type="text" id="review-filter-region" class="all-cases-review-filters__field" dir="rtl"
+      placeholder="المنطقة (مركز أو قرية)..." aria-label="فلترة بالمنطقة: مركز أو قرية">
+    <button type="button" class="btn btn--secondary btn--sm" id="btn-review-filters-clear" style="font-weight: 700;">مسح الفلاتر</button>
+    <span class="all-cases-review-filters__count" id="review-filters-count"></span>
+  </div>
+
   <!-- Cases Grid List Container -->
   <div class="all-cases-grid" id="all-cases-grid">
     <!-- Dynamically populated cases cards -->

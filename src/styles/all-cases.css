@@ -36,6 +36,43 @@
   box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
 }
 
+.all-cases-review-filters {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 14px 20px;
+  margin-bottom: 24px;
+}
+
+.all-cases-review-filters[hidden] {
+  display: none;
+}
+
+.all-cases-review-filters__field {
+  flex: 1 1 180px;
+  min-width: 0;
+  height: 40px;
+  padding: 0 12px;
+  border: 1.5px solid var(--border-color);
+  border-radius: 10px;
+  background: #ffffff;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.all-cases-review-filters__field:focus {
+  border-color: var(--primary-color);
+  outline: none;
+}
+
+.all-cases-review-filters__count {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
 .case-item-card {
   padding: 22px;
   display: flex;

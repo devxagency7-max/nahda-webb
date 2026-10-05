@@ -48,17 +48,19 @@ export const CasesService = {
    * @param {string} [opts.dateTo] - `YYYY-MM-DD`, inclusive range end on `registrationDate` (either end optional).
    *   `dateFrom`/`dateTo` combine with `date` via AND if both are sent. `dateFrom` after `dateTo` throws 422 VALIDATION_ERROR.
    * @param {string[]} [opts.status] - status wire values, sent as repeated params, combined with OR
+   * @param {string} [opts.socialWorkerId] - GUID of the currently assigned social worker (from GET /employees/social-workers)
    * @param {number} [opts.page]
    * @param {number} [opts.limit]
    * @returns {Promise<PagedResult<Object>>} item shape: id, caseNumber, displayId, status,
    *   priority, beneficiaryFullName, nationalId, charityId, charityName, centerId, centerName,
    *   villageId, villageName, phonePrimary, registrationDate, completionPercentage, createdAtUtc,
+   *   assignedToUserId, assignedToName,
    *   matchedSupport? (only present when `supportType` was sent), ...
    */
   async search(opts = {}) {
-    const { q, name, nationalId, charity, charityId, supportType, region, phone, date, dateFrom, dateTo, status, page, limit } = opts;
+    const { q, name, nationalId, charity, charityId, supportType, region, phone, date, dateFrom, dateTo, status, socialWorkerId, page, limit } = opts;
     return HttpClient.get('/search/cases', {
-      query: { q, name, national_id: nationalId, charity, charityId, supportType, region, phone, date, dateFrom, dateTo, status, page, limit }
+      query: { q, name, national_id: nationalId, charity, charityId, supportType, region, phone, date, dateFrom, dateTo, status, socialWorkerId, page, limit }
     });
   },
 

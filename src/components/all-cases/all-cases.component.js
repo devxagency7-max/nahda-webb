@@ -17,6 +17,8 @@
 import { DOM } from '../../utils/dom.js';
 import { showToast } from '../../utils/toast.js';
 import { CasesService } from '../../services/cases.service.js';
+import { CharitiesService } from '../../services/charities.service.js';
+import { EmployeesService } from '../../services/employees.service.js';
 import { errorStateHTML, bindRetry, retryToast } from '../../utils/error-state.js';
 import { isRole, ROLES } from '../../core/permissions.js';
 import { onViewEnter } from '../../core/view-lifecycle.js';
@@ -64,6 +66,7 @@ function normalizeCase(item) {
     // the card shows the row only once the backend starts sending it.
     familyMembersCount: typeof item.familyMembersCount === 'number' ? item.familyMembersCount : null,
     registrationDate: item.registrationDate || '',
+    workerName: item.assignedToName || '',
     status: statusInfo.tab,
     statusLabel: statusInfo.label,
     statusClass: statusInfo.pillClass,
@@ -98,6 +101,13 @@ let hasMore = false;
 let searchDebounce = null;
 let loadRequestId = 0;
 
+// "قيد المراجعة"-only filters, all applied by the server (AND with status/q).
+// region is free text (center or village, contains, min 2 chars).
+const REVIEW_FILTER_TAB = 'pending';
+const reviewFilters = { charityId: '', socialWorkerId: '', region: '' };
+let reviewOptionsLoaded = false;
+let regionDebounce = null;
+
 export function initAllCasesComponent() {
   const searchInput = DOM.qs('#all-cases-search-input');
   const filterBtns = DOM.qsa('.btn-case-filter');
@@ -131,9 +141,12 @@ export function initAllCasesComponent() {
     });
   }
 
+  bindReviewFilters();
+
   // Fetched when the screen is opened (and re-fetched on every re-entry so
   // the register reflects other users' work), not at boot behind another view.
   onViewEnter('all-cases', () => {
+    syncReviewFiltersBar();
     refreshFilterCounts();
     loadCases();
   });
@@ -146,6 +159,7 @@ export function setCasesFilter(filterName) {
     const f = btn.getAttribute('data-filter');
     btn.classList.toggle('btn-case-filter--active', f === activeFilter);
   });
+  syncReviewFiltersBar();
   // Every tab is its own server query (status / createdByMe) — re-fetch.
   loadCases();
 }
@@ -154,6 +168,115 @@ export function setCasesFilter(filterName) {
 function serverQuery() {
   const trimmedQuery = searchQuery.trim();
   return trimmedQuery.length >= 2 ? trimmedQuery : undefined;
+}
+
+/* --------------------------------------------------------------------------
+   REVIEW FILTERS — «قيد المراجعة»: الجمعية + الأخصائي المسند + المنطقة
+   -------------------------------------------------------------------------- */
+
+/** The review filters actually sent; empty unless the review tab is active. */
+function activeReviewFilters() {
+  if (activeFilter !== REVIEW_FILTER_TAB) return {};
+  const region = reviewFilters.region.trim();
+  return {
+    charityId: reviewFilters.charityId || undefined,
+    socialWorkerId: reviewFilters.socialWorkerId || undefined,
+    region: region.length >= 2 ? region : undefined
+  };
+}
+
+function hasActiveReviewFilters() {
+  return Object.values(activeReviewFilters()).some(Boolean);
+}
+
+/** Shows the bar only on the review tab; loads its pickers the first time. */
+function syncReviewFiltersBar() {
+  const bar = DOM.qs('#all-cases-review-filters');
+  if (!bar) return;
+  bar.hidden = activeFilter !== REVIEW_FILTER_TAB;
+  if (!bar.hidden && !reviewOptionsLoaded) loadReviewFilterOptions();
+}
+
+function fillSelect(select, placeholder, options) {
+  const current = select.value;
+  select.innerHTML = `<option value="">${placeholder}</option>` +
+    options.map(o => `<option value="${DOM.escapeHTML(o.id)}">${DOM.escapeHTML(o.label)}</option>`).join('');
+  if (current && options.some(o => o.id === current)) select.value = current;
+}
+
+/** Charities + social workers for the pickers. A failed list retries next time the tab opens. */
+async function loadReviewFilterOptions() {
+  reviewOptionsLoaded = true;
+  const charitySelect = DOM.qs('#review-filter-charity');
+  const workerSelect = DOM.qs('#review-filter-worker');
+  const [charities, workers] = await Promise.allSettled([
+    CharitiesService.listReference(),
+    EmployeesService.listSocialWorkers()
+  ]);
+
+  if (charities.status === 'fulfilled' && charitySelect) {
+    const items = (charities.value && charities.value.items) || [];
+    fillSelect(charitySelect, 'كل الجمعيات', items
+      .map(c => ({ id: c.id, label: c.name || '' }))
+      .sort((a, b) => a.label.localeCompare(b.label, 'ar')));
+  }
+  if (workers.status === 'fulfilled' && workerSelect) {
+    const value = workers.value;
+    const items = Array.isArray(value) ? value : ((value && value.items) || []);
+    fillSelect(workerSelect, 'كل الأخصائيين', items
+      .map(w => ({ id: w.id, label: w.fullName || w.phone || '' }))
+      .sort((a, b) => a.label.localeCompare(b.label, 'ar')));
+  }
+
+  if (charities.status === 'rejected' || workers.status === 'rejected') {
+    reviewOptionsLoaded = false;
+    showToast('تعذر تحميل قوائم الفلترة (الجمعيات أو الأخصائيين) ⚠️', 'error');
+  }
+}
+
+function bindReviewFilters() {
+  const charitySelect = DOM.qs('#review-filter-charity');
+  const workerSelect = DOM.qs('#review-filter-worker');
+  const regionInput = DOM.qs('#review-filter-region');
+  const clearBtn = DOM.qs('#btn-review-filters-clear');
+
+  if (charitySelect) {
+    charitySelect.addEventListener('change', () => {
+      reviewFilters.charityId = charitySelect.value;
+      loadCases();
+    });
+  }
+  if (workerSelect) {
+    workerSelect.addEventListener('change', () => {
+      reviewFilters.socialWorkerId = workerSelect.value;
+      loadCases();
+    });
+  }
+  if (regionInput) {
+    regionInput.addEventListener('input', () => {
+      reviewFilters.region = regionInput.value;
+      clearTimeout(regionDebounce);
+      regionDebounce = setTimeout(() => loadCases(), 350);
+    });
+  }
+  if (clearBtn) {
+    clearBtn.addEventListener('click', () => {
+      reviewFilters.charityId = '';
+      reviewFilters.socialWorkerId = '';
+      reviewFilters.region = '';
+      if (charitySelect) charitySelect.value = '';
+      if (workerSelect) workerSelect.value = '';
+      if (regionInput) regionInput.value = '';
+      loadCases();
+    });
+  }
+}
+
+/** "N حالة مطابقة" next to the filters while any of them is set. */
+function setReviewFiltersCount(total) {
+  const el = DOM.qs('#review-filters-count');
+  if (!el) return;
+  el.textContent = hasActiveReviewFilters() && typeof total === 'number' ? `${total} حالة مطابقة` : '';
 }
 
 /**
@@ -165,7 +288,13 @@ function fetchCasesPage(page) {
   if (activeFilter === 'mine') {
     return CasesService.list({ createdByMe: true, page, limit: PAGE_SIZE });
   }
-  return CasesService.search({ q: serverQuery(), status: FILTER_STATUSES[activeFilter], page, limit: PAGE_SIZE });
+  return CasesService.search({
+    q: serverQuery(),
+    status: FILTER_STATUSES[activeFilter],
+    ...activeReviewFilters(),
+    page,
+    limit: PAGE_SIZE
+  });
 }
 
 /** Loads page 1 from the real API for the active tab + search text. */
@@ -184,15 +313,18 @@ async function loadCases() {
     const items = (result && result.items) || [];
     casesList = items.map(normalizeCase);
     hasMore = Boolean(result && result.hasNext);
-    // Without a search text, the server's total for this tab IS the tab's
-    // count — keeps the badge equal to what the list can actually show.
-    if (!serverQuery() && result && typeof result.total === 'number') {
-      setFilterCount(activeFilter, result.total);
+    const total = result && typeof result.total === 'number' ? result.total : null;
+    // Without a search text or review filter, the server's total for this tab
+    // IS the tab's count — keeps the badge equal to what the list can show.
+    if (!serverQuery() && !hasActiveReviewFilters() && total !== null) {
+      setFilterCount(activeFilter, total);
     }
+    setReviewFiltersCount(total);
   } catch (err) {
     if (requestId !== loadRequestId) return;
     casesList = [];
     loadError = err;
+    setReviewFiltersCount(null);
   } finally {
     if (requestId === loadRequestId) {
       isLoading = false;
@@ -317,6 +449,11 @@ function caseCardHTML(c) {
           <span class="detail-label">🏢 الجمعية والموقع:</span>
           <span class="detail-val" style="font-size: 12px;">${DOM.escapeHTML(locationText(c))}</span>
         </div>
+        ${c.workerName ? `
+        <div class="case-item-detail-row">
+          <span class="detail-label">👤 الأخصائي:</span>
+          <span class="detail-val">${DOM.escapeHTML(c.workerName)}</span>
+        </div>` : ''}
         ${c.registrationDate ? `
         <div class="case-item-detail-row">
           <span class="detail-label">📅 تاريخ التسجيل:</span>
