@@ -282,7 +282,7 @@ function normalizeApiCase(detail, familyRes, supportRes, attachmentsRes, applian
     } : null,
     legacyRecord: legacyRecord || null,
     demographics: {
-      age: b.age,
+      age: b.computedCurrentAge ?? b.age,
       gender: b.gender,
       religion: b.religion,
       birthGovernorate: b.birthGovernorate,
