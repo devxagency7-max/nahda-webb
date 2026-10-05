@@ -197,16 +197,12 @@ function rememberServerBeneficiary(beneficiary) {
 const GUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
- * الجمعية المختارة في الفورم:
- *   - GUID جمعية حقيقية → الـ id.
- *   - «أخرى» → null (من غير جمعية مسجلة).
- *   - مفيش اختيار (القايمة لسه بتتحمّل أو فشلت) → undefined = ماتلمسش اللي على السيرفر.
+ * الجمعية المختارة في الفورم: GUID جمعية حقيقية → الـ id، ومفيش اختيار →
+ * undefined = ماتلمسش اللي على السيرفر (الحالة من غير جمعية = حالة خاصة).
  */
 function selectedCharityId() {
   const value = val('referral-charity-select');
-  if (GUID_RE.test(value)) return value;
-  if (value === 'أخرى') return null;
-  return undefined;
+  return GUID_RE.test(value) ? value : undefined;
 }
 
 /**

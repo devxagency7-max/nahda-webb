@@ -114,19 +114,16 @@ function initReferralCardCascade() {
     }
 
     if (allCharities.length === 0) {
-      refCharity.innerHTML = '<option value="" selected disabled>لا توجد جمعيات مسجلة حالياً (يمكن الإضافة من إدارة الجمعيات)</option>' +
-        '<option value="أخرى" data-is-other="true">أخرى</option>';
+      refCharity.innerHTML = '<option value="" selected disabled>لا توجد جمعيات مسجلة حالياً (يمكن الإضافة من إدارة الجمعيات)</option>';
       return;
     }
 
     if (matching.length === 0) {
       refCharity.innerHTML = '<option value="" selected disabled>لا توجد جمعيات مسجلة لهذا المركز/القرية (عرض جميع الجمعيات بالأسفل)</option>' +
-        allCharities.map(c => `<option value="${c.id}">${DOM.escapeHTML(c.name)} — مركز ${DOM.escapeHTML(c.center)} (${DOM.escapeHTML(c.village)})</option>`).join('') +
-        '<option value="أخرى" data-is-other="true">أخرى</option>';
+        allCharities.map(c => `<option value="${c.id}">${DOM.escapeHTML(c.name)} — مركز ${DOM.escapeHTML(c.center)} (${DOM.escapeHTML(c.village)})</option>`).join('');
     } else {
       refCharity.innerHTML = '<option value="" selected disabled>-- اختر الجمعية --</option>' +
-        matching.map(c => `<option value="${c.id}">${DOM.escapeHTML(c.name)} — مركز ${DOM.escapeHTML(c.center)} (${DOM.escapeHTML(c.village)})</option>`).join('') +
-        '<option value="أخرى" data-is-other="true">أخرى</option>';
+        matching.map(c => `<option value="${c.id}">${DOM.escapeHTML(c.name)} — مركز ${DOM.escapeHTML(c.center)} (${DOM.escapeHTML(c.village)})</option>`).join('');
     }
 
     if (currentVal && [...refCharity.options].some(o => o.value === currentVal)) {
