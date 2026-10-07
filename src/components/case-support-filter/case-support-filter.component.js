@@ -24,45 +24,16 @@ import { LocationsService } from '../../services/locations.service.js';
 import { messageFromError } from '../../services/errors.js';
 import { onViewEnter } from '../../core/view-lifecycle.js';
 import { supportTypeLabel } from '../../utils/support-labels.js';
+import { SUPPORT_GROUPS, canonicalSupportType } from '../../utils/support-catalog.js';
+import { SupportTypesService } from '../../services/support-types.service.js';
 
-// Real production values from the backend's case_support_history column,
-// stored as-is (case-sensitive, no normalization) — do not re-derive this
-// list client-side, the backend confirmed these are the exact stored strings.
-const SUPPORT_TYPES = [
-  'مصروفات دراسية',
-  'زي مدرسي',
-  'كرتونة',
-  'لحمة',
-  'وصلة مياه',
-  'سقف',
-  'مرشح لبنك الطعام',
-  'عمليات',
-  'سماعات',
-  'صرف',
-  'منح دراسية',
-  'مرحاض',
-  'أثاث',
-  'أجهزة',
-  'تجهيز عرائس',
-  'الاذنين',
-  'بناء غرفة',
-  'كهرباء',
-  'علاج دوري',
-  'يمين',
-  'طرف صناعي',
-  'يسار',
-  'أخري',
-  'كرسى متحرك عادى',
-  'حفاضات طبيه',
-  'دعم تجريبى',
-  'ألبان أطفال',
-  'علاج سكر',
-  'منحة تعلمية',
-  'كرسى متحرك كهرباء'
-];
+// أنواع الدعم: القايمة الثابتة (support-catalog.js) احتياطي، وبتتحدّث من
+// GET /support-types عند أول فتح للشاشة (فيها أي نوع اتكتب تحت «أخرى»).
+// الباك بيطابق الاسم الموحّد وكل كتاباته القديمة، فمفيش أسماء ثابتة هنا.
+let availableTypes = SUPPORT_GROUPS.flatMap(g => g.types.map(t => t.name));
 
-// The backend caps combined supportType values at 10 per request.
-const MAX_SUPPORT_TYPES = 10;
+// الباك بيقبل لحد 50 نوع دعم مدمجين في الطلب الواحد.
+const MAX_SUPPORT_TYPES = 50;
 
 // Backend max page size — fewer round-trips when walking every page.
 const PAGE_SIZE = 100;
@@ -83,6 +54,8 @@ const STATUS_LABELS = {
 let selectedCharityId = '';
 let appliedHeader = { charityName: '', center: '', village: '' };
 let selectedSupportTypes = [];
+let selectedSource = '';
+let selectedRecipientType = '';
 let currentResults = [];
 let totalCount = 0;
 let isLoading = false;
@@ -103,6 +76,8 @@ export function initCaseSupportFilterComponent() {
   const applyBtn = DOM.qs('#btn-csf-apply');
   const resetBtn = DOM.qs('#btn-csf-reset');
   const exportBtn = DOM.qs('#btn-csf-export-pdf');
+  const sourceSelect = DOM.qs('#csf-source-select');
+  const recipientSelect = DOM.qs('#csf-recipient-select');
 
   if (!charitySelect || !chipsContainer) return; // view not mounted (non-manager build, defensive)
 
@@ -113,6 +88,7 @@ export function initCaseSupportFilterComponent() {
   let pickersLoaded = false;
   onViewEnter('case-support-filter', () => {
     pickersLoaded = true;
+    loadSupportTypes(chipsContainer);
     ensureLocationsLoaded().then(() => {
       updateDistrictOptions(districtSelect);
       loadCharities(charitySelect, districtSelect, villageSelect);
@@ -146,6 +122,24 @@ export function initCaseSupportFilterComponent() {
     });
   }
 
+  if (sourceSelect) {
+    sourceSelect.addEventListener('change', () => {
+      selectedSource = sourceSelect.value;
+      // المستفيد معلومة موجودة في الدعم المقترح بس.
+      if (recipientSelect) {
+        recipientSelect.disabled = selectedSource === 'history';
+        if (recipientSelect.disabled) {
+          recipientSelect.value = '';
+          selectedRecipientType = '';
+        }
+      }
+    });
+  }
+
+  if (recipientSelect) {
+    recipientSelect.addEventListener('change', () => { selectedRecipientType = recipientSelect.value; });
+  }
+
   chipsContainer.addEventListener('click', (e) => {
     const chip = e.target.closest('.csf-support-chip');
     if (!chip) return;
@@ -163,8 +157,8 @@ export function initCaseSupportFilterComponent() {
       // filter at all and /search/cases returns every case — require at
       // least one real criterion (المركز/القرية only narrow the picker,
       // they are not sent to the server).
-      if (!charitySelect.value && selectedSupportTypes.length === 0) {
-        showToast('اختر جمعية أو نوع دعم واحد على الأقل قبل تطبيق الفلتر ⚠️');
+      if (!charitySelect.value && selectedSupportTypes.length === 0 && !selectedRecipientType) {
+        showToast('اختر جمعية أو نوع دعم أو مستفيد واحد على الأقل قبل تطبيق الفلتر ⚠️');
         return;
       }
       selectedCharityId = charitySelect.value || '';
@@ -196,6 +190,13 @@ export function initCaseSupportFilterComponent() {
       selectedCharityId = '';
       appliedHeader = { charityName: '', center: '', village: '' };
       selectedSupportTypes = [];
+      selectedSource = '';
+      selectedRecipientType = '';
+      if (sourceSelect) sourceSelect.value = '';
+      if (recipientSelect) {
+        recipientSelect.value = '';
+        recipientSelect.disabled = false;
+      }
       DOM.qsa('.csf-support-chip', chipsContainer).forEach(chip => {
         chip.classList.remove('csf-support-chip--active');
         const cb = chip.querySelector('input[type="checkbox"]');
@@ -326,13 +327,31 @@ function toggleSupportType(value, checked, chipEl, checkboxEl) {
   }
 }
 
+/** يجيب القايمة الكاملة (بما فيها الأنواع المخصصة) ويعيد رسم الشيبس مع الحفاظ على الاختيار. */
+async function loadSupportTypes(container) {
+  try {
+    const items = await SupportTypesService.list();
+    const names = items
+      .map(item => canonicalSupportType(item?.name))
+      .filter(c => !c.dropped)
+      .map(c => c.name);
+    if (names.length) availableTypes = [...new Set(names)];
+  } catch (err) {
+    console.error('[case-support-filter] support-types failed:', err);
+  }
+  renderSupportChips(container);
+}
+
 function renderSupportChips(container) {
-  container.innerHTML = SUPPORT_TYPES.map(type => `
+  container.innerHTML = availableTypes.map(type => `
     <label class="csf-support-chip">
-      <input type="checkbox" value="${DOM.escapeHTML(type)}">
+      <input type="checkbox" value="${DOM.escapeHTML(type)}"${selectedSupportTypes.includes(type) ? ' checked' : ''}>
       <span>${DOM.escapeHTML(supportTypeLabel(type))}</span>
     </label>
   `).join('');
+  DOM.qsa('.csf-support-chip', container).forEach(chip => {
+    chip.classList.toggle('csf-support-chip--active', Boolean(chip.querySelector('input')?.checked));
+  });
 }
 
 async function loadCharities(charitySelect, districtSelect, villageSelect) {
@@ -376,12 +395,9 @@ function normalizeResultItem(item) {
 
 // This screen only ever shows approved cases — a fixed, non-optional part of
 // this filter (product decision), not a manager-toggleable option. /search/cases
-// has no server-side `status` param (only the separate GET /cases does, which
-// lacks charityId/supportType) — see cases.service.js — so status is filtered
-// client-side. That only gives a correct count over the WHOLE result set: a
-// single page mixes statuses, so "approved on page 1" made an unfiltered
-// charity look smaller than the same charity + a support type (whose matches
-// are mostly approved). So every server page is fetched, then filtered.
+// now takes a server-side `status` filter (backend 2026-10-05), so it is sent
+// with the query; the client-side check below stays as a safety net, and every
+// server page is still walked so the count covers the WHOLE result set.
 const APPROVED_STATUS = 'approved';
 
 // Bumped on every apply/reset so a slow, superseded fetch can't overwrite newer results.
@@ -391,6 +407,9 @@ function currentFilterQuery(page) {
   return {
     charityId: selectedCharityId || undefined,
     supportType: selectedSupportTypes.length ? selectedSupportTypes : undefined,
+    supportSource: selectedSource || undefined,
+    recipientType: selectedRecipientType || undefined,
+    status: [APPROVED_STATUS],
     page,
     limit: PAGE_SIZE
   };
@@ -447,6 +466,20 @@ function totalMatchedQuantity(matchedSupport) {
   return matchedSupport.reduce((sum, m) => sum + (m.totalCount ?? 0), 0);
 }
 
+/** «زي مدرسي ← سمر، أحمد» — سطر لكل نوع دعم مطابق، ومعاه مستفيديه (من الدعم المقترح). */
+function matchedSupportHtml(matchedSupport) {
+  if (!Array.isArray(matchedSupport) || !matchedSupport.length) return '—';
+  return matchedSupport.map(m => {
+    const names = (m.recipients || []).map(r => {
+      if (r.recipientType === 'household') return 'الأسرة';
+      const name = r.name || '';
+      return r.recipientType === 'head' ? (name ? `${name} (رب الأسرة)` : 'رب الأسرة') : (name || 'فرد من الأسرة');
+    });
+    const unique = [...new Set(names)];
+    return `<div class="csf-matched"><strong>${DOM.escapeHTML(supportTypeLabel(m.supportType))}</strong>${unique.length ? ` ← ${DOM.escapeHTML(unique.join('، '))}` : ''}</div>`;
+  }).join('');
+}
+
 function resultRowHtml(row, index) {
   return `
     <tr>
@@ -458,6 +491,7 @@ function resultRowHtml(row, index) {
       <td>${DOM.escapeHTML(row.charityName)}</td>
       <td>${DOM.escapeHTML(row.centerName)} — ${DOM.escapeHTML(row.villageName)}</td>
       <td>${DOM.escapeHTML(row.statusLabel)}</td>
+      <td>${matchedSupportHtml(row.matchedSupport)}</td>
       <td style="text-align: center; font-weight: 800;">${totalMatchedQuantity(row.matchedSupport)}</td>
     </tr>
   `;
@@ -484,7 +518,7 @@ function renderResults() {
   if (initialState) initialState.style.display = 'none';
 
   if (isLoading && currentResults.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 24px;">⏳ جاري التحميل...</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 24px;">⏳ جاري التحميل...</td></tr>`;
     if (emptyState) emptyState.style.display = 'none';
     if (exportBtn) exportBtn.disabled = true;
     return;

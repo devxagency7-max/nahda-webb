@@ -40,7 +40,11 @@ export const CasesService = {
    * @param {string} [opts.nationalId] - sent as `national_id` (snake_case, confirmed backend casing)
    * @param {string} [opts.charity]
    * @param {string} [opts.charityId] - exact GUID match (distinct from the free-text `charity`)
-   * @param {string[]} [opts.supportType] - up to 10 values, sent as repeated params, combined with OR
+   * @param {string[]} [opts.supportType] - up to 50 values, sent as repeated params, combined with OR.
+   *   Searches the proposed support AND the disbursed history unless `supportSource` narrows it;
+   *   legacy spellings match too (`لحمة` finds «لحوم»).
+   * @param {'recommendations'|'history'} [opts.supportSource] - search only the proposed support or only the disbursed history
+   * @param {'household'|'head'|'family_member'} [opts.recipientType] - recipient of the proposed support
    * @param {string} [opts.region]
    * @param {string} [opts.phone]
    * @param {string} [opts.date] - `YYYY-MM-DD`, matches `registrationDate` as one exact calendar day
@@ -55,12 +59,13 @@ export const CasesService = {
    *   priority, beneficiaryFullName, nationalId, charityId, charityName, centerId, centerName,
    *   villageId, villageName, phonePrimary, registrationDate, completionPercentage, createdAtUtc,
    *   assignedToUserId, assignedToName,
-   *   matchedSupport? (only present when `supportType` was sent), ...
+   *   matchedSupport? (only when `supportType` was sent): [{supportType, totalCount, totalAmount,
+   *   recipients: [{recipientType, familyMemberId, name}]}], ...
    */
   async search(opts = {}) {
-    const { q, name, nationalId, charity, charityId, supportType, region, phone, date, dateFrom, dateTo, status, socialWorkerId, page, limit } = opts;
+    const { q, name, nationalId, charity, charityId, supportType, supportSource, recipientType, region, phone, date, dateFrom, dateTo, status, socialWorkerId, page, limit } = opts;
     return HttpClient.get('/search/cases', {
-      query: { q, name, national_id: nationalId, charity, charityId, supportType, region, phone, date, dateFrom, dateTo, status, socialWorkerId, page, limit }
+      query: { q, name, national_id: nationalId, charity, charityId, supportType, supportSource, recipientType, region, phone, date, dateFrom, dateTo, status, socialWorkerId, page, limit }
     });
   },
 

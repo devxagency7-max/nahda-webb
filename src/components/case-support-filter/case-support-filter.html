@@ -31,7 +31,7 @@
         <div class="glass-subcard__title-row">
           <h3 class="glass-subcard__title">معايير الفلترة</h3>
         </div>
-        <p class="glass-subcard__desc">حدد الجمعية و/أو نوع الدعم (يمكن اختيار أكثر من نوع دعم في نفس الوقت)</p>
+        <p class="glass-subcard__desc">حدد الجمعية و/أو نوع الدعم (يمكن اختيار أكثر من نوع دعم في نفس الوقت)، ومصدر الدعم والمستفيد منه</p>
       </div>
 
       <!-- الجمعية والنطاق الجغرافي: نفس نمط كارت "الجمعية والنطاق الجغرافي" في البيانات الأساسية —
@@ -75,10 +75,31 @@
         </div>
 
         <div class="form-group csf-filter-grid__support">
-          <label class="form-label">نوع الدعم (استلمته الحالة فعليًا)</label>
+          <label class="form-label">نوع الدعم</label>
           <div class="csf-support-chips" id="csf-support-chips">
             <!-- Populated dynamically with checkbox chips -->
           </div>
+        </div>
+      </div>
+
+      <div class="csf-filter-grid">
+        <div class="form-group">
+          <label for="csf-source-select" class="form-label">مصدر الدعم</label>
+          <select id="csf-source-select" class="form-select" dir="rtl">
+            <option value="" selected>الدعم المقترح + المصروف فعليًا</option>
+            <option value="recommendations">الدعم المقترح فقط</option>
+            <option value="history">الدعم المصروف فعليًا فقط</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="csf-recipient-select" class="form-label">المستفيد من الدعم المقترح</label>
+          <select id="csf-recipient-select" class="form-select" dir="rtl">
+            <option value="" selected>-- أي مستفيد --</option>
+            <option value="household">الأسرة كلها</option>
+            <option value="head">رب الأسرة</option>
+            <option value="family_member">فرد من الأسرة</option>
+          </select>
         </div>
       </div>
 
@@ -119,6 +140,7 @@
               <th>الجمعية</th>
               <th>المركز / القرية</th>
               <th>الحالة</th>
+              <th>الدعم والمستفيدون</th>
               <th>الكمية</th>
             </tr>
           </thead>

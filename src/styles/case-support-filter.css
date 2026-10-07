@@ -110,3 +110,8 @@
   border-radius: 10px;
   white-space: nowrap;
 }
+
+.csf-matched {
+  font-size: 13px;
+  line-height: 1.6;
+}
