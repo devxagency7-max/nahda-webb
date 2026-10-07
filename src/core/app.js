@@ -26,6 +26,7 @@ import { initProfileComponent } from '../components/profile/profile.component.js
 import { initAllCasesComponent } from '../components/all-cases/all-cases.component.js';
 import { initCaseDetailsComponent } from '../components/case-details/case-details.component.js';
 import { initReportsComponent } from '../components/reports/reports.component.js';
+import { initSystemBackups } from '../components/system-backups/system-backups.component.js';
 import { initCaseSupportFilterComponent } from '../components/case-support-filter/case-support-filter.component.js';
 import { initNotifications } from '../components/notifications/notifications.component.js';
 import { Lifecycle } from './lifecycle.js';
@@ -130,6 +131,7 @@ export function bootstrapApp() {
     runDataInit('caseDetailsComponent', initCaseDetailsComponent);
     runDataInit('reportsComponent', initReportsComponent);
     runDataInit('caseSupportFilterComponent', initCaseSupportFilterComponent);
+    runDataInit('systemBackups', initSystemBackups);
     runDataInit('notifications', initNotifications);
     runInit('numericInputNormalization', initNumericInputNormalization);
     runInit('dialogA11y', initDialogA11y);

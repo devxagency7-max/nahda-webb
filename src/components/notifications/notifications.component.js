@@ -131,6 +131,12 @@ function openNotification(id) {
       renderList();
     });
   }
+  // إشعار النسخة الاحتياطية الشهرية (icon = system_backup، من غير caseId) يفتح صفحتها.
+  if (n.icon === 'system_backup') {
+    closePanel();
+    window.openSystemBackupsPage?.();
+    return;
+  }
   if (n.caseId) {
     closePanel();
     if (window.openCaseDetailsPage) window.openCaseDetailsPage(n.caseId);
@@ -252,6 +258,14 @@ function onNotification(notification) {
   renderBadge();
   // Re-fetch rather than guess the server-side id/createdAt of the new row.
   if (panel && !panel.hidden) loadPage(1);
+  if (notification.icon === 'system_backup') {
+    // نسخة احتياطية جاهزة/تذكير: نحدّث التنبيه الأحمر ونفتح صفحتها من الـ toast.
+    window.refreshBackupAlert?.();
+    showToast(notification.title || 'النسخة الاحتياطية الشهرية', 'info', undefined, {
+      action: { label: 'فتح', onClick: () => window.openSystemBackupsPage?.() }
+    });
+    return;
+  }
   showToast(notification.title || 'إشعار جديد', 'info', undefined, notification.caseId ? {
     action: { label: 'عرض', onClick: () => window.openCaseDetailsPage?.(notification.caseId) }
   } : {});

@@ -1,4 +1,12 @@
 <div class="page-view page-view--hidden" id="view-dashboard">
+  <!-- تنبيه أحمر للمدير: نسخة احتياطية شهرية جاهزة ولسه ماتحمّلتش (system-backups.component.js) -->
+  <div class="backup-alert" id="backup-alert-banner" role="alert" hidden>
+    <div class="backup-alert__text">
+      <span aria-hidden="true">🔴</span>
+      <span id="backup-alert-text">فيه نسخة احتياطية شهرية لسه ماتحمّلتش.</span>
+    </div>
+    <button type="button" class="btn btn--primary" id="backup-alert-open">فتح صفحة النسخ الاحتياطية</button>
+  </div>
   <div id="dash-hero-mount"></div>
   <div id="dash-search-mount"></div>
   <div id="dash-kpis-mount"></div>

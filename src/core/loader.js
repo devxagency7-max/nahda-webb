@@ -58,6 +58,9 @@ import reportsHtml from '../components/reports/reports.html?raw';
 // Case Support Filter Page View (manager-only)
 import caseSupportFilterHtml from '../components/case-support-filter/case-support-filter.html?raw';
 
+// System Backups Page View (manager-only)
+import systemBackupsHtml from '../components/system-backups/system-backups.html?raw';
+
 /**
  * Synchronously mounts all modular HTML component templates into the DOM.
  */
@@ -150,4 +153,7 @@ export function mountComponentTemplates() {
 
   const caseSupportFilterContainer = document.getElementById('case-support-filter-view-mount');
   if (caseSupportFilterContainer) caseSupportFilterContainer.outerHTML = caseSupportFilterHtml;
+
+  const systemBackupsContainer = document.getElementById('system-backups-view-mount');
+  if (systemBackupsContainer) systemBackupsContainer.outerHTML = systemBackupsHtml;
 }

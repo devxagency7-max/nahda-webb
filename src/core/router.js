@@ -35,6 +35,7 @@ export function switchView(viewName, saveToStorage = true) {
   const viewEmployees = DOM.qs('#view-employees');
   const viewReports = DOM.qs('#view-reports');
   const viewCaseSupportFilter = DOM.qs('#view-case-support-filter');
+  const viewSystemBackups = DOM.qs('#view-system-backups');
   const breadcrumb = DOM.qs('.breadcrumb');
 
   if (saveToStorage) {
@@ -62,6 +63,7 @@ export function switchView(viewName, saveToStorage = true) {
   if (viewEmployees) viewEmployees.classList.add('page-view--hidden');
   if (viewReports) viewReports.classList.add('page-view--hidden');
   if (viewCaseSupportFilter) viewCaseSupportFilter.classList.add('page-view--hidden');
+  if (viewSystemBackups) viewSystemBackups.classList.add('page-view--hidden');
 
   // Toggle login screen body mode
   document.body.classList.toggle('is-login-view', viewName === 'login');
@@ -70,7 +72,7 @@ export function switchView(viewName, saveToStorage = true) {
   DOM.qsa('.sidebar-sublink').forEach(link => link.classList.remove('sidebar-sublink--active'));
   DOM.qsa('.accordion-header').forEach(hdr => hdr.classList.remove('accordion-header--active'));
 
-  document.body.classList.toggle('is-dashboard-view', viewName !== 'personal-data' && viewName !== 'bg-studio' && viewName !== 'state-mgmt' && viewName !== 'charities' && viewName !== 'profile' && viewName !== 'all-cases' && viewName !== 'case-details' && viewName !== 'employees' && viewName !== 'reports' && viewName !== 'case-support-filter' && viewName !== 'login');
+  document.body.classList.toggle('is-dashboard-view', viewName !== 'personal-data' && viewName !== 'bg-studio' && viewName !== 'state-mgmt' && viewName !== 'charities' && viewName !== 'profile' && viewName !== 'all-cases' && viewName !== 'case-details' && viewName !== 'employees' && viewName !== 'reports' && viewName !== 'case-support-filter' && viewName !== 'system-backups' && viewName !== 'login');
 
   if (viewName === 'login') {
     if (viewLogin) viewLogin.classList.remove('page-view--hidden');
@@ -138,6 +140,26 @@ export function switchView(viewName, saveToStorage = true) {
     }
     const navCaseSupportFilterLink = DOM.qs('#nav-case-support-filter-link');
     if (navCaseSupportFilterLink) navCaseSupportFilterLink.classList.add('accordion-header--active');
+
+    // Close other open accordion bodies for a clean sidebar state
+    DOM.qsa('.accordion-group--open').forEach(group => {
+      group.classList.remove('accordion-group--open');
+      const body = group.querySelector('.accordion-body');
+      if (body) body.style.maxHeight = null;
+    });
+  } else if (viewName === 'system-backups') {
+    if (viewSystemBackups) viewSystemBackups.classList.remove('page-view--hidden');
+    if (breadcrumb) {
+      breadcrumb.innerHTML = `
+        <span>الرئيسية</span>
+        <span>/</span>
+        <span>إدارة النظام</span>
+        <span>/</span>
+        <span class="breadcrumb__item--active">النسخ الاحتياطية الشهرية</span>
+      `;
+    }
+    const navSystemBackupsLink = DOM.qs('#nav-system-backups-link');
+    if (navSystemBackupsLink) navSystemBackupsLink.classList.add('accordion-header--active');
 
     // Close other open accordion bodies for a clean sidebar state
     DOM.qsa('.accordion-group--open').forEach(group => {

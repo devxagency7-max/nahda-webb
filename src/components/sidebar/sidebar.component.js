@@ -31,7 +31,7 @@ export function initSidebarAccordion() {
   accordionHeaders.forEach(header => {
     header.addEventListener('click', (e) => {
       // If header is a direct link (e.g. <a> anchor or direct data-view-target link), don't treat as expandable accordion header
-      if (header.tagName === 'A' || header.id === 'nav-bg-card-link' || header.id === 'nav-employees-link' || header.id === 'nav-reports-link' || header.id === 'nav-case-support-filter-link' || header.id === 'nav-dashboard-link' || !header.closest('.accordion-group')?.querySelector('.accordion-body')) {
+      if (header.tagName === 'A' || header.id === 'nav-bg-card-link' || header.id === 'nav-employees-link' || header.id === 'nav-reports-link' || header.id === 'nav-case-support-filter-link' || header.id === 'nav-system-backups-link' || header.id === 'nav-dashboard-link' || !header.closest('.accordion-group')?.querySelector('.accordion-body')) {
         return;
       }
 
@@ -162,6 +162,11 @@ export function initSidebarUserProfile() {
 
     // "فلترة الحالات بالدعم" — manager-only (per product decision, narrower
     // than the general reports/view_reports permission).
+    const systemBackupsGroup = DOM.qs('#sidebar-system-backups-group');
+    if (systemBackupsGroup) {
+      systemBackupsGroup.style.display = can(PERMISSIONS.DOWNLOAD_SYSTEM_BACKUP) ? 'block' : 'none';
+    }
+
     const caseSupportFilterGroup = DOM.qs('#sidebar-case-support-filter-group');
     if (caseSupportFilterGroup) {
       caseSupportFilterGroup.style.display = currentRole() === ROLES.MANAGER ? 'block' : 'none';

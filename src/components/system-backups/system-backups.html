@@ -1,0 +1,45 @@
+<!-- PAGE VIEW: النسخ الاحتياطية الشهرية (خاص بالمدير) -->
+<div class="page-view page-view--hidden" id="view-system-backups">
+  <section class="glass-card sb-page-card">
+    <div class="glass-card__header" style="justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 24px;">
+      <div class="glass-card__title-group">
+        <div class="glass-card__icon" style="background: linear-gradient(135deg, rgba(37, 99, 235, 0.15), rgba(29, 78, 216, 0.25)); color: #1d4ed8;">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+        </div>
+        <div>
+          <h2 class="glass-card__title">النسخة الاحتياطية الشهرية</h2>
+          <p class="glass-card__subtitle">ملف واحد فيه بيانات كل الحالات (Excel) ومرفقاتها — لازم مدير ينزّله كل شهر</p>
+        </div>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+        <button type="button" class="btn btn--secondary" id="sb-export-xlsx" title="تصدير بيانات الحالات فورًا بصيغة Excel">
+          <span>تصدير Excel فوري</span>
+        </button>
+        <button type="button" class="btn btn--secondary" id="sb-rebuild" title="إعادة إنشاء نسخة الشهر الحالي">
+          <span>إنشاء نسخة الآن</span>
+        </button>
+        <button type="button" class="btn btn--secondary" data-view-target="dashboard" title="الرجوع للرئيسية">
+          <span>لوحة التحكم الرئيسية</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- حالة آخر نسخة -->
+    <div id="sb-status"></div>
+
+    <!-- سجل النسخ -->
+    <div class="glass-subcard" style="margin-top: 24px;">
+      <div class="glass-subcard__header">
+        <div class="glass-subcard__title-row">
+          <h3 class="glass-subcard__title">سجل النسخ (آخر 24 شهر)</h3>
+        </div>
+      </div>
+      <div id="sb-history"></div>
+    </div>
+  </section>
+</div>
