@@ -40,6 +40,7 @@ import { LocationsService } from '../../services/locations.service.js';
 import { CasesService } from '../../services/cases.service.js';
 import { EmployeesService } from '../../services/employees.service.js';
 import { resetFamilyMembersManager } from '../family-members/family-members.component.js';
+import { resetSupportManager } from '../support/support.component.js';
 import { resetFinancialManager } from '../financial-ledger/financial-ledger.component.js';
 
 export const STAGES_METADATA = [
@@ -720,6 +721,8 @@ export function initWorkflowTabs() {
       DOM.qsa('.chip-field__other', view).forEach(el => { el.value = ''; el.style.display = 'none'; });
       DOM.qsa('.field-invalid', view).forEach(el => el.classList.remove('field-invalid'));
     }
+    // تاب الدعم: الأفراد المعلّمين والأنواع المفتوحة والاسم الحر في «أخرى».
+    resetSupportManager();
 
     // 5. المرفقات المرفوعة (مرحلة 2) — قايمة العرض المحلية (object URLs).
     const attachmentsList = DOM.qs('#attachments-list');

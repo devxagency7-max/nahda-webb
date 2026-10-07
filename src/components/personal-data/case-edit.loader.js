@@ -23,6 +23,7 @@ import { documentTypeLabel } from '../../services/document-types.js';
 import { restoreAgricultureManager } from '../agriculture/agriculture.component.js';
 import { loadFamilyMembersManager } from '../family-members/family-members.component.js';
 import { loadFinancialManager } from '../financial-ledger/financial-ledger.component.js';
+import { loadSupportSelection } from '../support/support.component.js';
 import { whenDropdownsReady } from './dropdown-data.component.js';
 
 function setVal(id, value) {
@@ -313,28 +314,15 @@ function fillStep6(financial) {
 
 /* ---------------------------- تاب 7 — الدعم ---------------------------- */
 
-function fillStep7(items) {
-  // يقبل شكلين: احتياجات جديدة (needType/category) أو دعم قديم من
-  // حالات اتسجّلت قبل التحويل لـ assessed-needs (supportType/supportCategory).
-  (items || []).forEach(item => {
-    const needType = item.needType ?? item.supportType;
-    const category = item.category ?? item.supportCategory;
-    const tile = [...DOM.qsa('.support-type-tile')].find(t => t.dataset.supportType === needType);
-    if (!tile) return;
-    const checkbox = tile.querySelector('.support-type-checkbox');
-    if (checkbox && !checkbox.checked) checkbox.click();
-    if (category) {
-      const subChip = [...DOM.qsa('.support-type-tile__subs .chip-btn', tile)].find(c => c.dataset.value === category);
-      if (subChip && !subChip.classList.contains('chip-btn--active')) subChip.click();
-    }
-  });
-  triggerWorkflowRecalc();
+function fillStep7(recommendations) {
+  loadSupportSelection(recommendations);
 }
 
 /* ---------------------------- أفراد الأسرة ---------------------------- */
 
 function mapMembersFromApi(members) {
   return (members || []).map(m => ({
+    memberId: m.id || '',
     name: m.name || '',
     relation: m.relation || '',
     idNum: m.nationalId || '',
@@ -380,10 +368,10 @@ export async function loadCaseIntoForm(caseId) {
       whenDropdownsReady()
     ]);
 
-    // الدعم القديم مطلوب بس كمصدر احتياطي لتاب 7 في الحالات اللي لسه
-    // ماعندهاش assessedNeeds — غير كده فشله مايأثرش على أي حاجة بتتحفظ.
-    const hasAssessedNeeds = Boolean(detail.assessedNeeds?.needs?.length);
-    if (!hasAssessedNeeds && supportRes?.loadError) throw supportRes.loadError;
+    // support-recommendations بيتحفظ بـ PUT "استبدال القائمة كلها" (والـ
+    // assessed-needs اتقفل) — فلو فشل جلبه ماينفعش نكمّل، وإلا أول "التالي"
+    // كان هيبعت قائمة فاضية ويمسح الدعم المسجّل.
+    if (supportRes?.loadError) throw supportRes.loadError;
 
     // caseRowVersion = rowVersion الحالة لحظة الفتح — مرجع التزامن لكل أقسام
     // القوائم لحد ما حفظ من عندنا يرجّع رقم أحدث. beneficiary/housing/
@@ -421,12 +409,7 @@ export async function loadCaseIntoForm(caseId) {
     fillStep5(detail.agriculture);
     loadFamilyMembersManager(mapMembersFromApi(familyRes?.members));
     fillStep6(detail.financial);
-    // حالات قديمة اتسجّلت قبل ما التاب ده يتحوّل لـ assessed-needs لسه
-    // محتفظة باختياراتها تحت support-recommendations (النموذج القديم) —
-    // بنعرض الاحتياجات الجديدة لو موجودة، ولو الحالة لسه ما اتحفظتش
-    // بالشكل الجديد بنرجع نقرا من الدعم القديم عشان الـ checkboxes متفضلش فاضية.
-    const legacyRecommendations = supportRes?.recommendations || supportRes?.supportRecommendations || [];
-    fillStep7(hasAssessedNeeds ? detail.assessedNeeds.needs : legacyRecommendations);
+    fillStep7(supportRes?.recommendations || supportRes?.supportRecommendations || []);
 
     triggerWorkflowRecalc();
     return true;

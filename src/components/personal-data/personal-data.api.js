@@ -20,6 +20,7 @@ import { ApiError, messageFromError } from '../../services/errors.js';
 import { parseEgyptianNationalId } from '../../utils/nationalId.js';
 import { choiceDialog } from '../../utils/dialog.js';
 import { loadCaseIntoForm } from './case-edit.loader.js';
+import { collectSupportItems, getSupportValidationError } from '../support/support.component.js';
 import { addUploadedAttachmentRow } from '../attachments/attachments.component.js';
 
 function val(id) {
@@ -296,6 +297,7 @@ function collectBeneficiaryPayload() {
  */
 function collectFamilyMembersPayload() {
   return (store.familyMembers || []).map(m => ({
+    id: m.memberId || undefined,
     name: m.name || '',
     relation: m.relation || '',
     nationalId: m.idNum || null,
@@ -958,39 +960,23 @@ export async function saveStep6() {
 
 /* ---------------------------- Step 7 — Support ---------------------------- */
 
-// كل checkbox متعلّم عليه في تاب "الدعم" بيتحوّل لاحتياج مُقيَّم (assessed
-// need) — القسم ده أصلاً بيمثّل احتياجات الأسرة، مش دعمًا منفصلاً، فبنبعته
-// لـ PUT /cases/{id}/assessed-needs بدل support-recommendations (source/status
-// اتشالوا من العقد، priorityLevel بقى optional — راجع رسالة الباك-إند).
-function collectAssessedNeeds() {
-  const checked = [...DOM.qsa('.support-type-checkbox:checked')];
-  return checked.map(cb => {
-    const tile = cb.closest('.support-type-tile');
-    const needType = tile?.dataset.supportType || 'دعم';
-    // بعض الاحتياجات ليها فئات فرعية (chip-btn جوه .support-type-tile__subs)
-    // — مثال: "لحوم" -> "نص كيلو"/"كيلو". بناخد أول فئة مفعّلة لو موجودة.
-    const category = tile?.querySelector('.support-type-tile__subs .chip-btn--active')?.dataset.value || null;
-    return {
-      needType,
-      category,
-      description: null,
-      priorityLevel: 'متوسط',
-      reason: null,
-      notes: val('support-notes') || null
-    };
-  });
-}
-
+// تاب "الدعم" بيتحفظ في support-recommendations (assessed-needs اتقفل 410):
+// صف لكل (نوع دعم × مستلم) — المستلم رب الأسرة/فرد/الأسرة كلها.
 export async function saveStep7() {
   const caseId = currentCaseId();
   if (!caseId) {
     showToast('كمّل بيانات المرحلة الأولى (اسم ورقم قومي رب الأسرة) الأول، وبعدين ارجع هنا 🙏', 'warning');
     return false;
   }
+  const invalid = getSupportValidationError();
+  if (invalid) {
+    showToast(invalid, 'warning');
+    return false;
+  }
   return runSave(async () => {
-    const updated = await CasesService.updateAssessedNeeds(
+    const updated = await CasesService.updateSupportRecommendations(
       caseId,
-      collectAssessedNeeds(),
+      collectSupportItems(val('support-notes')),
       sectionVersion('caseRowVersion')
     );
     store.setSectionVersion('caseRowVersion', updated?.caseRowVersion ?? sectionVersion('caseRowVersion'));

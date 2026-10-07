@@ -360,6 +360,8 @@ export function initFamilyMembersManager() {
 
   function applyMemberDataToCard(card, data) {
     const { name, relation, idNum, age, gender, religion, job, income, notes, diseases, isStudent, stage, grade, university, qualification, takafulKarama, takafulKaramaAmount, eduDisplay } = data;
+    // id ثابت لكل فرد بيتبعت للباك (client-generated UUID) عشان الدعم يتربط بيه.
+    card.dataset.memberId = data.memberId || card.dataset.memberId || crypto.randomUUID();
     const finalEduDisplay = eduDisplay || computeEduDisplay(isStudent, stage, grade, university, qualification);
 
     card.dataset.name = name;
