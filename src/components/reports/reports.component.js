@@ -12,6 +12,7 @@ import { ReportsService, clearReportsCache } from '../../services/reports.servic
 import { initReportBuilder, loadBuilderDatasets } from './reports-builder.component.js';
 import { onViewEnter } from '../../core/view-lifecycle.js';
 import { supportTypeLabel } from '../../utils/support-labels.js';
+import { LocationsService } from '../../services/locations.service.js';
 
 let activeTab = 'executive';
 let globalDateRange = { from: '', to: '' };
@@ -50,6 +51,7 @@ export function initReportsComponent() {
   bindGlobalActions();
   initComparisonTool();
   initReportBuilder();
+  bindSupportRecipientReport();
 
   // Route & Role gate adjustments
   applyRolePermissionsGates();
@@ -406,6 +408,8 @@ async function loadSupportData() {
       }
     }
 
+    loadSupportByRecipient();
+
     const tbody = DOM.qs('#sup-by-type-tbody');
     if (tbody) {
       tbody.innerHTML = byType.map(r => {
@@ -423,6 +427,96 @@ async function loadSupportData() {
   } catch (err) {
     console.error('[Reports] Error loading support dashboard:', err);
   }
+}
+
+/* ---- تقرير الدعم حسب المستفيد ---- */
+let supRecRows = [];
+let supRecLocationsReady = false;
+
+async function ensureSupRecLocations() {
+  if (supRecLocationsReady) return;
+  supRecLocationsReady = true;
+  const centerSelect = DOM.qs('#sup-rec-center');
+  const villageSelect = DOM.qs('#sup-rec-village');
+  if (!centerSelect || !villageSelect) return;
+  let centers = [];
+  try {
+    centers = await LocationsService.list();
+  } catch {
+    supRecLocationsReady = false;
+    return; // الفلتر الجغرافي اختياري — التقرير شغال من غيره.
+  }
+  centerSelect.innerHTML = '<option value="">-- كل المراكز --</option>' +
+    centers.map(c => `<option value="${DOM.escapeHTML(c.id)}">${DOM.escapeHTML(c.name)}</option>`).join('');
+  centerSelect.addEventListener('change', () => {
+    const center = centers.find(c => c.id === centerSelect.value);
+    const villages = center?.villages || [];
+    villageSelect.innerHTML = center
+      ? '<option value="">-- كل القرى --</option>' + villages.map(v => `<option value="${DOM.escapeHTML(v.id)}">${DOM.escapeHTML(v.name)}</option>`).join('')
+      : '<option value="">-- اختر المركز أولاً --</option>';
+    villageSelect.disabled = !center;
+  });
+}
+
+async function loadSupportByRecipient() {
+  const tbody = DOM.qs('#sup-rec-tbody');
+  if (!tbody) return;
+  ensureSupRecLocations();
+  const exportBtn = DOM.qs('#sup-rec-export');
+  try {
+    const res = await ReportsService.getSupportByRecipient({
+      approvedOnly: DOM.qs('#sup-rec-approved-only')?.checked !== false,
+      centerId: DOM.qs('#sup-rec-center')?.value || undefined,
+      villageId: DOM.qs('#sup-rec-village')?.value || undefined
+    });
+    supRecRows = Array.isArray(res) ? res : (res?.data || []);
+  } catch (err) {
+    console.error('[Reports] Error loading support-by-recipient:', err);
+    supRecRows = [];
+    tbody.innerHTML = '<tr><td colspan="8" class="reports-empty">تعذّر تحميل التقرير</td></tr>';
+    if (exportBtn) exportBtn.disabled = true;
+    return;
+  }
+  tbody.innerHTML = supRecRows.map(r => `
+    <tr>
+      <td style="font-weight: 700;">${DOM.escapeHTML(supportTypeLabel(r.supportType) || 'عام')}</td>
+      <td>${DOM.escapeHTML(r.category || '—')}</td>
+      <td><strong>${r.cases ?? 0}</strong></td>
+      <td>${r.householdCases ?? 0}</td>
+      <td>${r.heads ?? 0}</td>
+      <td>${r.familyMembers ?? 0}</td>
+      <td>${r.studentMembers ?? 0}</td>
+      <td><strong style="color: #059669;">${r.individuals ?? 0}</strong></td>
+    </tr>
+  `).join('') || '<tr><td colspan="8" class="reports-empty">لا توجد بيانات دعم مقترح لهذه الفلاتر</td></tr>';
+  if (exportBtn) exportBtn.disabled = supRecRows.length === 0;
+}
+
+function exportSupportByRecipientCsv() {
+  if (!supRecRows.length) return;
+  const header = ['نوع الدعم', 'التصنيف', 'الأسر', 'للأسرة كلها', 'أرباب الأسر', 'الأفراد', 'منهم الطلاب', 'إجمالي المستفيدين'];
+  const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const lines = [header, ...supRecRows.map(r => [
+    supportTypeLabel(r.supportType), r.category || '', r.cases, r.householdCases, r.heads, r.familyMembers, r.studentMembers, r.individuals
+  ])].map(row => row.map(esc).join(','));
+  // BOM عشان Excel يقرا العربي صح.
+  const blob = new Blob(['\uFEFF' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'support-by-recipient.csv';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  window.URL.revokeObjectURL(url);
+}
+
+function bindSupportRecipientReport() {
+  DOM.qs('#sup-rec-apply')?.addEventListener('click', () => {
+    clearReportsCache();
+    loadSupportByRecipient();
+  });
+  DOM.qs('#sup-rec-export')?.addEventListener('click', exportSupportByRecipientCsv);
 }
 
 /* --------------------------------------------------------------------------

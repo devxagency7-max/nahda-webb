@@ -148,6 +148,21 @@ export const ReportsService = {
     return cachedGet('/reports/support/by-type');
   },
 
+  /**
+   * GET /api/v1/reports/support/by-recipient (view_reports) — لكل نوع دعم: عدد الأسر،
+   * الأسرة كلها، أرباب الأسر، الأفراد، الطلاب، والإجمالي. بيقرا من الدعم المقترح.
+   * @param {{approvedOnly?: boolean, centerId?: string, villageId?: string}} [filters]
+   *   approvedOnly الافتراضي true (الحالات المعتمدة بس).
+   * @returns {Promise<Array<{supportType: string, category: string|null, cases: number,
+   *   householdCases: number, heads: number, familyMembers: number, studentMembers: number, individuals: number}>>}
+   */
+  async getSupportByRecipient({ approvedOnly = true, centerId, villageId } = {}) {
+    const query = { approvedOnly: String(approvedOnly) };
+    if (centerId) query.centerId = centerId;
+    if (villageId) query.villageId = villageId;
+    return cachedGet('/reports/support/by-recipient', query);
+  },
+
   /** GET /api/v1/reports/financial/summary (requires view_financial_reports) */
   async getFinancialSummary() {
     return cachedGet('/reports/financial/summary');

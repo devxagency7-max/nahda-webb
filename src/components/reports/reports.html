@@ -349,6 +349,57 @@
         </table>
       </div>
     </div>
+
+    <!-- تقرير الدعم حسب المستلم (support-recommendations) -->
+    <div class="glass-card reports-section-card" id="sup-recipient-card">
+      <div class="reports-section-header">
+        <div class="reports-section-title-wrap">
+          <h2 class="reports-section-title">👥 الدعم حسب المستفيد (أسر / أرباب أسر / أفراد / طلاب)</h2>
+          <span class="reports-section-meta">من الدعم المقترح — مثال: كام طالب أخد «زي مدرسي» في قرية معيّنة</span>
+        </div>
+      </div>
+
+      <div class="reports-filter-flex" style="margin-bottom: 16px; gap: 12px; flex-wrap: wrap; align-items: end;">
+        <label class="reports-filter-label" style="display: flex; align-items: center; gap: 6px;">
+          <input type="checkbox" id="sup-rec-approved-only" checked>
+          الحالات المعتمدة فقط
+        </label>
+        <div>
+          <label class="reports-filter-label" for="sup-rec-center">المركز</label>
+          <select id="sup-rec-center" class="form-select" dir="rtl">
+            <option value="">-- كل المراكز --</option>
+          </select>
+        </div>
+        <div>
+          <label class="reports-filter-label" for="sup-rec-village">القرية</label>
+          <select id="sup-rec-village" class="form-select" dir="rtl" disabled>
+            <option value="">-- اختر المركز أولاً --</option>
+          </select>
+        </div>
+        <button type="button" class="btn btn--secondary btn--sm" id="sup-rec-apply">تحديث</button>
+        <button type="button" class="btn btn--secondary btn--sm" id="sup-rec-export" disabled>تصدير CSV</button>
+      </div>
+
+      <div class="reports-table-responsive">
+        <table class="reports-table">
+          <thead>
+            <tr>
+              <th>نوع الدعم</th>
+              <th>التصنيف</th>
+              <th>الأسر</th>
+              <th>للأسرة كلها</th>
+              <th>أرباب الأسر</th>
+              <th>الأفراد</th>
+              <th>منهم الطلاب</th>
+              <th>إجمالي المستفيدين</th>
+            </tr>
+          </thead>
+          <tbody id="sup-rec-tbody">
+            <!-- Populated dynamically -->
+          </tbody>
+        </table>
+      </div>
+    </div>
   </div>
 
   <!-- ======================================================================
