@@ -315,7 +315,7 @@ function fillStep6(financial) {
 /* ---------------------------- تاب 7 — الدعم ---------------------------- */
 
 function fillStep7(recommendations) {
-  loadSupportSelection(recommendations);
+  return loadSupportSelection(recommendations);
 }
 
 /* ---------------------------- أفراد الأسرة ---------------------------- */
@@ -409,7 +409,7 @@ export async function loadCaseIntoForm(caseId) {
     fillStep5(detail.agriculture);
     loadFamilyMembersManager(mapMembersFromApi(familyRes?.members));
     fillStep6(detail.financial);
-    fillStep7(supportRes?.recommendations || supportRes?.supportRecommendations || []);
+    await fillStep7(supportRes?.recommendations || supportRes?.supportRecommendations || []);
 
     triggerWorkflowRecalc();
     return true;

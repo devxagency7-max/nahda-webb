@@ -880,9 +880,8 @@ function buildCaseSections(c) {
             <thead>
               <tr>
                 <th>نوع الدعم المقترح</th>
-                <th>الفئة / التصنيف</th>
-                <th>المبلغ المقترح</th>
-                <th>درجة الأولوية</th>
+                <th>الفئة / الكمية</th>
+                <th>المستفيدون</th>
               </tr>
             </thead>
             <tbody>
@@ -890,8 +889,7 @@ function buildCaseSections(c) {
                 <tr>
                   <td><strong>${DOM.escapeHTML(val(s.title))}</strong></td>
                   <td>${DOM.escapeHTML(val(s.option))}</td>
-                  <td style="color: #047857; font-weight: 700;">${val(s.amount)}</td>
-                  <td><span class="pdf-badge pdf-badge--warning">${DOM.escapeHTML(val(s.urgency))}</span></td>
+                  <td>${DOM.escapeHTML(Array.isArray(s.recipients) && s.recipients.length ? s.recipients.join('، ') : '—')}</td>
                 </tr>
               `).join('')}
             </tbody>

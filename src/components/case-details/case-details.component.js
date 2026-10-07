@@ -18,6 +18,7 @@ import { documentTypeLabel } from '../../services/document-types.js';
 import { formatLocalDate, formatCairoDateTime } from '../../utils/date.js';
 import { StorageService, STORAGE_KEYS } from '../../services/storage.js';
 import { supportTypeLabel } from '../../utils/support-labels.js';
+import { groupSupportRecommendations } from '../../utils/support-catalog.js';
 
 let currentActiveCase = null;
 
@@ -380,11 +381,11 @@ function normalizeApiCase(detail, familyRes, supportRes, attachmentsRes, applian
       notes: n.notes
     })),
     support: {
-      types: recommendations.map(r => ({
-        title: supportTypeLabel(r.supportType),
-        option: r.supportCategory,
-        amount: r.proposedAmount,
-        urgency: r.priorityLevel
+      types: groupSupportRecommendations(recommendations).map(g => ({
+        title: supportTypeLabel(g.type),
+        option: g.category,
+        amount: g.amount > 0 ? g.amount : '',
+        recipients: g.recipients
       })),
       approvedSupport: approved ? {
         type: supportTypeLabel(approved.approvedSupportType),
@@ -892,7 +893,10 @@ function renderSupportCard(c, gone = () => false) {
                 ${t.option ? `<span class="case-support-option">${DOM.escapeHTML(t.option)}</span>` : ''}
                 ${t.amount ? `<span class="case-support-amount">${DOM.escapeHTML(t.amount)}</span>` : ''}
               </div>
-              ${t.urgency ? `<span class="badge case-support-urgency">${DOM.escapeHTML(t.urgency)}</span>` : ''}
+              ${Array.isArray(t.recipients) && t.recipients.length ? `
+                <div class="case-support-recipients">
+                  ${t.recipients.map(r => `<span class="case-support-recipient">${DOM.escapeHTML(r)}</span>`).join('')}
+                </div>` : ''}
             </div>
           `).join('')}
         </div>

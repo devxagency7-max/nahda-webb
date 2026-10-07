@@ -12,10 +12,13 @@ import { EventBus, EVENTS } from '../../core/event-bus.js';
 import { store } from '../../state/store.js';
 import { DOM } from '../../utils/dom.js';
 import { SUPPORT_GROUPS, canonicalSupportType, meatCategory } from '../../utils/support-catalog.js';
+import { SupportTypesService } from '../../services/support-types.service.js';
 
 const MAX_TYPE_LENGTH = 100;
 const HOUSEHOLD_BENEFICIARY = 'الأسرة';
 const HEAD_ID = 'head';
+
+const GROUP_KEY_BY_LABEL = new Map(SUPPORT_GROUPS.map(g => [g.label, g.key]));
 
 let tileSeq = 0;
 let membersSignature = null;
@@ -179,6 +182,38 @@ function renderAllMembers(force = false) {
   DOM.qsa('.support-type-tile[data-scope="members"]').forEach(tile => renderMembersInto(tile, recipients));
 }
 
+/* ---------------------------- أنواع من السيرفر ---------------------------- */
+
+/**
+ * GET /support-types: أي نوع مش موجود في الشاشة (نوع مخصص كتبه مستخدم تحت
+ * «أخرى» في حالة تانية، أو نوع ثابت جديد) بيتضاف كـ checkbox جاهز. القايمة
+ * الثابتة بتفضل احتياطي لو الطلب فشل، ومابنشيلش أي نوع موجود.
+ */
+async function syncServerTypes() {
+  let items;
+  try {
+    items = await SupportTypesService.list();
+  } catch {
+    return;
+  }
+  const existing = new Set(DOM.qsa('.support-type-tile').map(t => t.dataset.supportType).filter(Boolean));
+  let added = false;
+  items.forEach(item => {
+    const canon = canonicalSupportType(item?.name);
+    if (canon.dropped || existing.has(canon.name)) return;
+    const groupKey = item.isCustom ? 'other' : (GROUP_KEY_BY_LABEL.get(item.category) || 'other');
+    const list = DOM.qs(`.support-group[data-group="${groupKey}"] .support-group__list`);
+    if (!list) return;
+    const tile = buildTile({ name: canon.name, scope: item.scope === 'household' ? 'household' : 'members' });
+    const freeText = list.querySelector('.support-type-tile[data-custom="true"]');
+    if (freeText) list.insertBefore(tile, freeText);
+    else list.appendChild(tile);
+    existing.add(canon.name);
+    added = true;
+  });
+  if (added) renderAllMembers(true);
+}
+
 /* ---------------------------- نقطة الدخول ---------------------------- */
 
 export function initSupportManager() {
@@ -190,7 +225,12 @@ export function initSupportManager() {
   renderAllMembers(true);
 
   EventBus.on(EVENTS.FAMILY_MEMBERS_UPDATED, () => renderAllMembers());
-  EventBus.on(EVENTS.WORKFLOW_STEP_CHANGED, () => renderAllMembers());
+  EventBus.on(EVENTS.WORKFLOW_STEP_CHANGED, (step) => {
+    renderAllMembers();
+    // أنواع «أخرى» ممكن حد تاني يكون ضافها من وقت ما الصفحة اتفتحت.
+    if (String(step) === '7') syncServerTypes();
+  });
+  syncServerTypes();
 }
 
 /** يرجّع التاب لحالته الفاضية (بداية حالة جديدة). */
@@ -268,8 +308,9 @@ export function collectSupportItems(notes = null) {
 
 /* ---------------------------- تحميل اختيارات محفوظة ---------------------------- */
 
-function tileFor(name, known) {
-  if (known) return DOM.qsa('.support-type-tile').find(t => t.dataset.supportType === name);
+function tileFor(name) {
+  const byName = DOM.qsa('.support-type-tile').find(t => t.dataset.custom !== 'true' && t.dataset.supportType === name);
+  if (byName) return byName;
   // نوع مش في القايمة الموحدة: بيتعرض تحت «أخرى» باسمه عشان مايتمسحش في الحفظ.
   const customs = DOM.qsa('.support-type-tile[data-custom="true"]');
   let tile = customs.find(t => !t.querySelector('.support-type-checkbox').checked);
@@ -288,20 +329,22 @@ function tileFor(name, known) {
  * يعلّم الاختيارات من recommendations راجعة من السيرفر. لازم يتنادى بعد
  * تحميل أفراد الأسرة في الـ store.
  */
-export function loadSupportSelection(recommendations) {
+export async function loadSupportSelection(recommendations) {
+  // الأنواع المخصصة لازم تكون اتضافت قبل ما نعلّم عليها.
+  await syncServerTypes();
   resetSupportManager();
   renderAllMembers(true);
 
   const grouped = new Map();
   (recommendations || []).forEach(r => {
-    const { name, known, dropped } = canonicalSupportType(r.supportType);
+    const { name, dropped } = canonicalSupportType(r.supportType);
     if (dropped) return;
-    if (!grouped.has(name)) grouped.set(name, { known, rows: [] });
+    if (!grouped.has(name)) grouped.set(name, { rows: [] });
     grouped.get(name).rows.push(r);
   });
 
-  grouped.forEach(({ known, rows }, name) => {
-    const tile = tileFor(name, known);
+  grouped.forEach(({ rows }, name) => {
+    const tile = tileFor(name);
     if (!tile) return;
     const checkbox = tile.querySelector('.support-type-checkbox');
     checkbox.checked = true;

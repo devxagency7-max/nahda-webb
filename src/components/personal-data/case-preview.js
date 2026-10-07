@@ -15,6 +15,9 @@ import { CasesService } from '../../services/cases.service.js';
 import { AttachmentsService } from '../../services/attachments.service.js';
 import { documentTypeLabel } from '../../services/document-types.js';
 import { formatLocalDate } from '../../utils/date.js';
+import { supportTypeLabel } from '../../utils/support-labels.js';
+import { groupSupportRecommendations } from '../../utils/support-catalog.js';
+import { collectSupportItems } from '../support/support.component.js';
 
 /** قيمة حقل نصي/منسدل، أو '' لو فاضي أو غير موجود. */
 function val(id) {
@@ -91,12 +94,12 @@ export function collectCaseFromForm() {
   const totalIncome = incomeItems.reduce((s, i) => s + i.amount, 0);
   const totalExpenses = expenseItems.reduce((s, i) => s + i.amount, 0);
 
-  const supportTypes = [...DOM.qsa('.support-type-checkbox:checked, [id^="support-type-"]:checked')]
-    .map(el => ({
-      title: (el.closest('label')?.textContent || el.dataset.label || '').trim(),
-      option: '', amount: '', urgency: ''
-    }))
-    .filter(t => t.title);
+  const supportTypes = groupSupportRecommendations(collectSupportItems()).map(g => ({
+    title: supportTypeLabel(g.type),
+    option: g.category,
+    amount: '',
+    recipients: g.recipients
+  }));
 
   return {
     id: 'المسودة الحالية',
@@ -239,6 +242,8 @@ function mapServerCaseToViewModel(serverCase, { support, attachments } = {}) {
   const a = serverCase.agriculture || {};
   const f = serverCase.financial || {};
 
+  const serverRecommendations = support?.recommendations || support?.supportRecommendations || [];
+
   const utilityByName = (name) => (u.utilities || []).find(x => x.name === name);
   const applianceByKey = (key) => (u.appliances || []).find(x => x.applianceKey === key)?.isPresent || false;
 
@@ -346,13 +351,13 @@ function mapServerCaseToViewModel(serverCase, { support, attachments } = {}) {
     },
 
     support: {
-      types: (support?.supportRecommendations || []).map(r => ({
-        title: r.supportType,
-        option: r.supportCategory || '',
-        amount: r.proposedAmount,
-        urgency: r.priorityLevel
+      types: groupSupportRecommendations(serverRecommendations).map(g => ({
+        title: supportTypeLabel(g.type),
+        option: g.category,
+        amount: g.amount > 0 ? g.amount : '',
+        recipients: g.recipients
       })),
-      notes: (support?.supportRecommendations || [])[0]?.notes || '',
+      notes: serverRecommendations[0]?.notes || '',
       approvedSupport: support?.approvedSupport || null
     },
 

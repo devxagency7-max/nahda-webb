@@ -113,3 +113,32 @@ export function canonicalSupportType(raw) {
   const name = ALIASES[text] || text;
   return { name, known: KNOWN.has(name), dropped: false };
 }
+
+/** اسم المستلم للعرض: recipientName الحالي من الباك، وبعده beneficiary كاحتياطي. */
+function recipientLabel(r) {
+  const type = r.recipientType || 'household';
+  if (type === 'household') return 'الأسرة';
+  const name = String(r.recipientName || r.beneficiary || '').trim();
+  if (type === 'head') return name ? `${name} (رب الأسرة)` : 'رب الأسرة';
+  return name || 'فرد من الأسرة';
+}
+
+/**
+ * يجمّع صفوف الدعم المقترح (نوع × مستلم) في سطر لكل نوع بمستلميه — للعرض في
+ * تفاصيل الحالة والمعاينة والـPDF.
+ * @returns {Array<{type: string, category: string, amount: number, recipients: string[]}>}
+ */
+export function groupSupportRecommendations(recommendations) {
+  const groups = new Map();
+  (recommendations || []).forEach(r => {
+    const { name, dropped } = canonicalSupportType(r.supportType);
+    if (dropped) return;
+    if (!groups.has(name)) groups.set(name, { type: name, category: '', amount: 0, recipients: [] });
+    const g = groups.get(name);
+    if (r.supportCategory && !g.category) g.category = r.supportCategory;
+    g.amount += Number(r.proposedAmount) || 0;
+    const label = recipientLabel(r);
+    if (!g.recipients.includes(label)) g.recipients.push(label);
+  });
+  return [...groups.values()];
+}
