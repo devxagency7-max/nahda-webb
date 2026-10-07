@@ -11,7 +11,7 @@ import { triggerWorkflowRecalc } from '../../core/state.js';
 import { EventBus, EVENTS } from '../../core/event-bus.js';
 import { store } from '../../state/store.js';
 import { DOM } from '../../utils/dom.js';
-import { SUPPORT_GROUPS, canonicalSupportType } from '../../utils/support-catalog.js';
+import { SUPPORT_GROUPS, canonicalSupportType, meatCategory } from '../../utils/support-catalog.js';
 
 const MAX_TYPE_LENGTH = 100;
 const HOUSEHOLD_BENEFICIARY = 'الأسرة';
@@ -56,7 +56,7 @@ function studentBadge(r) {
 
 /* ---------------------------- بناء الشاشة ---------------------------- */
 
-function buildTile({ name, label, scope, subs, custom }) {
+function buildTile({ name, label, scope, subs, custom, auto }) {
   tileSeq += 1;
   const id = `support-type-${tileSeq}`;
   const tile = document.createElement('div');
@@ -64,6 +64,7 @@ function buildTile({ name, label, scope, subs, custom }) {
   tile.dataset.supportType = custom ? '' : name;
   tile.dataset.scope = scope;
   if (custom) tile.dataset.custom = 'true';
+  if (auto) tile.dataset.auto = auto;
   const title = custom ? 'أخرى' : (label || name);
   tile.innerHTML = `
     <div class="form-group form-group--full support-type-tile__header">
@@ -71,6 +72,7 @@ function buildTile({ name, label, scope, subs, custom }) {
       <label for="${id}" style="font-weight: 700; font-size: var(--font-size-sm); cursor: pointer;">${esc(title)}</label>
     </div>
     ${custom ? '<div class="support-type-tile__custom" style="display: none;"><input type="text" class="form-control support-type-tile__custom-name" maxlength="100" placeholder="اكتب نوع الدعم"></div>' : ''}
+    ${auto === 'meat' ? '<div class="support-type-tile__auto" style="display: none;"></div>' : ''}
     ${subs?.length ? `<div class="support-type-tile__subs" style="display: none;">${subs.map(s => `<button type="button" class="chip-btn" data-value="${esc(s)}">${esc(s)}</button>`).join('')}</div>` : ''}
     ${scope === 'members' ? '<div class="support-type-tile__members" style="display: none;"></div>' : ''}`;
   bindTile(tile);
@@ -97,6 +99,8 @@ function syncTile(tile) {
   const subs = tile.querySelector('.support-type-tile__subs');
   const members = tile.querySelector('.support-type-tile__members');
   const customBox = tile.querySelector('.support-type-tile__custom');
+  const auto = tile.querySelector('.support-type-tile__auto');
+  if (auto) auto.style.display = checked ? 'block' : 'none';
   if (subs) subs.style.display = checked ? 'flex' : 'none';
   if (members) members.style.display = checked ? 'block' : 'none';
   if (customBox) customBox.style.display = checked ? 'block' : 'none';
@@ -154,11 +158,24 @@ function renderMembersInto(tile, recipients) {
     <div class="support-members-list">${rows}</div>`;
 }
 
+function familySize() {
+  return 1 + (store.familyMembers || []).length;
+}
+
+/** السطر التوضيحي تحت اللحمة (الكمية بتتحسب لوحدها من عدد الأسرة). */
+function refreshMeatAuto() {
+  const size = familySize();
+  DOM.qsa('.support-type-tile[data-auto="meat"] .support-type-tile__auto').forEach(el => {
+    el.textContent = `الكمية تلقائي: ${meatCategory(size)} (عدد الأسرة ${size} — 3 أفراد فأكتر كيلو، أقل من كده نص كيلو)`;
+  });
+}
+
 function renderAllMembers(force = false) {
   const recipients = recipientsList();
   const signature = JSON.stringify(recipients);
   if (!force && signature === membersSignature) return;
   membersSignature = signature;
+  refreshMeatAuto();
   DOM.qsa('.support-type-tile[data-scope="members"]').forEach(tile => renderMembersInto(tile, recipients));
 }
 
@@ -219,7 +236,9 @@ export function collectSupportItems(notes = null) {
       : (tile.dataset.supportType || '');
     const typeName = rawName.trim().slice(0, MAX_TYPE_LENGTH);
     if (!typeName) return;
-    const category = tile.querySelector('.support-type-tile__subs .chip-btn--active')?.dataset.value || null;
+    const category = tile.dataset.auto === 'meat'
+      ? meatCategory(familySize())
+      : (tile.querySelector('.support-type-tile__subs .chip-btn--active')?.dataset.value || null);
 
     const base = {
       supportType: typeName,

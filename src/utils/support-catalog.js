@@ -13,7 +13,7 @@ export const SUPPORT_GROUPS = [
     label: 'أساسي',
     types: [
       { name: 'كرتونة', scope: 'household' },
-      { name: 'لحمة', label: 'لحوم', scope: 'household', subs: ['نص كيلو', 'كيلو'] },
+      { name: 'لحمة', label: 'لحوم', scope: 'household', auto: 'meat' },
       { name: 'مرشح لبنك الطعام', scope: 'household' }
     ]
   },
@@ -94,6 +94,11 @@ const ALIASES = {
 
 // بيانات تجريبية في الإكسل — بتتشال ومابتتحمّلش.
 const DROPPED = new Set(['دعم تجريبى', 'دعم تجريبي']);
+
+/** اللحمة: الكمية من عدد الأسرة (رب الأسرة + الأفراد) — 3 فأكتر كيلو، أقل نص كيلو. */
+export function meatCategory(familySize) {
+  return familySize >= 3 ? 'كيلو' : 'نص كيلو';
+}
 
 const KNOWN = new Set(SUPPORT_GROUPS.flatMap(g => g.types.map(t => t.name)));
 
