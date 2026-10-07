@@ -103,19 +103,3 @@
   gap: 10px;
   font-weight: 800;
 }
-
-/* زرار النسخة الاحتياطية في الـ navbar */
-.top-header__backup {
-  position: relative;
-}
-
-.top-header__backup[hidden] {
-  display: none;
-}
-
-.top-header__backup .nav-alert-dot {
-  position: absolute;
-  top: 4px;
-  inset-inline-end: 4px;
-  margin: 0;
-}

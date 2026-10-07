@@ -49,8 +49,6 @@ function setAlert(active, latest) {
 
 /** يقرا حالة النسخة ويحدّث التنبيه. لأي دور غير المدير: مفيش طلب أصلًا. */
 export async function refreshBackupAlert() {
-  // زرار النسخة الاحتياطية في الـ navbar: ظاهر للمدير في أي وقت.
-  DOM.qsa('[data-backup-nav]').forEach(el => { el.hidden = !canManageBackups(); });
   if (!canManageBackups()) {
     setAlert(false);
     return null;
@@ -217,7 +215,6 @@ export function initSystemBackups() {
   });
 
   DOM.qs('#backup-alert-open')?.addEventListener('click', openSystemBackupsPage);
-  DOM.qsa('[data-backup-nav]').forEach(btn => btn.addEventListener('click', openSystemBackupsPage));
 
   onViewEnter('system-backups', loadPage);
   // بنفحص الحالة بعد تسجيل الدخول/تغيير المستخدم وكل ما المدير يرجع للرئيسية.
