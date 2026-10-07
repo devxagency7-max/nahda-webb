@@ -15,6 +15,8 @@ import { SUPPORT_GROUPS, canonicalSupportType, meatCategory } from '../../utils/
 
 const MAX_TYPE_LENGTH = 100;
 const HOUSEHOLD_BENEFICIARY = 'الأسرة';
+// نفس النص الافتراضي اللي بيبعته الموبايل — reason/justification كانوا NotEmpty في العقد.
+const DEFAULT_REASON = 'دعم مقترح من الأخصائي الاجتماعي';
 const HEAD_ID = 'head';
 
 let tileSeq = 0;
@@ -244,9 +246,9 @@ export function collectSupportItems(notes = null) {
       supportType: typeName,
       supportCategory: category,
       proposedAmount: 0,
-      reason: '',
-      justification: '',
-      priorityLevel: 'متوسط',
+      reason: DEFAULT_REASON,
+      justification: DEFAULT_REASON,
+      priorityLevel: 'medium',
       notes: notes || null
     };
 
