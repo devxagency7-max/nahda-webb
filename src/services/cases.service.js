@@ -216,11 +216,6 @@ export const CasesService = {
     return HttpClient.put(`/cases/${caseId}/classification`, { body: data });
   },
 
-  // ---- Assessed needs — full replace (not currently exposed as its own step) ----
-  async updateAssessedNeeds(caseId, needs, caseRowVersion) {
-    return HttpClient.put(`/cases/${caseId}/assessed-needs`, { body: { needs, caseRowVersion } });
-  },
-
   // ---- Section 6: Financial (Step 6) — full replace of two lists, caseRowVersion ----
   /** @param {Object} data - incomeItems[{label,amount,period?}], expenseItems[{category,amount,period?}], caseRowVersion */
   async updateFinancial(caseId, data) {

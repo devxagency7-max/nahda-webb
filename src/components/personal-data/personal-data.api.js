@@ -171,11 +171,47 @@ async function runSave(promiseFactory, opts = {}) {
     }
     let message = messageFromError(err);
     if (err instanceof ApiError && err.code === 'VALIDATION_ERROR' && err.details && onValidationDetails) {
-      message = onValidationDetails(err.details) || message;
+      message = onValidationDetails(err.details, err) || message;
     }
     showToast(message, 'error');
     throw err;
   }
+}
+
+/* ---------------------------- أفراد الأسرة: حفظ + تنبيه الدعم المحذوف ---------------------------- */
+
+/**
+ * الباك بيمسح صفوف الدعم المربوطة بفرد اتشال من القايمة ويرجّعها في
+ * `removedSupport: [{ id, supportType, familyMemberId }]` — بنقول للمستخدم
+ * عشان ماحدّش يتفاجئ إن الدعم اختفى.
+ */
+function notifyRemovedSupport(result) {
+  const removed = Array.isArray(result?.removedSupport) ? result.removedSupport : [];
+  if (!removed.length) return;
+  const types = [...new Set(removed.map(r => r.supportType).filter(Boolean))];
+  showToast(
+    `اتحذف دعم كان مسجّل لأفراد اتشالوا من الأسرة${types.length ? `: ${types.join('، ')}` : ''} — راجع تاب الدعم 📝`,
+    'warning',
+    7000
+  );
+}
+
+/** PUT /family-members بقايمة الشاشة (استبدال كامل) + تحديث الإصدار + تنبيه الدعم المحذوف. */
+async function pushFamilyMembers(caseId) {
+  const result = await CasesService.updateFamilyMembers(
+    caseId,
+    collectFamilyMembersPayload(),
+    sectionVersion('caseRowVersion')
+  );
+  store.setSectionVersion('caseRowVersion', result?.caseRowVersion ?? sectionVersion('caseRowVersion'));
+  notifyRemovedSupport(result);
+}
+
+/** 422 «معرّف الفرد مستخدم في حالة أخرى / مكرر» — رسالة الباك نفسها أوضح من الافتراضية. */
+function memberIdErrorMessage(err) {
+  return err instanceof ApiError && err.code === 'VALIDATION_ERROR' && /معرّف الفرد/.test(err.message || '')
+    ? err.message
+    : undefined;
 }
 
 /* ---------------------------- Step 1 — Demographics ---------------------------- */
@@ -533,12 +569,7 @@ export async function saveStep1() {
       }
 
       if (store.familyMembers && store.familyMembers.length > 0) {
-        const familyResult = await CasesService.updateFamilyMembers(
-          created.id,
-          collectFamilyMembersPayload(),
-          sectionVersion('caseRowVersion')
-        );
-        store.setSectionVersion('caseRowVersion', familyResult?.caseRowVersion ?? sectionVersion('caseRowVersion'));
+        await pushFamilyMembers(created.id);
       }
 
       // مدة أطول من التوست العادي (6 ثانية بدل 3.2) — دي لحظة مهمة للمستخدم
@@ -546,7 +577,7 @@ export async function saveStep1() {
       showToast(`تم إنشاء الحالة رقم ${created.caseNumber} وحفظ بيانات رب الأسرة بنجاح 🎉`, 'success', 6000);
       return true;
     }, {
-      onValidationDetails: applyStep1ServerValidationErrors
+      onValidationDetails: (details, err) => applyStep1ServerValidationErrors(details) || memberIdErrorMessage(err)
     }).then(() => true, () => false);
   }
 
@@ -572,12 +603,7 @@ export async function saveStep1() {
     // familyLoaded)، إرسال store.familyMembers كان هيمسح أفراد الأسرة المسجلين.
     const cc = store.currentCase;
     if (!cc?.isEditMode || cc.familyLoaded === true) {
-      const familyResult = await CasesService.updateFamilyMembers(
-        currentCaseId(),
-        collectFamilyMembersPayload(),
-        sectionVersion('caseRowVersion')
-      );
-      store.setSectionVersion('caseRowVersion', familyResult?.caseRowVersion ?? sectionVersion('caseRowVersion'));
+      await pushFamilyMembers(currentCaseId());
     }
 
     await syncCaseCharity(currentCaseId());
@@ -594,7 +620,7 @@ export async function saveStep1() {
       rememberServerBeneficiary(fresh?.beneficiary);
       store.setCurrentCase({ ...store.currentCase, charityId: fresh?.charityId || null });
     },
-    onValidationDetails: applyStep1ServerValidationErrors
+    onValidationDetails: (details, err) => applyStep1ServerValidationErrors(details) || memberIdErrorMessage(err)
   }).then(() => true, () => false);
 }
 
@@ -962,6 +988,16 @@ export async function saveStep6() {
 
 // تاب "الدعم" بيتحفظ في support-recommendations (assessed-needs اتقفل 410):
 // صف لكل (نوع دعم × مستلم) — المستلم رب الأسرة/فرد/الأسرة كلها.
+const SUPPORT_MEMBERS_FIRST_MESSAGE =
+  'فيه فرد مختار في الدعم لسه مش محفوظ — احفظ تاب الأفراد الأول (اضغط «التالي» من المرحلة الأولى) وبعدين ارجع احفظ الدعم 🙏';
+
+/** 422 «الفرد المحدد غير موجود في هذه الحالة» من PUT /support-recommendations. */
+function isMissingMemberError(err) {
+  if (!(err instanceof ApiError) || err.code !== 'VALIDATION_ERROR') return false;
+  const keys = err.details ? Object.keys(err.details) : [];
+  return keys.some(k => /familyMemberId/i.test(k)) || /الفرد المحدد غير موجود/.test(err.message || '');
+}
+
 export async function saveStep7() {
   const caseId = currentCaseId();
   if (!caseId) {
@@ -973,7 +1009,10 @@ export async function saveStep7() {
     showToast(invalid, 'warning');
     return false;
   }
-  return runSave(async () => {
+
+  // caseRowVersion بيتقرا جوه كل محاولة عشان إعادة المحاولة (بعد حفظ الأفراد
+  // أو بعد "حفظ بياناتي فوقها") تبعت الرقم الجديد مش القديم.
+  const putSupport = async () => {
     const updated = await CasesService.updateSupportRecommendations(
       caseId,
       collectSupportItems(val('support-notes')),
@@ -981,8 +1020,28 @@ export async function saveStep7() {
     );
     store.setSectionVersion('caseRowVersion', updated?.caseRowVersion ?? sectionVersion('caseRowVersion'));
     return true;
+  };
+
+  return runSave(async () => {
+    try {
+      return await putSupport();
+    } catch (err) {
+      if (!isMissingMemberError(err)) throw err;
+      // فرد جديد اتضاف واتختار في الدعم من غير ما تاب الأفراد يتحفظ. نحفظ
+      // الأفراد ونعيد المرة دي بس — وبس لو قايمتهم اتجابت فعلًا من السيرفر
+      // (PUT family-members استبدال كامل، فقايمة ناقصة كانت هتمسح أفراد حقيقيين).
+      const cc = store.currentCase;
+      if (cc?.isEditMode && cc.familyLoaded !== true) throw err;
+      try {
+        await pushFamilyMembers(caseId);
+      } catch {
+        throw err;
+      }
+      return putSupport();
+    }
   }, {
-    onConflict: (err) => refreshCaseRowVersion(caseId, err)
+    onConflict: (err) => refreshCaseRowVersion(caseId, err),
+    onValidationDetails: (details, err) => (isMissingMemberError(err) ? SUPPORT_MEMBERS_FIRST_MESSAGE : undefined)
   }).then(() => true, () => false);
 }
 
