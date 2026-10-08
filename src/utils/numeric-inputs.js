@@ -40,6 +40,27 @@ function normalizeField(el, allowDecimal) {
 }
 
 /**
+ * مبلغ بالجنيه (نفس InputFormatters.amount في تطبيق الموبايل): بدون إشارة سالب
+ * (normalizeDecimalNumerals بتشيل أي حرف غير الرقم والنقطة أصلًا)، نقطة عشرية
+ * واحدة، خانتان بعدها، وحد أقصى 9 خانات صحيحة. [data-money="true"].
+ * @param {HTMLInputElement} el
+ */
+function constrainMoney(el) {
+  const before = el.value;
+  const firstDot = before.indexOf('.');
+  const intPart = (firstDot === -1 ? before : before.slice(0, firstDot)).slice(0, 9);
+  const fraction = firstDot === -1 ? null : before.slice(firstDot + 1).replace(/\./g, '').slice(0, 2);
+  const after = fraction === null ? intPart : `${intPart}.${fraction}`;
+  if (after === before) return;
+  const caret = el.selectionStart;
+  el.value = after;
+  if (caret != null) {
+    const pos = Math.min(caret, after.length);
+    try { el.setSelectionRange(pos, pos); } catch { /* ignore */ }
+  }
+}
+
+/**
  * يفعّل التطبيع الفوري على كل حقول الإدخال الرقمية في التطبيق كله عبر
  * event delegation واحد على document — يغطي أي حقل جديد يتضاف لاحقًا من غير
  * ما نحتاج نربط listener يدوي لكل حقل.
@@ -60,9 +81,18 @@ export function initNumericInputNormalization() {
     if (!(el instanceof HTMLInputElement)) return;
     if (el.id === 'national-id' || el.id === 'new-member-id') return;
 
+    // أول تعديل بعد خطأ تحقق (إطار أحمر + رسالة `#<id>-error`) بيمسحهم؛ التحقق
+    // الجاي بيرجّعهم لو لسه الحقل غلط.
+    if (el.classList.contains('field-invalid')) {
+      el.classList.remove('field-invalid');
+      const errEl = el.id ? document.getElementById(`${el.id}-error`) : null;
+      if (errEl) errEl.style.display = 'none';
+    }
+
     const numericKind = el.dataset.numeric;
     if (numericKind === 'decimal') {
       normalizeField(el, true);
+      if (el.dataset.money === 'true') constrainMoney(el);
     } else if (numericKind === 'integer' || el.type === 'tel') {
       normalizeField(el, false);
     }

@@ -716,6 +716,9 @@ export function initWorkflowTabs() {
         el.value = '';
       });
       DOM.qsa('select', view).forEach(el => { el.selectedIndex = 0; });
+      // الديانة افتراضيها «مسلم» (الباقي بيرجع للـ placeholder).
+      const religionSelect = DOM.qs('#religion', view);
+      if (religionSelect && [...religionSelect.options].some(o => o.value === 'مسلم')) religionSelect.value = 'مسلم';
       DOM.qsa('input[type="radio"], input[type="checkbox"]', view).forEach(el => { el.checked = false; });
       DOM.qsa('.chip-btn--active', view).forEach(chip => chip.classList.remove('chip-btn--active'));
       DOM.qsa('.chip-field__other', view).forEach(el => { el.value = ''; el.style.display = 'none'; });

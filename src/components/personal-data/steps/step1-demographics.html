@@ -49,8 +49,8 @@
       <div class="form-group">
         <label class="form-label" for="current-age"><span>السن</span></label>
         <div class="input-container">
-          <input type="number" id="current-age" class="form-input" placeholder="أدخل السن بالسنوات..." min="1"
-            max="120" readonly style="background-color: rgba(241, 245, 249, 0.6); font-weight: 700;">
+          <input type="text" inputmode="numeric" data-numeric="integer" maxlength="3" id="current-age" class="form-input"
+            placeholder="أدخل السن بالسنوات...">
         </div>
       </div>
 
@@ -72,8 +72,8 @@
         <label class="form-label" for="religion"><span>الديانة</span></label>
         <div class="form-select-wrapper">
           <select id="religion" class="form-select" data-no-other="true">
-            <option value="" selected disabled>اختر الديانة...</option>
-            <option value="مسلم">مسلم</option>
+            <option value="" disabled>اختر الديانة...</option>
+            <option value="مسلم" selected>مسلم</option>
             <option value="مسيحي">مسيحي</option>
           </select>
           <svg class="select-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -130,18 +130,20 @@
       <div class="form-group">
         <label class="form-label" for="phone1"><span>الهاتف 1</span></label>
         <div class="input-container">
-          <input type="tel" id="phone1" class="form-input"
+          <input type="tel" id="phone1" class="form-input" maxlength="15"
             placeholder="أدخل رقم الهاتف الأساسي (01XXXXXXXXX)...">
         </div>
+        <div class="input-error-msg" id="phone1-error" style="display: none; color: #ef4444; font-size: 12px; font-weight: 700; margin-top: 6px;"></div>
       </div>
 
       <!-- 9. الهاتف 2 -->
       <div class="form-group">
         <label class="form-label" for="phone2"><span>الهاتف 2</span></label>
         <div class="input-container">
-          <input type="tel" id="phone2" class="form-input"
+          <input type="tel" id="phone2" class="form-input" maxlength="15"
             placeholder="أدخل رقم الهاتف الإضافي (01XXXXXXXXX)...">
         </div>
+        <div class="input-error-msg" id="phone2-error" style="display: none; color: #ef4444; font-size: 12px; font-weight: 700; margin-top: 6px;"></div>
       </div>
     </div>
   </section>
@@ -255,7 +257,7 @@
       <div class="form-group">
         <label class="form-label" for="head-monthly-income"><span>الدخل الشهري لرب الأسرة (جنيه)</span></label>
         <div class="input-container">
-          <input type="text" inputmode="decimal" data-numeric="decimal" id="head-monthly-income" class="form-input"
+          <input type="text" inputmode="decimal" data-numeric="decimal" data-money="true" id="head-monthly-income" class="form-input"
             placeholder="أدخل قيمة الدخل الشهري بالجنيه...">
         </div>
       </div>
@@ -271,7 +273,7 @@
       <div class="form-group" id="head-takaful-amount-group" style="display: none;">
         <label class="form-label" for="head-takaful-amount"><span>مبلغ تكافل وكرامة (جنيه)</span></label>
         <div class="input-container">
-          <input type="text" inputmode="decimal" data-numeric="decimal" id="head-takaful-amount" class="form-input"
+          <input type="text" inputmode="decimal" data-numeric="decimal" data-money="true" id="head-takaful-amount" class="form-input"
             placeholder="أدخل مبلغ تكافل وكرامة بالجنيه...">
         </div>
       </div>

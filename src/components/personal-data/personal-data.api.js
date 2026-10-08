@@ -18,6 +18,7 @@ import { CasesService } from '../../services/cases.service.js';
 import { AttachmentsService } from '../../services/attachments.service.js';
 import { ApiError, messageFromError } from '../../services/errors.js';
 import { parseEgyptianNationalId } from '../../utils/nationalId.js';
+import { isValidEgyptianPhone, PHONE_ERROR_MESSAGE } from '../../utils/phone.js';
 import { choiceDialog } from '../../utils/dialog.js';
 import { loadCaseIntoForm } from './case-edit.loader.js';
 import { collectSupportItems, getSupportValidationError } from '../support/support.component.js';
@@ -400,12 +401,20 @@ export function validateStep1() {
     issues.push({ el: DOM.qs('#national-id'), errEl: DOM.qs('#national-id-error'), message: 'تأكد من الرقم القومي — لازم يكون 14 رقم صحيح.' });
   }
 
+  // الهاتف اختياري، لكن لو اتكتب لازم يكون رقم مصري صحيح (موبايل/أرضي) —
+  // نفس قاعدة تطبيق الموبايل.
+  ['phone1', 'phone2'].forEach(id => {
+    if (!isValidEgyptianPhone(val(id))) {
+      issues.push({ el: DOM.qs(`#${id}`), errEl: DOM.qs(`#${id}-error`), message: PHONE_ERROR_MESSAGE });
+    }
+  });
+
   return issues;
 }
 
 export function clearStep1Errors() {
   DOM.qsa('#step-pane-1 .field-invalid').forEach(el => el.classList.remove('field-invalid'));
-  ['case-name-error', 'national-id-error'].forEach(id => {
+  ['case-name-error', 'national-id-error', 'phone1-error', 'phone2-error'].forEach(id => {
     const el = DOM.qs(`#${id}`);
     if (el) el.style.display = 'none';
   });
@@ -434,8 +443,8 @@ export function highlightStep1Issues(issues) {
 const STEP1_SERVER_FIELD_MAP = {
   fullname: { elId: 'case-name', errElId: 'case-name-error', label: 'الاسم' },
   nationalid: { elId: 'national-id', errElId: 'national-id-error', label: 'الرقم القومي' },
-  phoneprimary: { elId: 'phone1', label: 'الهاتف الأول' },
-  phonesecondary: { elId: 'phone2', label: 'الهاتف الثاني' },
+  phoneprimary: { elId: 'phone1', errElId: 'phone1-error', label: 'الهاتف الأول' },
+  phonesecondary: { elId: 'phone2', errElId: 'phone2-error', label: 'الهاتف الثاني' },
   address: { elId: 'address', label: 'العنوان' },
   religion: { elId: 'religion', label: 'الديانة' },
   education: { elId: 'education-level', label: 'المرحلة التعليمية' },
