@@ -198,13 +198,13 @@ export const CasesService = {
     return HttpClient.put(`/cases/${caseId}/housing`, { body: data });
   },
 
-  // ---- Section 4: Utilities (Step 4) — full replace of two lists, caseRowVersion ----
+  // ---- Section 4: Utilities (Step 3, مع السكن) — full replace of two lists, caseRowVersion ----
   /** @param {Object} data - appliances[{applianceKey,isPresent}], utilities[{name,isAvailable,condition?,sourceOrMeter?,notes?}], caseRowVersion */
   async updateUtilities(caseId, data) {
     return HttpClient.put(`/cases/${caseId}/utilities`, { body: data });
   },
 
-  // ---- Section 5: Agriculture (Step 5) — 1:1 upsert, nullable rowVersion on first save ----
+  // ---- Section 5: Agriculture (Step 4) — 1:1 upsert, nullable rowVersion on first save ----
   // Server clears stale dependent fields itself (hasLand/hasLivestock rules,
   // §12.4) — re-fetch after saving if the UI needs to reflect the cleared state.
   async updateAgriculture(caseId, data) {
@@ -221,13 +221,13 @@ export const CasesService = {
     return HttpClient.put(`/cases/${caseId}/classification`, { body: data });
   },
 
-  // ---- Section 6: Financial (Step 6) — full replace of two lists, caseRowVersion ----
+  // ---- Section 6: Financial (Step 5) — full replace of two lists, caseRowVersion ----
   /** @param {Object} data - incomeItems[{label,amount,period?}], expenseItems[{category,amount,period?}], caseRowVersion */
   async updateFinancial(caseId, data) {
     return HttpClient.put(`/cases/${caseId}/financial`, { body: data });
   },
 
-  // ---- Section 7: Support (Step 7) — two independent models (§12.6) ----
+  // ---- Section 7: Support (Step 6) — two independent models (§12.6) ----
   /**
    * Proposed list — edit_case, full replace, caseRowVersion.
    * **Body field is `items`, not `recommendations`** — confirmed against the
@@ -312,7 +312,7 @@ export const CasesService = {
   },
 
   /**
-   * Web-only counterpart to the mobile worker opinion (§step 8 of the
+   * Web-only counterpart to the mobile worker opinion (§step 7 of the
    * personal-data wizard) — data_entry/manager/reviewer record the social
    * worker's brief opinion + detailed report *before* the case is assigned.
    * Both fields are optional — an empty body still moves the case to

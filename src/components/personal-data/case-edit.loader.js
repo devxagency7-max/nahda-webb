@@ -176,9 +176,9 @@ function fillStep3(housing) {
   triggerWorkflowRecalc();
 }
 
-/* ---------------------------- تاب 4 — المرافق والتجهيزات ---------------------------- */
+/* ---------------------- تاب 3 (تكملة) — المرافق والتجهيزات ---------------------- */
 
-function fillStep4(utilities) {
+function fillUtilities(utilities) {
   const ut = utilities || {};
   activateChip('.chip-field[data-field="electricity"]', ut.electricity);
   activateChip('.chip-field[data-field="waterMeter"]', ut.water);
@@ -194,9 +194,9 @@ function fillStep4(utilities) {
   triggerWorkflowRecalc();
 }
 
-/* ---------------------------- تاب 5 — الزراعة ---------------------------- */
+/* ---------------------------- تاب 4 — الزراعة ---------------------------- */
 
-function fillStep5(agriculture) {
+function fillStep4(agriculture) {
   const ag = agriculture || {};
   let livestockTypes = [];
   try {
@@ -222,13 +222,13 @@ function fillStep5(agriculture) {
   restoreAgricultureManager();
 }
 
-/* ---------------------------- تاب 6 — الدخل والمصروفات ---------------------------- */
+/* ---------------------------- تاب 5 — الدخل والمصروفات ---------------------------- */
 
 const FIXED_EXPENSE_LABELS = new Set([
   'الأكل والشرب', 'المصروفات الدراسية', 'الكهرباء', 'المياه', 'الغاز', 'الإيجار', 'القسط'
 ]);
 
-function fillStep6(financial) {
+function fillStep5(financial) {
   const fin = financial || {};
   const incomeItems = fin.incomeItems || [];
   const expenseItems = fin.expenseItems || [];
@@ -252,9 +252,9 @@ function fillStep6(financial) {
   loadFinancialManager(manualIncomeItems, fixedExpenseAmounts, manualExpenseItems);
 }
 
-/* ---------------------------- تاب 7 — الدعم ---------------------------- */
+/* ---------------------------- تاب 6 — الدعم ---------------------------- */
 
-function fillStep7(recommendations) {
+function fillStep6(recommendations) {
   return loadSupportSelection(recommendations);
 }
 
@@ -346,11 +346,11 @@ export async function loadCaseIntoForm(caseId) {
     fillStep1(detail);
     fillStep2(attachmentsRes, caseId);
     fillStep3(detail.housing);
-    fillStep4(detail.utilities);
-    fillStep5(detail.agriculture);
+    fillUtilities(detail.utilities);
+    fillStep4(detail.agriculture);
     loadFamilyMembersManager(mapMembersFromApi(familyRes?.members));
-    fillStep6(detail.financial);
-    await fillStep7(supportRes?.recommendations || supportRes?.supportRecommendations || []);
+    fillStep5(detail.financial);
+    await fillStep6(supportRes?.recommendations || supportRes?.supportRecommendations || []);
 
     triggerWorkflowRecalc();
     return true;

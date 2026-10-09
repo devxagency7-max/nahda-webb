@@ -19,16 +19,15 @@ import dashKpisHtml from '../components/dashboard/parts/dash-kpis.html?raw';
 import dashRecentCasesHtml from '../components/dashboard/parts/dash-recent-cases.html?raw';
 import dashboardHtml from '../components/dashboard/dashboard.html?raw';
 
-// Workflow & Personal Data 8-Step Panes
+// Workflow & Personal Data 7-Step Panes
 import workflowNavHtml from '../components/workflow/workflow-nav.html?raw';
 import step1Html from '../components/personal-data/steps/step1-demographics.html?raw';
 import step2Html from '../components/personal-data/steps/step2-attachments.html?raw';
 import step3Html from '../components/personal-data/steps/step3-housing.html?raw';
-import step4Html from '../components/personal-data/steps/step4-utilities.html?raw';
-import step5Html from '../components/personal-data/steps/step5-agriculture.html?raw';
-import step6Html from '../components/personal-data/steps/step6-financial.html?raw';
-import step7Html from '../components/personal-data/steps/step7-support.html?raw';
-import step8Html from '../components/personal-data/steps/step8-assessment.html?raw';
+import step4Html from '../components/personal-data/steps/step4-agriculture.html?raw';
+import step5Html from '../components/personal-data/steps/step5-financial.html?raw';
+import step6Html from '../components/personal-data/steps/step6-support.html?raw';
+import step7Html from '../components/personal-data/steps/step7-assessment.html?raw';
 import personalDataHtml from '../components/personal-data/personal-data.html?raw';
 
 // Background Studio View
@@ -122,9 +121,6 @@ export function mountComponentTemplates() {
 
     const s7Mount = document.getElementById('step-pane-7-mount');
     if (s7Mount) s7Mount.outerHTML = step7Html;
-
-    const s8Mount = document.getElementById('step-pane-8-mount');
-    if (s8Mount) s8Mount.outerHTML = step8Html;
   }
 
   const bgStudioContainer = document.getElementById('bg-studio-view-mount');

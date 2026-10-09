@@ -113,7 +113,7 @@ export function initFinancialManager() {
     locked: true
   }));
 
-  // بند مصروف "إيجار أراضي زراعية" — مرتبط بحقل سعر إيجار الأرض في خطوة 5
+  // بند مصروف "إيجار أراضي زراعية" — مرتبط بحقل سعر إيجار الأرض في خطوة 4
   // (لو نوع الحيازة "إيجار")، مطابق لـ _syncAgriculturalHolding في الأبلكيشن.
   const LAND_RENT_EXPENSE_TYPE = 'إيجار أراضي زراعية';
   let isSyncing = false;
@@ -559,7 +559,7 @@ export function initFinancialManager() {
   onWorkflowRecalc(syncAutoIncomeItems);
   syncAutoIncomeItems();
 
-  // مزامنة بند "إيجار أراضي زراعية" مع خطوة 5، وعرض القائمة الافتراضية أول مرة.
+  // مزامنة بند "إيجار أراضي زراعية" مع خطوة 4، وعرض القائمة الافتراضية أول مرة.
   onWorkflowRecalc(syncLandRentExpenseItem);
   syncLandRentExpenseItem();
 

@@ -1,0 +1,52 @@
+<!-- TAB 6: الدعم -->
+<div class="step-pane" id="step-pane-6" style="display: none;">
+  <!-- 1. كارت الدعم المقترح من الأخصائي -->
+  <section class="glass-card" id="card-tab-7-proposed">
+    <div class="glass-card__header">
+      <div class="glass-card__title-group">
+        <div class="glass-card__icon" style="background: rgba(16, 185, 129, 0.15); color: #059669;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+          </svg>
+        </div>
+        <div>
+          <h2 class="glass-card__title">أنواع الدعم المقترحة (اختيارات متعددة)</h2>
+          <p class="glass-card__subtitle">اختر أنواع الدعم المطلوبة للحالة، وحدد تحت كل نوع مين من الأسرة هياخده</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- بتتبني من support.component.js (تصنيفات + أنواع + أفراد كل نوع) -->
+    <div id="support-types-list"></div>
+  </section>
+
+  <!-- 2. كارت الدعم المعتمد (View-only) -->
+  <section class="glass-card" id="card-tab-7-approved" style="margin-top: 24px; border: 1.5px solid rgba(37, 99, 235, 0.4);">
+    <div class="glass-card__header">
+      <div class="glass-card__title-group">
+        <div class="glass-card__icon" style="background: rgba(37, 99, 235, 0.15); color: #2563eb;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+        </div>
+        <div>
+          <h3 class="glass-card__title">الدعم المعتمد</h3>
+        </div>
+      </div>
+    </div>
+
+    <div id="approved-support-empty"
+      style="background: rgba(37, 99, 235, 0.06); padding: 14px; border-radius: 10px; color: #1d4ed8; font-size: 13px; font-weight: 600;">
+      القرار لسه في انتظار اعتماد المراجع — هيظهر هنا أول ما يتحدد.
+    </div>
+
+    <div id="approved-support-details" style="display: none;" class="case-page-grid">
+      <div><strong>نوع الدعم المعتمد:</strong> <span id="approved-support-type"></span></div>
+      <div><strong>القيمة المعتمدة:</strong> <span id="approved-support-amount"></span></div>
+      <div><strong>المستفيد:</strong> <span id="approved-support-beneficiary"></span></div>
+      <div><strong>تاريخ الاعتماد:</strong> <span id="approved-support-date"></span></div>
+      <div style="grid-column: 1 / -1;"><strong>ملاحظات الاعتماد:</strong> <span id="approved-support-notes"></span></div>
+    </div>
+  </section>
+</div>

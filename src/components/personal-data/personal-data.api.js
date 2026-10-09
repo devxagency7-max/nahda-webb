@@ -905,7 +905,7 @@ function collectHousingPayload() {
   };
 }
 
-export async function saveStep3() {
+async function saveHousing() {
   const caseId = currentCaseId();
   if (!caseId) {
     showToast('كمّل بيانات المرحلة الأولى (اسم ورقم قومي رب الأسرة) الأول، وبعدين ارجع هنا 🙏', 'warning');
@@ -924,9 +924,9 @@ export async function saveStep3() {
   }).then(() => true, () => false);
 }
 
-/* ---------------------------- Step 4 — Utilities ---------------------------- */
+/* ------------------ Step 3 (تكملة) — Utilities & appliances ------------------ */
 
-// step4-utilities.html: each utility/appliance is its own chip-field (a
+// step3-housing.html (قسم المرافق والأجهزة): each utility/appliance is its own chip-field (a
 // single yes/no or condition chip), not one shared multi-select — unlike
 // case-preview.js's older shared-'devices'/'appliances' field reading.
 const UTILITY_CHIP_FIELDS = ['electricity', 'waterMeter', 'waterMotor'];
@@ -960,7 +960,7 @@ function collectUtilitiesPayload() {
   };
 }
 
-export async function saveStep4() {
+async function saveUtilities() {
   const caseId = currentCaseId();
   if (!caseId) {
     showToast('كمّل بيانات المرحلة الأولى (اسم ورقم قومي رب الأسرة) الأول، وبعدين ارجع هنا 🙏', 'warning');
@@ -975,12 +975,22 @@ export async function saveStep4() {
   }).then(() => true, () => false);
 }
 
-/* ---------------------------- Step 5 — Agriculture ---------------------------- */
+/**
+ * مرحلة السكن فيها خانات السكن والمرافق والأجهزة مع بعض — نفس الطلبين زي
+ * الأول (PUT /housing ثم PUT /utilities)، بالترتيب ده زي ما الباك إند طلب
+ * (رد 2026-10-08 §8.8). فشل السكن بيوقف المرافق.
+ */
+export async function saveStep3() {
+  if (!(await saveHousing())) return false;
+  return saveUtilities();
+}
+
+/* ---------------------------- Step 4 — Agriculture ---------------------------- */
 // readAgricultureData() already lives in agriculture.component.js and is the
 // single source of truth the validator also uses — reuse it rather than
 // re-reading the DOM here.
 
-export async function saveStep5(readAgricultureData) {
+export async function saveStep4(readAgricultureData) {
   const caseId = currentCaseId();
   if (!caseId) {
     showToast('كمّل بيانات المرحلة الأولى (اسم ورقم قومي رب الأسرة) الأول، وبعدين ارجع هنا 🙏', 'warning');
@@ -1036,10 +1046,10 @@ export async function saveStep5(readAgricultureData) {
   }).then(() => true, () => false);
 }
 
-/* ---------------------------- Step 6 — Financial ---------------------------- */
+/* ---------------------------- Step 5 — Financial ---------------------------- */
 
 /**
- * بيانات مرحلة 6 مصدرها الحقيقي store.incomeItems/expenseItems — بيتحدّثوا
+ * بيانات مرحلة 5 مصدرها الحقيقي store.incomeItems/expenseItems — بيتحدّثوا
  * لحظيًا من financial-ledger.component.js (recalculateBudget ->
  * store.setFinancialItems) مع كل إضافة/حذف/تعديل. الكود القديم هنا كان
  * بيحاول يقرأ العناصر من selectors زي '#income-items-list .financial-item'
@@ -1068,7 +1078,7 @@ function readExpenseRows() {
 
 // السيرفر بيقبل بالظبط الخمس فئات دي، بنصها الحرفي، لا أكتر ولا أقل —
 // اتحقق منه فعليًا على السيرفر الحي (422 "يجب إدخال جميع بنود المصروفات
-// الثابتة الخمسة، ولا يمكن إضافة تصنيفات أخرى"). الفورم (step6-financial.html
+// الثابتة الخمسة، ولا يمكن إضافة تصنيفات أخرى"). الفورم (step5-financial.html
 // #new-expense-type) بتسمح بـ 8 أنواع حرة + "أخرى" — فبنجمّع كل بند مُدخَل
 // على أقرب فئة من الخمسة، وأي فئة متسجلتش بتتبعت بمبلغ صفر (السيرفر بيرفض
 // أي مجموعة غير كاملة).
@@ -1116,11 +1126,11 @@ function collectFixedExpenseItems() {
 }
 
 /**
- * تحقق تنبيهي (مش إجباري) للمرحلة السادسة — الأسرة ممكن فعلاً معندهاش دخل
+ * تحقق تنبيهي (مش إجباري) للمرحلة الخامسة — الأسرة ممكن فعلاً معندهاش دخل
  * أو مصروفات متسجلة، فمابنمنعش المتابعة، بس بننبّه المستخدم لو نسي يسجّل
- * أي بند قبل ما يعدّي، بنفس فلسفة "تحذير مرة واحدة" المستخدمة في المرحلة 5.
+ * أي بند قبل ما يعدّي، بنفس فلسفة "تحذير مرة واحدة" المستخدمة في المرحلة 4.
  */
-export function validateStep6() {
+export function validateStep5() {
   const hasIncome = readIncomeRows().length > 0;
   const hasExpense = readExpenseRows().length > 0;
   if (hasIncome || hasExpense) return [];
@@ -1130,7 +1140,7 @@ export function validateStep6() {
   }];
 }
 
-export async function saveStep6() {
+export async function saveStep5() {
   const caseId = currentCaseId();
   if (!caseId) {
     showToast('كمّل بيانات المرحلة الأولى (اسم ورقم قومي رب الأسرة) الأول، وبعدين ارجع هنا 🙏', 'warning');
@@ -1155,7 +1165,7 @@ export async function saveStep6() {
   }).then(() => true, () => false);
 }
 
-/* ---------------------------- Step 7 — Support ---------------------------- */
+/* ---------------------------- Step 6 — Support ---------------------------- */
 
 // تاب "الدعم" بيتحفظ في support-recommendations (assessed-needs اتقفل 410):
 // صف لكل (نوع دعم × مستلم) — المستلم رب الأسرة/فرد/الأسرة كلها.
@@ -1169,7 +1179,7 @@ function isMissingMemberError(err) {
   return keys.some(k => /familyMemberId/i.test(k)) || /الفرد المحدد غير موجود/.test(err.message || '');
 }
 
-export async function saveStep7() {
+export async function saveStep6() {
   const caseId = currentCaseId();
   if (!caseId) {
     showToast('كمّل بيانات المرحلة الأولى (اسم ورقم قومي رب الأسرة) الأول، وبعدين ارجع هنا 🙏', 'warning');
@@ -1218,10 +1228,10 @@ export async function saveStep7() {
   }).then(() => true, () => false);
 }
 
-/* ---------------------------- Step 8 — Assessment ---------------------------- */
+/* ---------------------------- Step 7 — Assessment ---------------------------- */
 
 /**
- * §8: يحفظ رأي الباحث الاجتماعي (المرحلة 8) عبر PUT
+ * §8: يحفظ رأي الباحث الاجتماعي (المرحلة 7) عبر PUT
  * /cases/{id}/opinions/social-worker-assessment — الرد بيرجّع الحالة الجديدة
  * (draft/pending_assignment -> pending_assignment) فبنحدّث store.currentCase
  * هنا زي ما بتعمل شاشة "إرسال لأخصائي" بعد assign، عشان أي UI تانية معتمدة
@@ -1232,7 +1242,7 @@ export async function saveStep7() {
  * pending_assignment من غير رأي مسجّل) — الاستثناء الوحيد اللي السيرفر
  * بيرفضه 422 هو detailedReport من غير briefOpinion، فبنمنعه هنا قبل الطلب.
  */
-export async function saveStep8() {
+export async function saveStep7() {
   const caseId = currentCaseId();
   if (!caseId) {
     showToast('كمّل بيانات المرحلة الأولى (اسم ورقم قومي رب الأسرة) الأول، وبعدين ارجع هنا 🙏', 'warning');
@@ -1270,9 +1280,8 @@ export const STEP_SAVE_HANDLERS = {
   1: saveStep1,
   2: saveStep2,
   3: saveStep3,
-  4: saveStep4,
-  // 5 is wired specially in workflow.component.js (needs readAgricultureData)
+  // 4 is wired specially in workflow.component.js (needs readAgricultureData)
+  5: saveStep5,
   6: saveStep6,
-  7: saveStep7,
-  8: saveStep8
+  7: saveStep7
 };

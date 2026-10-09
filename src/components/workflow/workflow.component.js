@@ -1,6 +1,6 @@
 /* --------------------------------------------------------------------------
    DEVX CASE JOURNEY TIMELINE ENGINE CONTROLLER
-   Unified dynamic SVG continuous snake journey for 8 stations (4 + 4).
+   Unified dynamic SVG continuous snake journey for 7 stations (4 + 3).
    Features:
    - Dynamic station centers measurement relative to SVG coordinate space
    - Continuous G1-smooth 180° Cubic Bezier U-Turns
@@ -27,12 +27,12 @@ import {
 } from '../agriculture/agriculture.component.js';
 import {
   STEP_SAVE_HANDLERS,
-  saveStep5,
+  saveStep4,
   wireAttachmentUpload,
   validateStep1,
   clearStep1Errors,
   highlightStep1Issues,
-  validateStep6,
+  validateStep5,
   registerWizardControls
 } from '../personal-data/personal-data.api.js';
 import { messageFromError } from '../../services/errors.js';
@@ -46,17 +46,17 @@ import { resetFinancialManager } from '../financial-ledger/financial-ledger.comp
 export const STAGES_METADATA = [
   { id: 'stage-01', step: 1, row: 1, title: '1. الأساسية والأفراد', target: 'step-pane-1', route: 'personal-data' },
   { id: 'stage-02', step: 2, row: 1, title: '2. المرفقات والوثائق', target: 'step-pane-2', route: 'personal-data' },
+  // المرافق والأجهزة اتدمجت في مرحلة السكن (مفيش مرحلة مرافق منفصلة).
   { id: 'stage-03', step: 3, row: 1, title: '3. بيانات السكن', target: 'step-pane-3', route: 'personal-data' },
-  { id: 'stage-04', step: 4, row: 1, title: '4. الخدمات والمرافق', target: 'step-pane-4', route: 'personal-data' },
-  { id: 'stage-05', step: 5, row: 2, title: '5. الحيازة الزراعية', target: 'step-pane-5', route: 'personal-data' },
-  { id: 'stage-06', step: 6, row: 2, title: '6. الدخل والمصروفات', target: 'step-pane-6', route: 'personal-data' },
-  { id: 'stage-07', step: 7, row: 2, title: '7. الدعم والقرار', target: 'step-pane-7', route: 'personal-data' },
-  { id: 'stage-08', step: 8, row: 2, title: '8. الرأي', target: 'step-pane-8', route: 'personal-data' },
+  { id: 'stage-04', step: 4, row: 1, title: '4. الحيازة الزراعية', target: 'step-pane-4', route: 'personal-data' },
+  { id: 'stage-05', step: 5, row: 2, title: '5. الدخل والمصروفات', target: 'step-pane-5', route: 'personal-data' },
+  { id: 'stage-06', step: 6, row: 2, title: '6. الدعم والقرار', target: 'step-pane-6', route: 'personal-data' },
+  { id: 'stage-07', step: 7, row: 2, title: '7. الرأي', target: 'step-pane-7', route: 'personal-data' },
 ];
 
 const TOTAL_STEPS = STAGES_METADATA.length;
 const RING_CIRCUMFERENCE = 144.51; // 2 * Math.PI * 23
-let currentPercentages = [0, 0, 0, 0, 0, 0, 0, 0];
+let currentPercentages = [0, 0, 0, 0, 0, 0, 0];
 
 // POST /cases/{id}/assign (زرار "إرسال لأخصائي") مسموح بس من الحالتين دول
 // عند السيرفر — أي حالة تانية بترجع 422 INVALID_STATUS_TRANSITION. بنطابق
@@ -314,18 +314,15 @@ export function initWorkflowTabs() {
     const s2AttachedCount = DOM.qsa('#attachments-list .case-page-att-item[data-att-id]').length;
     const pct2 = s2AttachedCount > 0 ? 100 : 0;
 
-    // 3. السكن (حقول Multi-select Chips)
+    // 3. السكن والمرافق والأجهزة (حقول Multi-select Chips)
     const pct3 = calculateChipFieldsProgress('#step-pane-3');
 
-    // 4. المرافق والتجهيزات (حقول Multi-select Chips)
-    const pct4 = calculateChipFieldsProgress('#step-pane-4');
-
-    // 5. الحيازة والأصول الزراعية — الحساب كله في agriculture.component.js
+    // 4. الحيازة والأصول الزراعية — الحساب كله في agriculture.component.js
     // (مصدر واحد للحقيقة يشاركه التحقق قبل الانتقال). مرحلة لسه محدش فتحها
     // بترجع 0% بدل ما تتحسب مكتملة بالغلط.
-    const pct5 = agricultureProgress();
+    const pct4 = agricultureProgress();
 
-    // 6. الدخل والمصروفات — عدد الكروت مش دليل كافٍ على الاكتمال: في بنود
+    // 5. الدخل والمصروفات — عدد الكروت مش دليل كافٍ على الاكتمال: في بنود
     // تلقائية ثابتة (معاش، معاش تكافل وكرامة، دخل/إيجار الأرض الزراعية، 7
     // فئات مصروفات) بتتزرع دايمًا بقيمة صفر بمجرد فتح المرحلة (راجع
     // financial-ledger.component.js: _defaultExpenseCategories/buildAutoIncomeItems)
@@ -334,19 +331,19 @@ export function initWorkflowTabs() {
     // مصروف واحد على الأقل بقيمة أكبر من صفر (من store.incomeItems/expenseItems
     // اللي بيحدّثها recalculateBudget مع كل تغيير — مصدر الحقيقة الحقيقي للمبالغ).
     const hasNonZeroAmount = (items) => Array.isArray(items) && items.some(item => Number(item.amount) > 0);
-    const pct6 = (hasNonZeroAmount(store.incomeItems) || hasNonZeroAmount(store.expenseItems)) ? 100 : 0;
+    const pct5 = (hasNonZeroAmount(store.incomeItems) || hasNonZeroAmount(store.expenseItems)) ? 100 : 0;
 
-    // 7. الدعم والقرار (مطابق لـ SupportRecommendationFormData.progress في
+    // 6. الدعم والقرار (مطابق لـ SupportRecommendationFormData.progress في
     // الأبلكيشن: 100% لو فيه فئة دعم واحدة على الأقل متفعّلة، وإلا 0%)
     const supSelectedCount = DOM.qsa('.support-type-checkbox:checked').length;
-    const pct7 = supSelectedCount > 0 ? 100 : 0;
+    const pct6 = supSelectedCount > 0 ? 100 : 0;
 
-    // 8. الرأي
+    // 7. الرأي
     const briefOp = DOM.qs('#researcher-brief-opinion');
     const opEl = DOM.qs('#researcher-opinion');
-    const pct8 = ((briefOp && briefOp.value !== '') || (opEl && opEl.value.trim() !== '')) ? 100 : 0;
+    const pct7 = ((briefOp && briefOp.value !== '') || (opEl && opEl.value.trim() !== '')) ? 100 : 0;
 
-    currentPercentages = [pct1, pct2, pct3, pct4, pct5, pct6, pct7, pct8];
+    currentPercentages = [pct1, pct2, pct3, pct4, pct5, pct6, pct7];
 
     // Update Individual Station UI (Circular Rings, Inner Percentage Text, Completion status)
     currentPercentages.forEach((pct, idx) => {
@@ -402,23 +399,23 @@ export function initWorkflowTabs() {
   /* ---------- التحقق قبل الانتقال + إعلان المرحلة لقارئ الشاشة ---------- */
 
   // سجل التحقق لكل مرحلة. المراحل غير المدرجة بتعدّي بدون قيود (زي ما كانت).
-  // 6 تنبيهية فقط (مفيش highlighter ليها — البيانات فعليًا اختيارية عند
-  // السيرفر) بينما 1 و5 بيبرزوا الحقول الناقصة بصريًا كمان. 7 بتعدّي بدون
+  // 5 تنبيهية فقط (مفيش highlighter ليها — البيانات فعليًا اختيارية عند
+  // السيرفر) بينما 1 و4 بيبرزوا الحقول الناقصة بصريًا كمان. 6 بتعدّي بدون
   // تحذير خالص — نوع الدعم اختياري بالكامل.
   const STEP_VALIDATORS = {
     1: validateStep1,
-    5: validateAgriculture,
-    6: validateStep6
+    4: validateAgriculture,
+    5: validateStep5
   };
 
   const STEP_ERROR_CLEANERS = {
     1: clearStep1Errors,
-    5: clearAgricultureErrors
+    4: clearAgricultureErrors
   };
 
   const STEP_HIGHLIGHTERS = {
     1: highlightStep1Issues,
-    5: highlightAgricultureIssues
+    4: highlightAgricultureIssues
   };
 
   function getValidationMsgEl(step) {
@@ -635,13 +632,13 @@ export function initWorkflowTabs() {
   }
 
   /**
-   * Dispatches to the right API save for the step being left. Step 5
+   * Dispatches to the right API save for the step being left. Step 4
    * (agriculture) needs readAgricultureData from agriculture.component.js,
    * so it's wired here rather than through the plain STEP_SAVE_HANDLERS map.
    * @returns {Promise<boolean>} false means "stay on this step" (already toasted).
    */
   async function saveCurrentStepToApi(step) {
-    if (step === 5) return saveStep5(readAgricultureData);
+    if (step === 4) return saveStep4(readAgricultureData);
     const handler = STEP_SAVE_HANDLERS[step];
     if (!handler) return true;
     return handler();
@@ -662,7 +659,7 @@ export function initWorkflowTabs() {
 
     StorageService.set(STORAGE_KEYS.SUPPORT_DECISION_DATA, supportRecord);
 
-    // بيانات المرحلة 5 بتتحفظ لحظيًا في الـ store، بس بنأكد الحفظ هنا برضه
+    // بيانات المرحلة 4 بتتحفظ لحظيًا في الـ store، بس بنأكد الحفظ هنا برضه
     // علشان الحفظ النهائي يبقى لقطة متسقة من الاستمارة كلها.
     store.setAgriculture(readAgricultureData());
 
@@ -688,7 +685,7 @@ export function initWorkflowTabs() {
   /**
    * يصفّر الاستمارة كلها استعدادًا لحالة جديدة — نفس الأثر اللي كان بيحصل
    * مع Refresh فعلي، لكن من غير ما نحتاج نعمل reload حقيقي للصفحة. بيتنادى
-   * بعد ما المستخدم يخلّص استمارة (مرحلة 8) ويرجع للرئيسية، عشان لو فتح
+   * بعد ما المستخدم يخلّص استمارة (مرحلة 7) ويرجع للرئيسية، عشان لو فتح
    * "البيانات الأساسية" تاني يلاقيها فاضية بدل ما تكمّل تحديث نفس الحالة
    * القديمة بالغلط.
    */
@@ -702,7 +699,7 @@ export function initWorkflowTabs() {
     resetFamilyMembersManager();
     store.setAgriculture(null);
 
-    // 3. الدخل والمصروفات (مرحلة 6) — بنود تلقائية + يدوية كلها closures
+    // 3. الدخل والمصروفات (مرحلة 5) — بنود تلقائية + يدوية كلها closures
     // محلية جوه financial-ledger.component.js، فبترجع لحالتها الافتراضية
     // عن طريق الـ reset callback المسجّل هناك.
     resetFinancialManager();
@@ -852,7 +849,7 @@ export function initWorkflowTabs() {
   // ملاحظة: النقر على محطة من خريطة الرحلة = تنقّل حر (زي تبويبات)، مش إرسال
   // للاستمارة — فمابنمنعوش بالتحقق. البوابة بتفضل على زرار "التالي" وعلى
   // "حفظ" في آخر مرحلة، وهما مسار الإكمال الفعلي. كده المستخدم يقدر يتنقل
-  // بين 5 و6 و7 بحرية ويرجع يكمّل الناقص بعدين.
+  // بين 4 و5 و6 بحرية ويرجع يكمّل الناقص بعدين.
   stepNodes.forEach((node) => {
     node.addEventListener('click', () => {
       const step = parseInt(node.getAttribute('data-step'), 10) || 1;
@@ -921,7 +918,7 @@ function setupResizeObserver() {
 /**
  * DEVX SVG TIMELINE ENGINE
  * Dynamically measures station DOM centers and builds a continuous
- * G1-smooth snake path across 2 rows (4 + 4) or vertical stack on mobile.
+ * G1-smooth snake path across 2 rows (4 + 3) or vertical stack on mobile.
  */
 export function renderJourneyTimeline() {
   const svgEl = DOM.qs('#case-journey-svg');
@@ -968,7 +965,7 @@ export function renderJourneyTimeline() {
       stationSubpaths[s] = currentSub;
     }
   } else {
-    // Desktop / Tablet Snake: Row 1 (4), U-Turn, Row 2 (4)
+    // Desktop / Tablet Snake: Row 1 (4), U-Turn, Row 2 (3)
 
     // Row 1: 1 -> 2 -> 3 -> 4 (Visual RTL: 1 is Right, 4 is Left)
     pathString = `M ${centers[1].x.toFixed(1)},${centers[1].y.toFixed(1)}`;
@@ -992,7 +989,7 @@ export function renderJourneyTimeline() {
     pathString += uTurn;
     stationSubpaths[5] = pathString;
 
-    // Row 2: 5 -> 6 -> 7 -> 8 (Visual LTR: 5 is Left, 8 is Right)
+    // Row 2: 5 -> 6 -> 7 (Visual LTR: 5 is Left, 7 is Right)
     for (let s = 6; s <= TOTAL_STEPS; s++) {
       pathString += ` L ${centers[s].x.toFixed(1)},${centers[s].y.toFixed(1)}`;
       stationSubpaths[s] = pathString;

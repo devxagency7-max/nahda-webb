@@ -11,7 +11,7 @@
         </div>
         <div>
           <h2 class="glass-card__title">3. بيانات السكن والمبنى</h2>
-          <p class="glass-card__subtitle">وصف السكن، طبيعته، وحالة المبنى والسقف والأرضية والمدخل ودورات المياه</p>
+          <p class="glass-card__subtitle">وصف السكن وحالة المبنى ودورات المياه، والمرافق (كهرباء، مياه، غاز) والأجهزة الأساسية</p>
         </div>
       </div>
     </div>
@@ -110,6 +110,195 @@
         <div class="chip-field__options">
           <button type="button" class="chip-btn" data-value="ادمي">ادمي</button>
           <button type="button" class="chip-btn" data-value="غير ادمي">غير ادمي</button>
+          <button type="button" class="chip-btn" data-value="أخرى">أخرى</button>
+        </div>
+        <input type="text" class="form-input chip-field__other" style="display: none;" placeholder="اكتب هنا...">
+      </div>
+
+      <div class="chip-field" data-field="sanitation">
+        <div class="chip-field__header">
+          <span class="chip-field__label">الصرف الصحي</span>
+          <span class="badge chip-field__count">0 اختيار</span>
+        </div>
+        <div class="chip-field__options">
+          <button type="button" class="chip-btn" data-value="شبكة عامة">شبكة عامة</button>
+          <button type="button" class="chip-btn" data-value="ترنش">ترنش</button>
+          <button type="button" class="chip-btn" data-value="بيارة">بيارة</button>
+          <button type="button" class="chip-btn" data-value="مفيش">مفيش</button>
+          <button type="button" class="chip-btn" data-value="أخرى">أخرى</button>
+        </div>
+        <input type="text" class="form-input chip-field__other" style="display: none;" placeholder="اكتب هنا...">
+      </div>
+
+      <div class="chip-field" data-field="electricity">
+        <div class="chip-field__header">
+          <span class="chip-field__label">الكهرباء</span>
+          <span class="badge chip-field__count">0 اختيار</span>
+        </div>
+        <div class="chip-field__options">
+          <button type="button" class="chip-btn" data-value="عداد">عداد</button>
+          <button type="button" class="chip-btn" data-value="ممارسة">ممارسة</button>
+          <button type="button" class="chip-btn" data-value="أخرى">أخرى</button>
+        </div>
+        <input type="text" class="form-input chip-field__other" style="display: none;" placeholder="اكتب هنا...">
+      </div>
+
+      <div class="chip-field" data-field="waterMeter">
+        <div class="chip-field__header">
+          <span class="chip-field__label">عداد المياه</span>
+          <span class="badge chip-field__count">0 اختيار</span>
+        </div>
+        <div class="chip-field__options">
+          <button type="button" class="chip-btn" data-value="عداد">عداد</button>
+          <button type="button" class="chip-btn" data-value="ممارسة">ممارسة</button>
+          <button type="button" class="chip-btn" data-value="أخرى">أخرى</button>
+        </div>
+        <input type="text" class="form-input chip-field__other" style="display: none;" placeholder="اكتب هنا...">
+      </div>
+
+      <div class="chip-field" data-field="waterMotor">
+        <div class="chip-field__header">
+          <span class="chip-field__label">موتور مياه</span>
+          <span class="badge chip-field__count">0 اختيار</span>
+        </div>
+        <div class="chip-field__options">
+          <button type="button" class="chip-btn" data-value="يوجد">يوجد</button>
+          <button type="button" class="chip-btn" data-value="لا يوجد">لا يوجد</button>
+          <button type="button" class="chip-btn" data-value="أخرى">أخرى</button>
+        </div>
+        <input type="text" class="form-input chip-field__other" style="display: none;" placeholder="اكتب هنا...">
+      </div>
+
+      <div class="chip-field" data-field="gas">
+        <div class="chip-field__header">
+          <span class="chip-field__label">الغاز</span>
+          <span class="badge chip-field__count">0 اختيار</span>
+        </div>
+        <div class="chip-field__options">
+          <button type="button" class="chip-btn" data-value="يوجد">يوجد</button>
+          <button type="button" class="chip-btn" data-value="لا يوجد">لا يوجد</button>
+          <button type="button" class="chip-btn" data-value="أخرى">أخرى</button>
+        </div>
+        <input type="text" class="form-input chip-field__other" style="display: none;" placeholder="اكتب هنا...">
+      </div>
+
+      <div class="chip-field" data-field="fridge">
+        <div class="chip-field__header">
+          <span class="chip-field__label">الثلاجة</span>
+          <span class="badge chip-field__count">0 اختيار</span>
+        </div>
+        <div class="chip-field__options">
+          <button type="button" class="chip-btn" data-value="يوجد">يوجد</button>
+          <button type="button" class="chip-btn" data-value="لا يوجد">لا يوجد</button>
+          <button type="button" class="chip-btn" data-value="أخرى">أخرى</button>
+        </div>
+        <input type="text" class="form-input chip-field__other" style="display: none;" placeholder="اكتب هنا...">
+      </div>
+
+      <div class="chip-field" data-field="washer">
+        <div class="chip-field__header">
+          <span class="chip-field__label">الغسالة</span>
+          <span class="badge chip-field__count">0 اختيار</span>
+        </div>
+        <div class="chip-field__options">
+          <button type="button" class="chip-btn" data-value="لا يوجد">لا يوجد</button>
+          <button type="button" class="chip-btn" data-value="عادية">عادية</button>
+          <button type="button" class="chip-btn" data-value="هاف اوتوماتيك">هاف اوتوماتيك</button>
+          <button type="button" class="chip-btn" data-value="أخرى">أخرى</button>
+        </div>
+        <input type="text" class="form-input chip-field__other" style="display: none;" placeholder="اكتب هنا...">
+      </div>
+
+      <div class="chip-field" data-field="oven">
+        <div class="chip-field__header">
+          <span class="chip-field__label">فرن خبيز</span>
+          <span class="badge chip-field__count">0 اختيار</span>
+        </div>
+        <div class="chip-field__options">
+          <button type="button" class="chip-btn" data-value="يوجد">يوجد</button>
+          <button type="button" class="chip-btn" data-value="لا يوجد">لا يوجد</button>
+          <button type="button" class="chip-btn" data-value="أخرى">أخرى</button>
+        </div>
+        <input type="text" class="form-input chip-field__other" style="display: none;" placeholder="اكتب هنا...">
+      </div>
+
+      <div class="chip-field" data-field="cookingAppliances">
+        <div class="chip-field__header">
+          <span class="chip-field__label">أجهزة الطبخ</span>
+          <span class="badge chip-field__count">0 اختيار</span>
+        </div>
+        <div class="chip-field__options">
+          <button type="button" class="chip-btn" data-value="شعلة">شعلة</button>
+          <button type="button" class="chip-btn" data-value="بوتوجاز">بوتوجاز</button>
+          <button type="button" class="chip-btn" data-value="لا يوجد">لا يوجد</button>
+          <button type="button" class="chip-btn" data-value="أخرى">أخرى</button>
+        </div>
+        <input type="text" class="form-input chip-field__other" style="display: none;" placeholder="اكتب هنا...">
+      </div>
+
+      <div class="chip-field" data-field="computer">
+        <div class="chip-field__header">
+          <span class="chip-field__label">حاسب آلي</span>
+          <span class="badge chip-field__count">0 اختيار</span>
+        </div>
+        <div class="chip-field__options">
+          <button type="button" class="chip-btn" data-value="للتعليم">للتعليم</button>
+          <button type="button" class="chip-btn" data-value="للتسلية">للتسلية</button>
+          <button type="button" class="chip-btn" data-value="لا يوجد">لا يوجد</button>
+          <button type="button" class="chip-btn" data-value="أخرى">أخرى</button>
+        </div>
+        <input type="text" class="form-input chip-field__other" style="display: none;" placeholder="اكتب هنا...">
+      </div>
+
+      <div class="chip-field" data-field="tv">
+        <div class="chip-field__header">
+          <span class="chip-field__label">التلفاز</span>
+          <span class="badge chip-field__count">0 اختيار</span>
+        </div>
+        <div class="chip-field__options">
+          <button type="button" class="chip-btn" data-value="تلفاز">تلفاز</button>
+          <button type="button" class="chip-btn" data-value="شاشة">شاشة</button>
+          <button type="button" class="chip-btn" data-value="لا يوجد">لا يوجد</button>
+          <button type="button" class="chip-btn" data-value="أخرى">أخرى</button>
+        </div>
+        <input type="text" class="form-input chip-field__other" style="display: none;" placeholder="اكتب هنا...">
+      </div>
+
+      <div class="chip-field" data-field="freezer">
+        <div class="chip-field__header">
+          <span class="chip-field__label">ديب فريزر</span>
+          <span class="badge chip-field__count">0 اختيار</span>
+        </div>
+        <div class="chip-field__options">
+          <button type="button" class="chip-btn" data-value="يوجد">يوجد</button>
+          <button type="button" class="chip-btn" data-value="لا يوجد">لا يوجد</button>
+          <button type="button" class="chip-btn" data-value="أخرى">أخرى</button>
+        </div>
+        <input type="text" class="form-input chip-field__other" style="display: none;" placeholder="اكتب هنا...">
+      </div>
+
+      <div class="chip-field" data-field="transportation">
+        <div class="chip-field__header">
+          <span class="chip-field__label">وسيلة مواصلات</span>
+          <span class="badge chip-field__count">0 اختيار</span>
+        </div>
+        <div class="chip-field__options">
+          <button type="button" class="chip-btn" data-value="سيارة">سيارة</button>
+          <button type="button" class="chip-btn" data-value="موتوسيكل">موتوسيكل</button>
+          <button type="button" class="chip-btn" data-value="توك توك">توك توك</button>
+          <button type="button" class="chip-btn" data-value="أخرى">أخرى</button>
+        </div>
+        <input type="text" class="form-input chip-field__other" style="display: none;" placeholder="اكتب هنا...">
+      </div>
+
+      <div class="chip-field" data-field="internet">
+        <div class="chip-field__header">
+          <span class="chip-field__label">إنترنت</span>
+          <span class="badge chip-field__count">0 اختيار</span>
+        </div>
+        <div class="chip-field__options">
+          <button type="button" class="chip-btn" data-value="يوجد">يوجد</button>
+          <button type="button" class="chip-btn" data-value="لا يوجد">لا يوجد</button>
           <button type="button" class="chip-btn" data-value="أخرى">أخرى</button>
         </div>
         <input type="text" class="form-input chip-field__other" style="display: none;" placeholder="اكتب هنا...">

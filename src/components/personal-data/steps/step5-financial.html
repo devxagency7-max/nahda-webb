@@ -1,0 +1,226 @@
+<!-- TAB 5: الدخل والمصروفات -->
+<div class="step-pane" id="step-pane-5" style="display: none;">
+  <!-- 1. كارت الملخص المالي وصافي الميزانية -->
+  <section class="glass-card" id="card-tab-6-summary">
+    <div class="glass-card__header">
+      <div class="glass-card__title-group">
+        <div class="glass-card__icon" style="background: rgba(16, 185, 129, 0.15); color: #059669;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="1" x2="12" y2="23"></line>
+            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+          </svg>
+        </div>
+        <div>
+          <h2 class="glass-card__title">5. الملخص المالي وصافي الميزانية</h2>
+          <p class="glass-card__subtitle">حساب إجمالي الدخل مقابل المصروفات وصافي الفائض أو العجز المالي</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="financial-summary">
+      <div class="financial-summary__row">
+        <span class="financial-summary__label">إجمالي الدخل الشهري</span>
+        <span id="stat-total-income" class="financial-summary__value" style="color: #059669;">0 جنيه</span>
+      </div>
+
+      <div class="financial-summary__row">
+        <span class="financial-summary__label">إجمالي المصروفات الشهرية</span>
+        <span id="stat-total-expenses" class="financial-summary__value" style="color: #dc2626;">0 جنيه</span>
+      </div>
+
+      <div class="financial-summary__divider"></div>
+
+      <div class="financial-summary__row">
+        <span class="financial-summary__label financial-summary__label--bold">صافي الدخل</span>
+        <span id="stat-net-income" class="financial-summary__value financial-summary__value--bold" style="color: #2563eb;">0 جنيه</span>
+      </div>
+      <div class="financial-summary__hint">
+        محسوب تلقائيًا (Preview — القيمة النهائية من الخادم)
+      </div>
+    </div>
+  </section>
+
+  <!-- 2+3. كارتي مصادر الدخل والمصروفات جمب بعض -->
+  <div class="financial-cards-row">
+    <!-- 2. كارت تفاصيل مصادر الدخل -->
+    <section class="glass-card" id="card-tab-6-income">
+      <div class="glass-card__header" style="justify-content: space-between; flex-wrap: wrap; gap: 14px;">
+        <div class="glass-card__title-group">
+          <div class="glass-card__icon" style="background: rgba(16, 185, 129, 0.15); color: #059669;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="1" x2="12" y2="23"></line>
+              <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+            </svg>
+          </div>
+          <div>
+            <h3 class="glass-card__title">مصادر الدخل الشهرية</h3>
+            <p class="glass-card__subtitle">تسجيل كافة مصادر دخل أفراد الأسرة بالتفصيل</p>
+          </div>
+        </div>
+
+        <button class="btn btn--primary" id="btn-open-add-income" type="button" data-disclosure aria-expanded="false" aria-controls="add-income-inline-form">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          <span>إضافة مصدر دخل</span>
+        </button>
+      </div>
+
+      <!-- Inline Add Income Form -->
+      <div class="inline-member-form" id="add-income-inline-form" role="group" aria-label="نموذج إضافة بند دخل" style="display: none; margin-bottom: 20px;">
+        <div class="form-grid form-grid--3-col">
+          <div class="form-group">
+            <label class="form-label" for="new-income-type">نوع المصدر</label>
+            <div class="form-select-wrapper">
+              <select id="new-income-type" class="form-select">
+                <option value="راتب">راتب</option>
+                <option value="عمل حر">عمل حر / يومية</option>
+                <option value="معاش">معاش تأميني</option>
+                <option value="تكافل وكرامة">معاش تكافل وكرامة</option>
+                <option value="زراعة">زراعة</option>
+                <option value="تجارة">تجارة</option>
+                <option value="إيجار">إيجار عقار/أرض</option>
+                <option value="أخرى">أخرى</option>
+              </select>
+              <svg class="select-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="new-income-person">اسم الفرد صاحب الدخل</label>
+            <input type="text" id="new-income-person" class="form-input" placeholder="اسم رب الأسرة أو التابع...">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="new-income-amount">المبلغ</label>
+            <input type="text" inputmode="decimal" data-numeric="decimal" id="new-income-amount" class="form-input" placeholder="المبلغ بالجنيه...">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="new-income-frequency">الدورية</label>
+            <div class="form-select-wrapper">
+              <select id="new-income-frequency" class="form-select" data-no-other="true">
+                <option value="يومي">يومي</option>
+                <option value="أسبوعي">أسبوعي</option>
+                <option value="شهري" selected>شهري</option>
+                <option value="موسمي">موسمي</option>
+                <option value="سنوي">سنوي</option>
+              </select>
+              <svg class="select-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </div>
+          </div>
+
+          <div class="form-group form-group--full">
+            <label class="form-label" for="new-income-notes">ملاحظات (اختياري)</label>
+            <input type="text" id="new-income-notes" class="form-input" placeholder="أدخل أي ملاحظات إضافية...">
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 14px;">
+          <button class="btn btn--secondary" type="button" id="btn-cancel-add-income">إلغاء</button>
+          <button class="btn btn--primary" type="button" id="btn-save-income">حفظ مصدر الدخل</button>
+        </div>
+      </div>
+
+      <div id="income-list-container">
+        <div class="members-empty-state" id="income-empty-state"
+          style="text-align: center; padding: 16px; color: var(--text-muted); font-size: 13px;">
+          لسه مفيش مصادر دخل متسجلة. لو في أي دخل للأسرة، اضغط "إضافة مصدر دخل" وسجّله.
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. كارت تفاصيل المصروفات -->
+    <section class="glass-card" id="card-tab-6-expenses">
+      <div class="glass-card__header" style="justify-content: space-between; flex-wrap: wrap; gap: 14px;">
+        <div class="glass-card__title-group">
+          <div class="glass-card__icon" style="background: rgba(239, 68, 68, 0.15); color: #dc2626;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="1" x2="12" y2="23"></line>
+              <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+            </svg>
+          </div>
+          <div>
+            <h3 class="glass-card__title">المصروفات والنفقات الشهرية</h3>
+            <p class="glass-card__subtitle">تسجيل الإيجار، الفواتير، العلاج، المصاريف والالتزامات</p>
+          </div>
+        </div>
+
+        <button class="btn btn--primary" id="btn-open-add-expense" type="button" data-disclosure aria-expanded="false" aria-controls="add-expense-inline-form">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          <span>إضافة مصروف</span>
+        </button>
+      </div>
+
+      <!-- Inline Add Expense Form -->
+      <div class="inline-member-form" id="add-expense-inline-form" role="group" aria-label="نموذج إضافة بند مصروف" style="display: none; margin-bottom: 20px;">
+        <div class="form-grid form-grid--2-col">
+          <div class="form-group">
+            <label class="form-label" for="new-expense-type">نوع المصروف / النفقة</label>
+            <div class="form-select-wrapper">
+              <select id="new-expense-type" class="form-select">
+                <option value="إيجار سكن">إيجار سكن</option>
+                <option value="فواتير مياه وكهرباء وغاز">فواتير مياه وكهرباء وغاز</option>
+                <option value="أكل وشرب وطعام">أكل وشرب وطعام</option>
+                <option value="تعليم ومصروفات دراسية">تعليم ومصروفات دراسية</option>
+                <option value="علاج وأدوية">علاج وأدوية</option>
+                <option value="أقساط وقروض">أقساط وقروض</option>
+                <option value="مواصلات">مواصلات</option>
+                <option value="أخرى">أخرى</option>
+              </select>
+              <svg class="select-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="new-expense-amount">المبلغ</label>
+            <input type="text" inputmode="decimal" data-numeric="decimal" id="new-expense-amount" class="form-input" placeholder="المبلغ بالجنيه...">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="new-expense-frequency">الدورية</label>
+            <div class="form-select-wrapper">
+              <select id="new-expense-frequency" class="form-select" data-no-other="true">
+                <option value="يومي">يومي</option>
+                <option value="أسبوعي">أسبوعي</option>
+                <option value="شهري" selected>شهري</option>
+                <option value="موسمي">موسمي</option>
+                <option value="سنوي">سنوي</option>
+              </select>
+              <svg class="select-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </div>
+          </div>
+
+          <div class="form-group form-group--full">
+            <label class="form-label" for="new-expense-notes">ملاحظات (اختياري)</label>
+            <input type="text" id="new-expense-notes" class="form-input" placeholder="أدخل أي ملاحظات إضافية...">
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 14px;">
+          <button class="btn btn--secondary" type="button" id="btn-cancel-add-expense">إلغاء</button>
+          <button class="btn btn--primary" type="button" id="btn-save-expense">حفظ المصروف</button>
+        </div>
+      </div>
+
+      <div id="expense-list-container">
+        <div class="members-empty-state" id="expense-empty-state"
+          style="text-align: center; padding: 16px; color: var(--text-muted); font-size: 13px;">
+          لسه مفيش مصروفات متسجلة. اضغط "إضافة مصروف" وسجّل التزامات الأسرة الشهرية.
+        </div>
+      </div>
+    </section>
+  </div>
+</div>

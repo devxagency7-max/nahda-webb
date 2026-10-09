@@ -48,7 +48,7 @@ function livestockAnswer() {
 }
 
 function livestockChipField() {
-  return DOM.qs('#step-pane-5 .chip-field[data-field="livestock"]');
+  return DOM.qs('#step-pane-4 .chip-field[data-field="livestock"]');
 }
 
 function readLivestockChips() {
@@ -151,9 +151,9 @@ export function agricultureProgress() {
 /* ---------- إبراز/مسح حالات الخطأ ---------- */
 
 export function clearAgricultureErrors() {
-  DOM.qsa('#step-pane-5 .field-invalid').forEach(el => el.classList.remove('field-invalid'));
-  DOM.qsa('#step-pane-5 .agri-yesno--invalid').forEach(el => el.classList.remove('agri-yesno--invalid'));
-  DOM.qsa('#step-pane-5 .chip-field--invalid').forEach(el => el.classList.remove('chip-field--invalid'));
+  DOM.qsa('#step-pane-4 .field-invalid').forEach(el => el.classList.remove('field-invalid'));
+  DOM.qsa('#step-pane-4 .agri-yesno--invalid').forEach(el => el.classList.remove('agri-yesno--invalid'));
+  DOM.qsa('#step-pane-4 .chip-field--invalid').forEach(el => el.classList.remove('chip-field--invalid'));
 }
 
 export function highlightAgricultureIssues(issues) {
@@ -227,7 +227,7 @@ export function initAgricultureManager() {
     const isOwned = type === 'تمليك';
     if (rentGroup) rentGroup.style.display = isRent ? 'block' : 'none';
     if (incomeGroup) incomeGroup.style.display = isOwned ? 'block' : 'none';
-    // الحقل المخفي بيتمسح فعليًا — مايفضلش محتفظ بقيمة قديمة تتحسب في المرحلة 6.
+    // الحقل المخفي بيتمسح فعليًا — مايفضلش محتفظ بقيمة قديمة تتحسب في المرحلة 5.
     if (!isRent) clearFieldValues(['agri-rent-amount']);
     if (!isOwned) clearFieldValues(['agri-annual-income']);
   }
@@ -379,7 +379,7 @@ export function initAgricultureManager() {
   }
 
   restore();
-  // إبلاغ المرحلة 6 وشريط التقدّم بالقيم المستعادة.
+  // إبلاغ المرحلة 5 وشريط التقدّم بالقيم المستعادة.
   triggerWorkflowRecalc();
 
   _restoreCallback = () => {
