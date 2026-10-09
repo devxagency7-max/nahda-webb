@@ -8,6 +8,66 @@ import { triggerWorkflowRecalc } from '../../core/state.js';
 import { store } from '../../state/store.js';
 import { DOM } from '../../utils/dom.js';
 import { parseEgyptianNationalId, normalizeNumerals } from '../../utils/nationalId.js';
+import { isValidEgyptianPhone, PHONE_ERROR_MESSAGE } from '../../utils/phone.js';
+import { confirmDialog } from '../../utils/dialog.js';
+
+/**
+ * قيم الحقول اللي السيرفر بيفرّق فيها بين null («سيب القديم») و"" («امسح»)،
+ * بأسماء الـ API، من شكل الكارت (dataset أو بيانات الفورم). المرحلة/الصف/الكلية
+ * للطالب بس، والمؤهل لغير الطالب بس.
+ */
+export function memberClearableValues(m) {
+  const student = m.isStudent === true || m.isStudent === 'true';
+  const text = v => (v == null ? '' : String(v).trim());
+  return {
+    nationalId: text(m.idNum),
+    job: m.job === 'غير محدد' ? '' : text(m.job),
+    notes: text(m.notes),
+    grade: student ? text(m.grade) : '',
+    university: student ? text(m.university) : '',
+    phone: text(m.phone),
+    diseases: text(m.diseases),
+    educationStage: student ? text(m.stage) : '',
+    education: student ? '' : text(m.qualification)
+  };
+}
+
+/** الحقول (بأسماء الـ API) اللي كان فيها قيمة في أي وقت — `dataset.filled`. */
+export function memberFilledKeys(m) {
+  return new Set(String(m.filled || '').split(',').filter(Boolean));
+}
+
+/**
+ * يحط قيمة في select — لو مش من الخيارات، بيفعّل «أخرى» بالقيمة الحرة
+ * (other-dropdowns.component.js) بدل ما المتصفح يسيب الـ select فاضي.
+ */
+function setSelectWithOther(select, value) {
+  if (!select) return;
+  resetOtherOption(select);
+  if (!value) return;
+  if ([...select.options].some(o => o.value === value)) {
+    select.value = value;
+  } else {
+    const otherOpt = [...select.options].find(o => o.dataset.isOther === 'true' || o.value === 'أخرى');
+    if (!otherOpt) return;
+    otherOpt.value = value;
+    otherOpt.textContent = `أخرى: ${value}`;
+    select.value = value;
+  }
+  select.dispatchEvent(new Event('change', { bubbles: true }));
+}
+
+/** يرجّع خيار «أخرى» لأصله ويفضّي الـ select (ويقفل خانة الكتابة الحرة). */
+function resetOtherOption(select) {
+  if (!select) return;
+  const otherOpt = [...select.options].find(o => o.dataset.isOther === 'true');
+  if (otherOpt) {
+    otherOpt.value = 'أخرى';
+    otherOpt.textContent = 'أخرى (كتابة مخصصة...)';
+  }
+  select.value = '';
+  select.dispatchEvent(new Event('change', { bubbles: true }));
+}
 
 // initFamilyMembersManager() بيتنادى مرة واحدة بس عند فتح التطبيق — قائمة
 // الأفراد وuseCount بتاعتها closures محلية، فمفيش طريقة توصلهم من برّه غير
@@ -24,8 +84,8 @@ let _loadCallback = null;
 /**
  * يعرض أفراد أسرة حالة محفوظة سابقًا — بيتنادى لما المستخدم يفتح حالة
  * موجودة للتعديل. `members` بنفس شكل بيانات الكارت (dataset): name, relation,
- * idNum, age, gender, religion, job, income, notes, isStudent, stage, grade,
- * university, qualification, takafulKarama, takafulKaramaAmount.
+ * idNum, age, gender, religion, phone, job, income, notes, diseases, isStudent,
+ * stage, grade, university, qualification, takafulKarama, takafulKaramaAmount.
  */
 export function loadFamilyMembersManager(members) {
   if (_loadCallback) _loadCallback(members || []);
@@ -88,6 +148,18 @@ export function initFamilyMembersManager() {
 
   // الأمراض (نص حر) للفرد التابع
   const diseasesInput = DOM.qs('#new-member-diseases');
+
+  // هاتف الفرد — أرقام عربية ← إنجليزية أثناء الكتابة (مع الإبقاء على + و -).
+  const phoneInput = DOM.qs('#new-member-phone');
+  if (phoneInput) {
+    phoneInput.addEventListener('input', () => {
+      const clean = phoneInput.value
+        .replace(/[٠-٩]/g, d => String(d.charCodeAt(0) - 0x0660))
+        .replace(/[۰-۹]/g, d => String(d.charCodeAt(0) - 0x06f0))
+        .replace(/[^\d+\-\s]/g, '');
+      if (clean !== phoneInput.value) phoneInput.value = clean;
+    });
+  }
 
   let editingCard = null;
   // مكان أصلي فاضي (placeholder) بيحجز موضع الفورم في الـ DOM لما يتقفل —
@@ -179,8 +251,14 @@ export function initFamilyMembersManager() {
     const incomeInput = DOM.qs('#new-member-income');
     const notesInput = DOM.qs('#new-member-notes');
 
+    // الأول: قيم «أخرى» الحرة من الفرد اللي قبله ترجع لأصلها، وخانة الكتابة
+    // تتقفل (تغيير القيمة من غير حدث change كان بيسيبها مفتوحة).
+    resetOtherOption(relationInput);
+    resetOtherOption(stageSelect);
+    resetOtherOption(qualificationSelect);
+
     if (nameInput) nameInput.value = '';
-    if (relationInput) relationInput.value = '';
+    if (phoneInput) phoneInput.value = '';
     if (idInput) idInput.value = '';
     if (ageInput) ageInput.value = '';
     if (jobInput) jobInput.value = '';
@@ -214,8 +292,10 @@ export function initFamilyMembersManager() {
     const notesInput = DOM.qs('#new-member-notes');
 
     if (nameInput) nameInput.value = d.name || '';
-    if (relationInput) relationInput.value = d.relation || '';
+    // قيمة مكتوبة في «أخرى» (أو مش في القايمة) تظهر في خانة الكتابة بدل ما تتمسح.
+    setSelectWithOther(relationInput, d.relation || '');
     if (idInput) idInput.value = d.idNum || '';
+    if (phoneInput) phoneInput.value = d.phone || '';
     if (ageInput) ageInput.value = d.age || '';
     if (jobInput) jobInput.value = d.job === 'غير محدد' ? '' : (d.job || '');
     if (incomeInput) incomeInput.value = d.income || '';
@@ -232,10 +312,10 @@ export function initFamilyMembersManager() {
 
     if (isStudent) {
       const stage = d.stage || '';
-      if (stageSelect) stageSelect.value = stage;
+      setSelectWithOther(stageSelect, stage);
       handleStageChange(stage, d.grade || '', d.university || '');
-    } else if (qualificationSelect) {
-      qualificationSelect.value = d.qualification || '';
+    } else {
+      setSelectWithOther(qualificationSelect, d.qualification || '');
     }
 
     const isTakaful = d.takafulKarama === 'true';
@@ -359,10 +439,18 @@ export function initFamilyMembersManager() {
   }
 
   function applyMemberDataToCard(card, data) {
-    const { name, relation, idNum, age, gender, religion, job, income, notes, diseases, isStudent, stage, grade, university, qualification, takafulKarama, takafulKaramaAmount, eduDisplay } = data;
+    const { name, relation, idNum, age, gender, religion, phone, job, income, notes, diseases, isStudent, stage, grade, university, qualification, takafulKarama, takafulKaramaAmount, eduDisplay } = data;
     // id ثابت لكل فرد بيتبعت للباك (client-generated UUID) عشان الدعم يتربط بيه.
     card.dataset.memberId = data.memberId || card.dataset.memberId || crypto.randomUUID();
     const finalEduDisplay = eduDisplay || computeEduDisplay(isStudent, stage, grade, university, qualification);
+
+    // الحقول اللي كان فيها قيمة في أي وقت (من السيرفر أو اتكتبت هنا): لو
+    // اتفضّت بعدين بتتبعت "" (امسح)، والفاضية من الأول بتتبعت null (سيب).
+    const filled = memberFilledKeys({ filled: data.filled ?? card.dataset.filled });
+    Object.entries(memberClearableValues(data)).forEach(([key, value]) => {
+      if (value) filled.add(key);
+    });
+    card.dataset.filled = [...filled].join(',');
 
     card.dataset.name = name;
     card.dataset.relation = relation;
@@ -370,6 +458,7 @@ export function initFamilyMembersManager() {
     card.dataset.age = age || '';
     card.dataset.gender = gender || '';
     card.dataset.religion = religion || '';
+    card.dataset.phone = phone || '';
     card.dataset.job = job || 'غير محدد';
     card.dataset.income = income || '';
     card.dataset.notes = notes || '';
@@ -402,6 +491,7 @@ export function initFamilyMembersManager() {
 
           <div style="margin-top: 6px; display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; color: var(--text-secondary);">
             ${idNum ? `<div>🪪 <strong>الرقم القومي:</strong> <span style="font-family: monospace; font-weight: 700;">${DOM.escapeHTML(idNum)}</span></div>` : ''}
+            ${phone ? `<div>📞 <strong>الهاتف:</strong> <span style="font-family: monospace; font-weight: 700;" dir="ltr">${DOM.escapeHTML(phone)}</span></div>` : ''}
             <div>🏫 <strong>التعليم:</strong> ${DOM.escapeHTML(finalEduDisplay)}</div>
             <div>💼 <strong>الوظيفة / العمل:</strong> ${DOM.escapeHTML(job || 'غير محدد')} ${income ? ` • 💵 <strong>الدخل:</strong> <span style="color: #059669; font-weight: 800;">${DOM.escapeHTML(income)} جنيه/شهرياً</span>` : ''}</div>
             ${takafulKarama === true || takafulKarama === 'true' ? `<div>🤝 <strong>تكافل وكرامة:</strong> <span style="color: #7c3aed; font-weight: 800;">مستفيد${takafulKaramaAmount ? ` — ${DOM.escapeHTML(takafulKaramaAmount)} جنيه` : ''}</span></div>` : ''}
@@ -437,6 +527,7 @@ export function initFamilyMembersManager() {
       const age = ageInput ? ageInput.value.trim() : '';
       const gender = memberGenderSelect ? memberGenderSelect.value : '';
       const religion = memberReligionSelect ? memberReligionSelect.value : '';
+      const phone = phoneInput ? phoneInput.value.trim() : '';
       const job = jobInput ? jobInput.value.trim() : 'غير محدد';
       const income = incomeInput ? incomeInput.value.trim() : '';
       const notes = notesInput ? notesInput.value.trim() : '';
@@ -464,18 +555,33 @@ export function initFamilyMembersManager() {
         return;
       }
 
+      // «أخرى» من غير ما تتكتب الصلة الفعلية.
+      if (relation === 'أخرى') {
+        showToast('اكتب صلة القرابة في خانة «أخرى»');
+        const otherInput = relationInput?.closest('.form-select-wrapper')?.querySelector('.in-field-other-input');
+        if (otherInput) otherInput.focus();
+        return;
+      }
+
       if (idNum && idNum.length !== 14) {
         showToast('الرقم القومي يتكون من 14 رقم بالكامل');
         if (idInput) idInput.focus();
         return;
       }
 
-      const memberData = { name, relation, idNum, age, gender, religion, job, income, notes, diseases, isStudent, stage, grade, university, qualification, takafulKarama, takafulKaramaAmount, eduDisplay };
+      if (!isValidEgyptianPhone(phone)) {
+        showToast(PHONE_ERROR_MESSAGE);
+        if (phoneInput) phoneInput.focus();
+        return;
+      }
+
+      const memberData = { name, relation, idNum, age, gender, religion, phone, job, income, notes, diseases, isStudent, stage, grade, university, qualification, takafulKarama, takafulKaramaAmount, eduDisplay };
 
       if (editingCard) {
         applyMemberDataToCard(editingCard, memberData);
         bindDeleteButton(editingCard);
         closeModal();
+        sortCardsByAge();
         saveMembersToStore();
         showToast(`تم تحديث بيانات الفرد "${name}" بنجاح ✏️`);
       } else {
@@ -486,12 +592,36 @@ export function initFamilyMembersManager() {
         bindDeleteButton(memberCardHtml);
         membersList.appendChild(memberCardHtml);
         closeModal();
+        sortCardsByAge();
         saveMembersToStore();
         showToast(`تمت إضافة الفرد التابع "${name}" بنجاح 👤`);
       }
 
       updateMembersCount();
     });
+  }
+
+  /**
+   * يرتّب الكروت بالسن: الأكبر فوق والأصغر تحت، واللي سنه مش معروف في الآخر
+   * (نفس السن يفضل بترتيب الإضافة). ترتيب الكروت هو ترتيب القايمة المبعوتة.
+   */
+  function sortCardsByAge() {
+    if (!membersList) return;
+    const ageOf = card => {
+      const n = parseInt(card.dataset.age, 10);
+      return Number.isFinite(n) ? n : null;
+    };
+    [...membersList.querySelectorAll('.member-card')]
+      .map((card, index) => ({ card, index, age: ageOf(card) }))
+      .sort((a, b) => {
+        if (a.age !== b.age) {
+          if (a.age === null) return 1;
+          if (b.age === null) return -1;
+          return b.age - a.age;
+        }
+        return a.index - b.index;
+      })
+      .forEach(({ card }) => membersList.appendChild(card));
   }
 
   function saveMembersToStore() {
@@ -517,14 +647,23 @@ export function initFamilyMembersManager() {
         membersList.appendChild(card);
       });
     }
+    sortCardsByAge();
+    saveMembersToStore();
   }
 
   function bindDeleteButton(card) {
     const delBtn = card.querySelector('.btn-delete-member');
     if (!delBtn) return;
-    delBtn.addEventListener('click', (e) => {
+    delBtn.addEventListener('click', async (e) => {
       e.stopPropagation();
       const name = card.dataset.name || card.querySelector('.member-card__name')?.textContent || 'الفرد';
+      const confirmed = await confirmDialog({
+        title: 'حذف فرد من الأسرة',
+        message: `"${name}" هيتشال من أفراد الأسرة. متأكد؟`,
+        confirmLabel: 'حذف',
+        danger: true
+      });
+      if (!confirmed || !card.isConnected) return;
       card.remove();
       saveMembersToStore();
       updateMembersCount();

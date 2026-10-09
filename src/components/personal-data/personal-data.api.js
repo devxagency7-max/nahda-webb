@@ -23,6 +23,7 @@ import { choiceDialog } from '../../utils/dialog.js';
 import { loadCaseIntoForm } from './case-edit.loader.js';
 import { collectSupportItems, getSupportValidationError } from '../support/support.component.js';
 import { addUploadedAttachmentRow } from '../attachments/attachments.component.js';
+import { memberClearableValues, memberFilledKeys } from '../family-members/family-members.component.js';
 
 function val(id) {
   const el = DOM.qs(`#${id}`);
@@ -333,27 +334,37 @@ function collectBeneficiaryPayload() {
  * mapMembersFromApi في case-edit.loader.js.
  */
 function collectFamilyMembersPayload() {
-  return (store.familyMembers || []).map(m => ({
-    id: m.memberId || undefined,
-    name: m.name || '',
-    relation: m.relation || '',
-    nationalId: m.idNum || null,
-    age: m.age ? Number(m.age) : null,
-    gender: m.gender || null,
-    isStudent: m.isStudent === 'true' || m.isStudent === true,
-    educationStage: m.stage || null,
-    grade: m.grade || null,
-    university: m.university || null,
-    education: m.qualification || null,
-    job: m.job && m.job !== 'غير محدد' ? m.job : null,
-    monthlyIncome: m.income ? Number(m.income) : null,
-    notes: m.notes || null,
-    // فاضي لازم يتبعت "" (مش null) — الباك-إند بيفرّق بينهم فعليًا لـ diseases:
-    // null/محذوف = سيبها زي ما هي، "" = امسحها فعليًا (راجع رد الباك-إند).
-    diseases: m.diseases ?? '',
-    takafulBeneficiary: m.takafulKarama === 'true' || m.takafulKarama === true,
-    takafulAmount: m.takafulKaramaAmount ? Number(m.takafulKaramaAmount) : null
-  }));
+  return (store.familyMembers || []).map((m, index) => {
+    // الباك إند (2026-10-08 §6): null = سيب القيمة القديمة، "" = امسحها. فالخانة
+    // الفاضية بتتبعت "" لو كان فيها قيمة قبل كده (من السيرفر أو اتكتبت)، و null
+    // لو فاضية من الأول — كده الفرد اللي بطّل يبقى طالب بتتمسح مرحلته وصفه وكليته.
+    const values = memberClearableValues(m);
+    const filled = memberFilledKeys(m);
+    const clearable = key => values[key] || (filled.has(key) ? '' : null);
+    return {
+      id: m.memberId || undefined,
+      name: m.name || '',
+      relation: m.relation || '',
+      nationalId: clearable('nationalId'),
+      age: m.age ? Number(m.age) : null,
+      gender: m.gender || null,
+      religion: m.religion || null,
+      isStudent: m.isStudent === 'true' || m.isStudent === true,
+      educationStage: clearable('educationStage'),
+      grade: clearable('grade'),
+      university: clearable('university'),
+      education: clearable('education'),
+      job: clearable('job'),
+      monthlyIncome: m.income ? Number(m.income) : null,
+      phone: clearable('phone'),
+      diseases: clearable('diseases'),
+      notes: clearable('notes'),
+      takafulBeneficiary: m.takafulKarama === 'true' || m.takafulKarama === true,
+      takafulAmount: m.takafulKaramaAmount ? Number(m.takafulKaramaAmount) : null,
+      // ترتيب القايمة (الأكبر سنًا فوق) — من 0.
+      sortOrder: index
+    };
+  });
 }
 
 /**
