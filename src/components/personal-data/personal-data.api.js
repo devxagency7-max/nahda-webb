@@ -154,9 +154,11 @@ async function askConflictResolution(err) {
  *   return a ready-to-show message string (or null/undefined to fall back
  *   to the generic message) — used to turn the specific invalid field red
  *   instead of just showing a generic toast (see applyStep1ServerValidationErrors).
+ * @param {Function} [opts.messageFor] - (err) => رسالة أدق لأي كود خطأ (مثلًا
+ *   أخطاء أفراد الأسرة)، أو undefined. بتتشيّك قبل onValidationDetails.
  */
 async function runSave(promiseFactory, opts = {}) {
-  const { onConflict, onValidationDetails } = opts;
+  const { onConflict, onValidationDetails, messageFor } = opts;
   try {
     return await promiseFactory();
   } catch (err) {
@@ -172,7 +174,10 @@ async function runSave(promiseFactory, opts = {}) {
       throw err;
     }
     let message = messageFromError(err);
-    if (err instanceof ApiError && err.code === 'VALIDATION_ERROR' && err.details && onValidationDetails) {
+    const custom = messageFor ? messageFor(err) : undefined;
+    if (custom) {
+      message = custom;
+    } else if (err instanceof ApiError && err.code === 'VALIDATION_ERROR' && err.details && onValidationDetails) {
       message = onValidationDetails(err.details, err) || message;
     }
     showToast(message, 'error');
@@ -209,11 +214,72 @@ async function pushFamilyMembers(caseId) {
   notifyRemovedSupport(result);
 }
 
-/** 422 «معرّف الفرد مستخدم في حالة أخرى / مكرر» — رسالة الباك نفسها أوضح من الافتراضية. */
-function memberIdErrorMessage(err) {
-  return err instanceof ApiError && err.code === 'VALIDATION_ERROR' && /معرّف الفرد/.test(err.message || '')
-    ? err.message
-    : undefined;
+const MEMBER_FIELD_LABELS = {
+  name: 'الاسم',
+  relation: 'صلة القرابة',
+  nationalid: 'الرقم القومي',
+  age: 'السن',
+  gender: 'النوع',
+  religion: 'الديانة',
+  phone: 'رقم الهاتف',
+  educationstage: 'المرحلة التعليمية',
+  grade: 'الصف',
+  university: 'الكلية / التخصص',
+  education: 'المؤهل الدراسي',
+  job: 'الوظيفة',
+  monthlyincome: 'الدخل الشهري',
+  takafulamount: 'مبلغ تكافل وكرامة',
+  diseases: 'الأمراض',
+  notes: 'الملاحظات'
+};
+
+/**
+ * ترتيب الفرد واسم الخانة من تفاصيل خطأ PUT /family-members — الباك (2026-10-08
+ * §6) بيبعتها بشكلين: `details.field = "members[2].id"` + `details.reason`، أو
+ * مفتاح الخانة نفسه `"members[2].grade": ["..."]`.
+ */
+function memberErrorRef(details) {
+  if (!details || typeof details !== 'object') return null;
+  const pattern = /members\[(\d+)\]\.?(\w*)/i;
+  const asList = v => (Array.isArray(v) ? v : v == null ? [] : [v]);
+  for (const value of asList(details.field)) {
+    const m = pattern.exec(String(value));
+    if (m) return { index: Number(m[1]), field: m[2].toLowerCase(), message: null };
+  }
+  for (const [key, value] of Object.entries(details)) {
+    const m = pattern.exec(key);
+    if (m) return { index: Number(m[1]), field: m[2].toLowerCase(), message: asList(value)[0] || null };
+  }
+  return null;
+}
+
+/**
+ * رسالة واضحة لرفض أفراد الأسرة بتسمّي الفرد والخانة (ترتيب الفرد في الطلب =
+ * ترتيب store.familyMembers)، أو undefined لو الخطأ مش خاص بفرد.
+ */
+function familyMembersErrorMessage(err) {
+  if (!(err instanceof ApiError)) return undefined;
+  const ref = memberErrorRef(err.details);
+  const reasonValue = err.details?.reason;
+  const reason = Array.isArray(reasonValue) ? reasonValue[0] : reasonValue;
+  const name = ref ? (store.familyMembers?.[ref.index]?.name || '').trim() : '';
+  const who = name ? `الفرد «${name}»` : 'أحد الأفراد';
+
+  if (err.code === 'DUPLICATE_NATIONAL_ID_IN_CASE') {
+    return `الرقم القومي بتاع ${who} متكرر مع فرد تاني أو مع رب الأسرة — صلّحه وجرّب تاني`;
+  }
+  if (err.code !== 'VALIDATION_ERROR' || !ref) return undefined;
+  if (reason === 'duplicate_in_request') {
+    return `${who} متكرر في القايمة — احذف النسخة الزيادة وجرّب تاني`;
+  }
+  if (reason === 'id_belongs_to_other_case' || ref.field === 'id') {
+    return `${who} متسجّل بمعرّف مستخدم في حالة تانية — احذفه من القايمة وضيفه تاني، وبعدين احفظ`;
+  }
+  const label = MEMBER_FIELD_LABELS[ref.field];
+  const detail = ref.message && !/[A-Za-z]{3,}/.test(ref.message)
+    ? ref.message
+    : 'القيمة مش مقبولة (ممكن تكون أطول من المسموح)';
+  return label ? `${who} — ${label}: ${detail}` : `${who}: ${detail}`;
 }
 
 /* ---------------------------- Step 1 — Demographics ---------------------------- */
@@ -597,7 +663,8 @@ export async function saveStep1() {
       showToast(`تم إنشاء الحالة رقم ${created.caseNumber} وحفظ بيانات رب الأسرة بنجاح 🎉`, 'success', 6000);
       return true;
     }, {
-      onValidationDetails: (details, err) => applyStep1ServerValidationErrors(details) || memberIdErrorMessage(err)
+      messageFor: familyMembersErrorMessage,
+      onValidationDetails: details => applyStep1ServerValidationErrors(details)
     }).then(() => true, () => false);
   }
 
@@ -640,7 +707,8 @@ export async function saveStep1() {
       rememberServerBeneficiary(fresh?.beneficiary);
       store.setCurrentCase({ ...store.currentCase, charityId: fresh?.charityId || null });
     },
-    onValidationDetails: (details, err) => applyStep1ServerValidationErrors(details) || memberIdErrorMessage(err)
+    messageFor: familyMembersErrorMessage,
+    onValidationDetails: details => applyStep1ServerValidationErrors(details)
   }).then(() => true, () => false);
 }
 
@@ -1054,13 +1122,15 @@ export async function saveStep7() {
       if (cc?.isEditMode && cc.familyLoaded !== true) throw err;
       try {
         await pushFamilyMembers(caseId);
-      } catch {
-        throw err;
+      } catch (memberErr) {
+        // رفض خاص بفرد (رقم قومي متكرر، خانة طويلة...) أوضح من «احفظ الأفراد الأول».
+        throw familyMembersErrorMessage(memberErr) ? memberErr : err;
       }
       return putSupport();
     }
   }, {
     onConflict: (err) => refreshCaseRowVersion(caseId, err),
+    messageFor: familyMembersErrorMessage,
     onValidationDetails: (details, err) => (isMissingMemberError(err) ? SUPPORT_MEMBERS_FIRST_MESSAGE : undefined)
   }).then(() => true, () => false);
 }

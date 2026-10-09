@@ -563,6 +563,19 @@ export function initFamilyMembersManager() {
         return;
       }
 
+      // النوع إلزامي على السيرفر، والسن من 0 لـ 120 (غير كده 422).
+      if (!gender) {
+        showToast('يرجى اختيار نوع الفرد');
+        if (memberGenderSelect) memberGenderSelect.focus();
+        return;
+      }
+
+      if (age && Number(age) > 120) {
+        showToast('السن لازم يكون من 0 لـ 120');
+        if (ageInput) ageInput.focus();
+        return;
+      }
+
       if (idNum && idNum.length !== 14) {
         showToast('الرقم القومي يتكون من 14 رقم بالكامل');
         if (idInput) idInput.focus();

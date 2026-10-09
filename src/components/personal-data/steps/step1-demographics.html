@@ -372,7 +372,7 @@
           <div class="form-group">
             <label class="form-label" for="new-member-name"><span>اسم الفرد التابع الرباعي</span> <span
                 class="form-label__required">*</span></label>
-            <input type="text" id="new-member-name" class="form-input" placeholder="أدخل اسم الفرد بالكامل...">
+            <input type="text" id="new-member-name" class="form-input" maxlength="150" placeholder="أدخل اسم الفرد بالكامل...">
           </div>
 
           <div class="form-group">
@@ -412,7 +412,7 @@
           </div>
 
           <div class="form-group">
-            <label class="form-label" for="new-member-gender">النوع</label>
+            <label class="form-label" for="new-member-gender"><span>النوع</span> <span class="form-label__required">*</span></label>
             <div class="form-select-wrapper">
               <select id="new-member-gender" class="form-select" data-no-other="true">
                 <option value="" selected disabled>اختر النوع...</option>
@@ -487,7 +487,7 @@
 
           <div class="form-group" id="student-uni-group" style="display: none;">
             <label class="form-label" id="student-uni-label" for="new-member-university">اسم الكلية / التخصص / الجامعة</label>
-            <input type="text" id="new-member-university" class="form-input"
+            <input type="text" id="new-member-university" class="form-input" maxlength="150"
               placeholder="أدخل اسم الكلية أو التخصص...">
           </div>
 
@@ -515,7 +515,7 @@
 
           <div class="form-group">
             <label class="form-label" for="new-member-job">الوظيفة / العمل</label>
-            <input type="text" id="new-member-job" class="form-input" placeholder="الوظيفة إن وجدت...">
+            <input type="text" id="new-member-job" class="form-input" maxlength="150" placeholder="الوظيفة إن وجدت...">
           </div>
 
           <div class="form-group">
@@ -543,7 +543,7 @@
 
           <div class="form-group form-group--full">
             <label class="form-label" for="new-member-notes">ملاحظات عن الفرد</label>
-            <input type="text" id="new-member-notes" class="form-input" placeholder="أدخل أي ملاحظات إضافية...">
+            <input type="text" id="new-member-notes" class="form-input" maxlength="1000" placeholder="أدخل أي ملاحظات إضافية...">
           </div>
         </div>
       </div>
