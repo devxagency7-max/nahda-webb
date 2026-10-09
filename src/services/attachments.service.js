@@ -11,12 +11,12 @@
      3. POST /attachments/{id}/commit -> server verifies real magic bytes,
                                      marks the attachment complete
 
-   Allowed MIME types (closed list): image/jpeg, image/png, image/heic,
-   image/webp, application/pdf, application/msword,
-   application/vnd.openxmlformats-officedocument.wordprocessingml.document.
-   Max size: 10 MB exactly. An oversized/disallowed file is rejected at
-   /init, before any bucket write access is minted — check client-side first
-   to avoid a wasted round trip, but never trust the client check alone.
+   Allowed MIME types (closed list, backend reply 2026-10-08 §7): images
+   (jpeg/png/heic/heif/webp) and PDF only — Word files are rejected.
+   Max size: 10 MB per file; max 50 attachments per case. An oversized/
+   disallowed file is rejected at /init, before any bucket write access is
+   minted — check client-side first to avoid a wasted round trip, but never
+   trust the client check alone.
    -------------------------------------------------------------------------- */
 import { HttpClient } from './http.js';
 import { ApiError } from './errors.js';
@@ -27,41 +27,71 @@ const ALLOWED_MIME_TYPES = new Set([
   'image/png',
   'image/heic',
   'image/webp',
-  'application/pdf',
-  'application/msword',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+  'application/pdf'
 ]);
 
-const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
+// Some browsers (Windows especially) give HEIC/HEIF files an empty `type`,
+// and .heif is the same container as .heic — fall back to the extension.
+const MIME_BY_EXTENSION = {
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  png: 'image/png',
+  heic: 'image/heic',
+  heif: 'image/heic',
+  webp: 'image/webp',
+  pdf: 'application/pdf'
+};
+
+const MIME_ALIASES = { 'image/jpg': 'image/jpeg', 'image/heif': 'image/heic' };
+
+export const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
+export const MAX_ATTACHMENTS_PER_CASE = 50;
+export const MAX_FILES_PER_PICK = 5;
+export const MAX_DESCRIPTION_LENGTH = 300;
+
+/** The MIME type to declare for a picked file, or '' if it isn't allowed. */
+export function resolveMimeType(file) {
+  const declared = MIME_ALIASES[file.type] || file.type;
+  if (ALLOWED_MIME_TYPES.has(declared)) return declared;
+  const ext = (file.name.split('.').pop() || '').toLowerCase();
+  return MIME_BY_EXTENSION[ext] || '';
+}
+
+/** Client-side pre-check: an ApiError to show the user, or null if the file is fine. */
+export function validateFile(file) {
+  if (!file.size) {
+    return new ApiError('EMPTY_FILE', `الملف "${file.name}" فاضي، اختار ملف تاني`, undefined, 422);
+  }
+  if (file.size > MAX_FILE_SIZE_BYTES) return new ApiError('FILE_TOO_LARGE', undefined, undefined, 422);
+  if (!resolveMimeType(file)) return new ApiError('UNSUPPORTED_FILE_TYPE', undefined, undefined, 422);
+  return null;
+}
 
 export const AttachmentsService = {
   /**
    * Full three-step upload. Call this with a File object from an <input type="file">.
    * @param {Object} opts
    * @param {string} opts.caseId
-   * @param {string} opts.documentType - closed vocabulary key, e.g. 'national_id_copy'
+   * @param {string} opts.documentType - closed-list code, e.g. 'national_id'
    * @param {File} opts.file
-   * @param {string} [opts.description]
+   * @param {string} [opts.description] - «أخرى» details (max 300)
    * @param {(progress:{stage:string}) => void} [opts.onProgress] - fired at 'init' | 'uploading' | 'commit' | 'done'
    * @returns {Promise<Object>} the commit response: {attachmentId, status:'complete', rowVersion, scanStatus, fileSizeBytes, checksum, ...}
    * @throws {ApiError} FILE_TOO_LARGE | UNSUPPORTED_FILE_TYPE | STORAGE_UNAVAILABLE | VALIDATION_ERROR
    */
   async upload({ caseId, documentType, file, description, onProgress }) {
-    if (file.size > MAX_FILE_SIZE_BYTES) {
-      throw new ApiError('FILE_TOO_LARGE', undefined, undefined, 422);
-    }
-    if (!ALLOWED_MIME_TYPES.has(file.type)) {
-      throw new ApiError('UNSUPPORTED_FILE_TYPE', undefined, undefined, 422);
-    }
+    const invalid = validateFile(file);
+    if (invalid) throw invalid;
+    const mimeType = resolveMimeType(file);
 
     onProgress?.({ stage: 'init' });
     const initRes = await this.init({
       caseId,
       documentType: documentTypeCode(documentType),
       fileName: file.name,
-      mimeType: file.type,
+      mimeType,
       fileSize: file.size,
-      description
+      description: description?.trim() || undefined
     });
 
     // Without this, commit() would hit /attachments/undefined/commit and the
@@ -72,7 +102,9 @@ export const AttachmentsService = {
     }
 
     onProgress?.({ stage: 'uploading' });
-    await this.uploadToStorage(initRes.uploadUrl, file, initRes.mimeType);
+    // The signed URL only accepts the type the server signed; fall back to the
+    // one we sent if the reply ever omits it (never send "undefined").
+    await this.uploadToStorage(initRes.uploadUrl, file, initRes.mimeType || mimeType);
 
     onProgress?.({ stage: 'commit' });
     // One key per logical upload: a network-level retry of this same commit
@@ -83,10 +115,16 @@ export const AttachmentsService = {
     return commitRes;
   },
 
-  /** Step 1 — mint the presigned upload URL. caseId is authorized via the full case-visibility chain before anything is minted. */
+  /**
+   * Step 1 — mint the presigned upload URL. Idempotency-Key is required
+   * (backend reply 2026-10-08 §7). A fresh key per upload on purpose: the
+   * same key replays the same reply for an hour, including an upload URL that
+   * expires after 15 minutes.
+   */
   async init({ caseId, documentType, fileName, mimeType, fileSize, description }) {
     return HttpClient.post('/attachments/init', {
-      body: { caseId, documentType, fileName, mimeType, fileSize, description }
+      body: { caseId, documentType, fileName, mimeType, fileSize, description },
+      idempotencyKey: crypto.randomUUID()
     });
   },
 
@@ -134,5 +172,29 @@ export const AttachmentsService = {
   /** @returns {Promise<PagedResult>} paginated metadata list — never embeds download links; call getDownloadUrl per item. */
   async listForCase(caseId, { page, limit } = {}) {
     return HttpClient.get(`/cases/${caseId}/attachments`, { query: { page, limit } });
+  },
+
+  /**
+   * Every attachment of a case in one `{ items }` result. A case holds 50 at
+   * most, so one page of 50 covers it under the new contract
+   * (total/limit/offset, no hasNext); extra pages serve the current one, and
+   * duplicates are dropped in case the server ignores `page`.
+   */
+  async listAllForCase(caseId) {
+    const items = [];
+    const seen = new Set();
+    for (let page = 1; page <= 10; page++) {
+      const res = await this.listForCase(caseId, { page, limit: MAX_ATTACHMENTS_PER_CASE });
+      let added = 0;
+      for (const item of res?.items || []) {
+        if (item?.id && !seen.has(item.id)) {
+          seen.add(item.id);
+          items.push(item);
+          added++;
+        }
+      }
+      if (!res?.hasNext || added === 0) break;
+    }
+    return { items };
   }
 };

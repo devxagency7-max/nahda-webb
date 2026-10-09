@@ -73,7 +73,8 @@ export const FALLBACK_MESSAGES = {
   IDEMPOTENCY_KEY_REQUIRED: 'لم تكتمل العملية، حاول مرة أخرى',
   FILE_TOO_LARGE: 'حجم الملف أكبر من 10 ميجابايت، اختر ملفًا أصغر',
   UNSUPPORTED_FILE_TYPE: 'نوع هذا الملف غير مدعوم، جرّب صيغة أخرى',
-  STORAGE_UNAVAILABLE: 'خدمة رفع الملفات غير متاحة الآن، حاول بعد قليل'
+  STORAGE_UNAVAILABLE: 'خدمة رفع الملفات غير متاحة الآن، حاول بعد قليل',
+  ATTACHMENT_DELETE_LOCKED: 'الحالة مقفولة، لذلك لا يمكن حذف هذا المرفق الآن'
 };
 
 /** Convenience for callers that just want something to hand `showToast`. */

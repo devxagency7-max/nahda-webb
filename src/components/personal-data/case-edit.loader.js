@@ -19,7 +19,7 @@ import { triggerWorkflowRecalc } from '../../core/state.js';
 import { CasesService } from '../../services/cases.service.js';
 import { AttachmentsService } from '../../services/attachments.service.js';
 import { messageFromError } from '../../services/errors.js';
-import { documentTypeLabel } from '../../services/document-types.js';
+import { renderAttachmentList } from '../attachments/attachments.component.js';
 import { restoreAgricultureManager } from '../agriculture/agriculture.component.js';
 import { loadFamilyMembersManager } from '../family-members/family-members.component.js';
 import { loadFinancialManager } from '../financial-ledger/financial-ledger.component.js';
@@ -152,73 +152,9 @@ function fillStep1(detail) {
 
 /* ---------------------------- تاب 2 — المرفقات ---------------------------- */
 
-/**
- * يمسح مرفق حقيقي من حالة موجودة — DELETE /api/v1/attachments/{id} (موثّق
- * وشغال فعليًا، اتأكد من التوثيق). كان الصف بيتعرض للقراءة بس بدون زرار حذف؛
- * ده مش قيد من الباك إند، كان مجرد وصلة ناقصة عندنا في الفرونت إند.
- */
-async function removeExistingAttachment(row, item) {
-  const delBtn = row.querySelector('.btn-delete-existing-att');
-  if (delBtn) delBtn.disabled = true;
-  try {
-    await AttachmentsService.remove(item.id);
-    row.remove();
-    const listEl = DOM.qs('#attachments-list');
-    const emptyState = DOM.qs('#attachments-empty-state');
-    if (listEl && emptyState) {
-      emptyState.style.display = DOM.qsa('.case-page-att-item', listEl).length === 0 ? 'flex' : 'none';
-    }
-    showToast(`تم حذف المرفق "${item.fileName || ''}"`, 'success');
-    triggerWorkflowRecalc();
-  } catch (err) {
-    if (delBtn) delBtn.disabled = false;
-    showToast(`تعذّر حذف المرفق — ${messageFromError(err)}`, 'error');
-  }
-}
-
+/** الصفوف نفسها (فتح/معاينة، حذف بتأكيد، حالة الرفع) في attachments.component.js. */
 function fillStep2(attachments) {
-  const listEl = DOM.qs('#attachments-list');
-  const emptyState = DOM.qs('#attachments-empty-state');
-  if (!listEl) return;
-
-  DOM.qsa('.case-page-att-item', listEl).forEach(row => row.remove());
-
-  const items = (attachments && attachments.items) || [];
-  if (emptyState) emptyState.style.display = items.length === 0 ? 'flex' : 'none';
-
-  items.forEach(item => {
-    const row = DOM.createElement('div', {
-      className: 'case-page-att-item',
-      dataset: { attId: item.id }
-    });
-
-    const info = DOM.createElement('span', {}, null);
-    info.innerHTML = `📎 <strong>${DOM.escapeHTML(item.fileName || '')}</strong>` +
-      (item.documentType ? ` — ${DOM.escapeHTML(documentTypeLabel(item.documentType))}` : '');
-
-    const actions = DOM.createElement('span', { style: { display: 'flex', alignItems: 'center', gap: '10px' } });
-
-    const delBtn = DOM.createElement('button', {
-      type: 'button',
-      className: 'btn-in-field-reset btn-delete-existing-att',
-      title: 'حذف المرفق',
-      style: { color: '#ef4444' }
-    });
-    delBtn.innerHTML = `
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <polyline points="3 6 5 6 21 6"></polyline>
-        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-      </svg>
-    `;
-    delBtn.addEventListener('click', () => removeExistingAttachment(row, item));
-    actions.appendChild(delBtn);
-
-    row.appendChild(info);
-    row.appendChild(actions);
-    listEl.appendChild(row);
-  });
-
-  triggerWorkflowRecalc();
+  renderAttachmentList((attachments && attachments.items) || []);
 }
 
 /* ---------------------------- تاب 3 — السكن ---------------------------- */
@@ -365,7 +301,7 @@ export async function loadCaseIntoForm(caseId) {
       CasesService.getById(caseId),
       CasesService.getFamilyMembers(caseId),
       CasesService.getSupport(caseId).catch(err => ({ loadError: err })),
-      AttachmentsService.listForCase(caseId).catch(() => ({ items: [] })),
+      AttachmentsService.listAllForCase(caseId).catch(() => ({ items: [] })),
       whenDropdownsReady()
     ]);
 

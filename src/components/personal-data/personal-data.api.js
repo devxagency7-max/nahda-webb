@@ -15,14 +15,15 @@ import { DOM } from '../../utils/dom.js';
 import { store } from '../../state/store.js';
 import { showToast } from '../../utils/toast.js';
 import { CasesService } from '../../services/cases.service.js';
-import { AttachmentsService } from '../../services/attachments.service.js';
+import { AttachmentsService, MAX_ATTACHMENTS_PER_CASE, MAX_FILES_PER_PICK, validateFile } from '../../services/attachments.service.js';
+import { OTHER_DOCUMENT_TYPE } from '../../services/document-types.js';
 import { ApiError, messageFromError } from '../../services/errors.js';
 import { parseEgyptianNationalId } from '../../utils/nationalId.js';
 import { isValidEgyptianPhone, PHONE_ERROR_MESSAGE } from '../../utils/phone.js';
 import { choiceDialog } from '../../utils/dialog.js';
 import { loadCaseIntoForm } from './case-edit.loader.js';
 import { collectSupportItems, getSupportValidationError } from '../support/support.component.js';
-import { addUploadedAttachmentRow } from '../attachments/attachments.component.js';
+import { addUploadedAttachmentRow, attachmentRowCount, renderAttachmentList } from '../attachments/attachments.component.js';
 import { memberClearableValues, memberFilledKeys } from '../family-members/family-members.component.js';
 
 function val(id) {
@@ -715,14 +716,14 @@ export async function saveStep1() {
 /* ---------------------------- Step 2 — Attachments ---------------------------- */
 // Uploads already happen immediately per-file when the user picks one
 // (init -> PUT storage -> commit) — see wireAttachmentUpload() below.
-// "التالي" on this step has nothing further to PUT; it just re-syncs the
-// attachments list from the server so the preview matches reality.
+// "التالي" on this step has nothing further to PUT; it just re-syncs and
+// re-renders the attachments list from the server so it matches reality.
 
 export async function saveStep2() {
   const caseId = currentCaseId();
   if (!caseId) return true; // nothing to sync before the case exists
   return runSave(async () => {
-    await AttachmentsService.listForCase(caseId);
+    renderAttachmentList((await AttachmentsService.listAllForCase(caseId)).items);
     return true;
   }).then(() => true, () => false);
 }
@@ -732,54 +733,110 @@ export async function saveStep2() {
  * Call once during initWorkflowTabs(). Uploads fire on file selection, not
  * on "التالي" — attachments are independent records, not part of the case
  * row, so there is no reason to defer them.
+ *
+ * Up to 5 files per pick, all under the one selected type (product decision),
+ * uploaded one after another (/init is rate-limited per user). One failed file
+ * doesn't stop the rest. «أخرى» details go in `description`.
  */
 export function wireAttachmentUpload() {
   const input = DOM.qs('#case-doc-upload');
   const docTypeSelect = DOM.qs('#case-doc-type');
+  const descGroup = DOM.qs('#case-doc-description-group');
+  const descInput = DOM.qs('#case-doc-description');
   if (!input) return;
 
+  const syncDescription = () => {
+    const isOther = docTypeSelect?.value === OTHER_DOCUMENT_TYPE;
+    if (descGroup) descGroup.style.display = isOther ? '' : 'none';
+    if (!isOther && descInput) descInput.value = '';
+  };
+  docTypeSelect?.addEventListener('change', syncDescription);
+  syncDescription();
+
+  let uploading = false;
+
   input.addEventListener('change', async () => {
-    const file = input.files?.[0];
-    if (!file) return;
+    const picked = [...(input.files || [])];
+    input.value = '';
+    if (!picked.length) return;
+    if (uploading) {
+      showToast('استنى لما الرفع اللي شغال يخلص، وبعدين ارفع ملفات تانية', 'warning');
+      return;
+    }
     const caseId = currentCaseId();
     if (!caseId) {
       showToast('كمّل بيانات المرحلة الأولى واضغط "التالي" الأول، وبعدين ارفع المرفقات 📎', 'warning');
-      input.value = '';
       return;
     }
     const documentType = docTypeSelect?.value || '';
     if (!documentType) {
       showToast('اختَر تصنيف المستند من القائمة فوق الأول، وبعدين ارفع الملف', 'warning');
-      input.value = '';
       return;
     }
+    const description = documentType === OTHER_DOCUMENT_TYPE ? (descInput?.value || '').trim() : '';
 
+    const left = MAX_ATTACHMENTS_PER_CASE - attachmentRowCount();
+    if (left <= 0) {
+      showToast(`الحالة وصلت للحد الأقصى (${MAX_ATTACHMENTS_PER_CASE} مرفق). احذف مرفق مش محتاجه الأول.`, 'error');
+      return;
+    }
+    const limit = Math.min(MAX_FILES_PER_PICK, left);
+    const files = picked.slice(0, limit);
+    if (picked.length > limit) {
+      showToast(`اخترت ${picked.length} ملفات، وهنرفع أول ${limit} بس (ده الحد المسموح دلوقتي).`, 'warning');
+    }
+
+    // Reject bad files up front so the user hears about them right away.
+    const errors = [];
+    const valid = files.filter(file => {
+      const invalid = validateFile(file);
+      if (invalid) errors.push(`${file.name}: ${messageFromError(invalid)}`);
+      return !invalid;
+    });
+
+    uploading = true;
+    let uploaded = 0;
     try {
-      showToast('جاري رفع الملف... ⏳', 'info');
-      const committed = await AttachmentsService.upload({ caseId, documentType, file });
-      addUploadedAttachmentRow({
-        id: committed.attachmentId,
-        fileName: committed.fileName || file.name,
-        documentType,
-        size: committed.fileSizeBytes ?? file.size
-      });
-      // جاهز لاختيار تصنيف جديد للملف اللي بعده — بعد نجاح الرفع بس.
-      if (docTypeSelect) docTypeSelect.selectedIndex = 0;
-      showToast('تم رفع المرفق بنجاح ✅', 'success');
-      EventBusRefreshAttachments();
-    } catch (err) {
-      showToast(messageFromError(err), 'error');
+      for (const [i, file] of valid.entries()) {
+        showToast(valid.length > 1 ? `جاري رفع ${i + 1} من ${valid.length}... ⏳` : 'جاري رفع الملف... ⏳', 'info');
+        try {
+          const committed = await AttachmentsService.upload({ caseId, documentType, file, description });
+          addUploadedAttachmentRow({
+            id: committed.attachmentId,
+            fileName: committed.fileName || file.name,
+            documentType,
+            description: description || undefined,
+            mimeType: committed.mimeType || file.type,
+            status: 'complete',
+            scanStatus: committed.scanStatus,
+            uploadedAtUtc: committed.uploadedAtUtc,
+            size: committed.fileSizeBytes ?? file.size
+          });
+          uploaded++;
+        } catch (err) {
+          errors.push(`${file.name}: ${messageFromError(err)}`);
+        }
+      }
     } finally {
-      input.value = '';
+      uploading = false;
+    }
+
+    if (uploaded > 0) {
+      // جاهز لاختيار تصنيف جديد للملفات اللي بعدها — بعد نجاح الرفع بس.
+      if (docTypeSelect) {
+        docTypeSelect.selectedIndex = 0;
+        docTypeSelect.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    }
+    const total = files.length;
+    if (!errors.length) {
+      showToast(total > 1 ? `تم رفع ${total} مرفقات بنجاح ✅` : 'تم رفع المرفق بنجاح ✅', 'success');
+    } else if (total === 1) {
+      showToast(errors[0].slice(errors[0].indexOf(': ') + 2), 'error');
+    } else {
+      showToast(`اترفع ${uploaded} من ${total}. ${errors.join(' — ')}`, 'error');
     }
   });
-}
-
-// Kept as a small indirection point in case the attachments list UI needs a
-// dedicated re-render hook wired in later — avoids a circular import with
-// workflow.component.js for now.
-function EventBusRefreshAttachments() {
-  AttachmentsService.listForCase(currentCaseId()).catch(() => {});
 }
 
 /* ---------------------------- Step 3 — Housing ---------------------------- */

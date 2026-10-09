@@ -21,28 +21,35 @@
         <label class="form-label" for="case-doc-type"><span>تصنيف نوع المستند / الصورة</span> <span
             class="form-label__required">*</span></label>
         <div class="form-select-wrapper">
-          <select id="case-doc-type" class="form-select">
+          <!-- القيم = أكواد قايمة السيرفر المقفولة (نفس الموبايل). «أخرى» مالهاش
+               كتابة جوه القايمة: تفاصيلها في خانة الوصف تحت وبتتبعت description. -->
+          <select id="case-doc-type" class="form-select" data-no-other="true">
             <option value="" selected disabled>اختر تصنيف المستند المراد إرفاقه...</option>
-            <option value="بطاقة شخصية">بطاقة شخصية</option>
-            <option value="مستندات الأسرة">مستندات الأسرة (شهادات ميلاد/زواج/وفاة)</option>
-            <option value="مستندات دخل">مستندات دخل ومعاشات</option>
-            <option value="مستندات علاج">مستندات علاج وتقارير طبية</option>
-            <option value="مستندات تعليم">مستندات تعليم وإيصالات سداد</option>
-            <option value="صور السكن">صور السكن والمبنى</option>
-            <option value="صور ميدانية">صور الزيارة الميدانية</option>
-            <option value="أخرى" data-is-other="true">أخرى</option>
+            <option value="national_id">بطاقة شخصية</option>
+            <option value="family_docs">مستندات الأسرة (شهادات ميلاد/زواج/وفاة)</option>
+            <option value="income_docs">مستندات دخل ومعاشات</option>
+            <option value="medical_docs">مستندات علاج وتقارير طبية</option>
+            <option value="education_docs">مستندات تعليم وإيصالات سداد</option>
+            <option value="housing_photos">صور السكن والمبنى</option>
+            <option value="field_photos">صور الزيارة الميدانية</option>
+            <option value="other">أخرى</option>
           </select>
           <svg class="select-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polyline points="6 9 12 15 18 9"></polyline>
           </svg>
         </div>
       </div>
+      <div class="form-group form-group--full" id="case-doc-description-group" style="display: none;">
+        <label class="form-label" for="case-doc-description"><span>تفاصيل المستند (اختياري)</span></label>
+        <input type="text" id="case-doc-description" class="form-input" maxlength="300"
+          placeholder="اكتب اسم أو وصف المستند...">
+      </div>
     </div>
 
     <div class="form-grid form-grid--full">
       <label class="form-upload">
-        <input type="file" id="case-doc-upload" style="display: none;"
-          accept="image/jpeg,image/png,image/heic,image/webp,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
+        <input type="file" id="case-doc-upload" style="display: none;" multiple
+          accept="image/jpeg,image/png,image/heic,image/heif,image/webp,application/pdf,.heic,.heif">
         <div class="form-upload__icon">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -50,8 +57,8 @@
             <line x1="12" y1="3" x2="12" y2="15"></line>
           </svg>
         </div>
-        <div class="form-upload__title">اضغط هنا لإرفاق مستند أو صورة جديدة للحالة</div>
-        <div class="form-upload__hint">صور (JPG, PNG, HEIC, WebP) أو PDF أو ملف Word، وحجم الملف الواحد لحد 10 ميجابايت</div>
+        <div class="form-upload__title">اضغط هنا لإرفاق مستندات أو صور جديدة للحالة</div>
+        <div class="form-upload__hint">صور (JPG, PNG, HEIC, WebP) أو PDF — لحد 5 ملفات في المرة بنفس التصنيف، وحجم الملف الواحد لحد 10 ميجابايت</div>
       </label>
     </div>
 

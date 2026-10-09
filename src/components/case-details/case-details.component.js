@@ -15,6 +15,7 @@ import { AttachmentsService } from '../../services/attachments.service.js';
 import { DropdownsService } from '../../services/dropdowns.service.js';
 import { messageFromError } from '../../services/errors.js';
 import { documentTypeLabel } from '../../services/document-types.js';
+import { attachmentOpenAttrs, attachmentStatusLabel } from '../attachments/attachments.component.js';
 import { formatLocalDate, formatCairoDateTime } from '../../utils/date.js';
 import { StorageService, STORAGE_KEYS } from '../../services/storage.js';
 import { supportTypeLabel } from '../../utils/support-labels.js';
@@ -319,11 +320,16 @@ function normalizeApiCase(detail, familyRes, supportRes, attachmentsRes, applian
       notes: m.notes
     })),
     attachments: attachments.map(a => ({
-      title: a.fileName,
+      id: a.id,
+      title: a.description || a.fileName,
       docType: documentTypeLabel(a.documentType),
       fileName: a.fileName,
+      mimeType: a.mimeType,
+      rawStatus: a.status,
+      scanStatus: a.scanStatus,
+      uploadedBy: a.uploadedByName || '',
       uploadedAt: a.uploadedAtUtc ? a.uploadedAtUtc.slice(0, 10) : '',
-      status: a.status === 'complete' ? 'مستوفاة ✅' : (a.status || '')
+      status: attachmentStatusLabel(a) || 'مستوفاة ✅'
     })),
     housing: {
       description: h.description,
@@ -440,7 +446,7 @@ async function loadCaseFromApi(id) {
       CasesService.getReport(id),
       CasesService.getFamilyMembers(id).catch(() => ({ members: [] })),
       CasesService.getSupport(id).catch(() => ({})),
-      AttachmentsService.listForCase(id).catch(() => ({ items: [] })),
+      AttachmentsService.listAllForCase(id).catch(() => ({ items: [] })),
       loadApplianceLabels()
     ]);
     const detail = reportRes.case;
@@ -555,7 +561,7 @@ function missingSections(c) {
 
   if (!c.name || !c.nid || !d.age || !d.address) out.push('البيانات الأساسية');
   if (!(c.familyMembers || []).length) out.push('الأفراد التابعين');
-  if (!(c.attachments || []).length) out.push('المرفقات');
+  // المرفقات مش قسم في اكتمال السيرفر (رد الباك إند 2026-10-08 §7).
   if (!h.ownership && !h.walls && !h.description) out.push('السكن');
   if (!((c.utilities && (c.utilities.services || []).some(s => s.isAvailable)) || (c.appliances || []).length)) out.push('المرافق');
   if (!a.hasLand && !a.hasLivestock) out.push('الحيازة الزراعية');
@@ -678,12 +684,12 @@ function renderBasicDataCard(c, gone = () => false) {
 }
 
 /* ------------------------------ 2. المرفقات ------------------------------ */
-function renderAttachmentsCard(c, gone = () => false) {
+function renderAttachmentsCard(c) {
   const items = Array.isArray(c.attachments) ? c.attachments : [];
   return `
     <div class="glass-card case-page-card">
       <div class="case-page-card__title">
-        <span>📄 2. المرفقات والوثائق</span>${sectionFlag(gone('المرفقات'))}
+        <span>📄 2. المرفقات والوثائق</span>
         <span class="badge case-page-count">${items.length} مستند</span>
       </div>
       ${items.length ? `
@@ -696,9 +702,15 @@ function renderAttachmentsCard(c, gone = () => false) {
                   ${att.docType ? `<span class="badge case-att-type">${DOM.escapeHTML(att.docType)}</span>` : ''}
                   ${att.fileName ? `<span>${DOM.escapeHTML(att.fileName)}</span>` : ''}
                   ${att.uploadedAt ? `<span>· ${DOM.escapeHTML(att.uploadedAt)}</span>` : ''}
+                  ${att.uploadedBy ? `<span>· رفعه ${DOM.escapeHTML(att.uploadedBy)}</span>` : ''}
                 </span>
               </div>
-              <span class="badge case-att-status">${DOM.escapeHTML(att.status || '')}</span>
+              <span style="display: flex; align-items: center; gap: 8px;">
+                ${att.id && (!att.rawStatus || att.rawStatus === 'complete') && att.scanStatus !== 'infected'
+                  ? `<button type="button" class="btn btn--secondary" style="padding: 4px 12px; font-size: 12px;" ${attachmentOpenAttrs({ id: att.id, fileName: att.fileName, mimeType: att.mimeType, status: att.rawStatus, scanStatus: att.scanStatus })}>فتح</button>`
+                  : ''}
+                <span class="badge case-att-status">${DOM.escapeHTML(att.status || '')}</span>
+              </span>
             </div>
           `).join('')}
         </div>
@@ -943,7 +955,7 @@ function renderCaseDetailsCards(container, c) {
   container.innerHTML = `
     ${draftBanner(c)}
     ${renderBasicDataCard(c, gone)}
-    ${renderAttachmentsCard(c, gone)}
+    ${renderAttachmentsCard(c)}
     ${renderHousingCard(c, gone)}
     ${renderUtilitiesCard(c, gone)}
     ${renderAgricultureCard(c, gone)}

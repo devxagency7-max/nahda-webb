@@ -135,13 +135,12 @@ export function collectCaseFromForm() {
 
     familyMembers: members,
 
-    attachments: [...DOM.qsa('#attachments-list .attachment-item')].map(el => ({
-      title: (el.querySelector('[data-att-title]')?.textContent || '').trim(),
-      docType: (el.querySelector('[data-att-type]')?.textContent || '').trim(),
-      fileName: (el.querySelector('[data-att-file]')?.textContent || '').trim(),
-      uploadedAt: (el.querySelector('[data-att-date]')?.textContent || '').trim(),
-      status: 'مرفوعة'
-    })),
+    // الصفوف المرفوعة فعلًا (attachments.component.js): اسم الملف في <strong>
+    // والتصنيف بعده — المحدِّد القديم (.attachment-item) ماكانش بيطابق أي صف.
+    attachments: [...DOM.qsa('#attachments-list .case-page-att-item[data-att-id]')].map(el => {
+      const fileName = (el.querySelector('strong')?.textContent || '').trim();
+      return { title: fileName, docType: '', fileName, uploadedAt: '', status: 'مرفوعة' };
+    }),
 
     housing: {
       description: val('housing-description'),
@@ -287,8 +286,8 @@ function mapServerCaseToViewModel(serverCase, { support, attachments } = {}) {
       title: att.description || att.fileName || '',
       docType: documentTypeLabel(att.documentType),
       fileName: att.fileName || '',
-      uploadedAt: att.createdAtUtc || '',
-      status: att.status === 'complete' ? 'مرفوعة' : att.status
+      uploadedAt: att.uploadedAtUtc ? att.uploadedAtUtc.slice(0, 10) : '',
+      status: att.status === 'complete' ? 'مرفوعة' : 'الرفع ماكملش'
     })),
 
     housing: {
@@ -379,7 +378,7 @@ export async function loadCaseFromServer(caseId) {
   const [serverCase, support, attachments] = await Promise.all([
     CasesService.getById(caseId),
     CasesService.getSupport(caseId).catch(() => null),
-    AttachmentsService.listForCase(caseId).catch(() => null)
+    AttachmentsService.listAllForCase(caseId).catch(() => null)
   ]);
   return mapServerCaseToViewModel(serverCase, { support, attachments });
 }

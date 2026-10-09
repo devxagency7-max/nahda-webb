@@ -309,10 +309,10 @@ export function initWorkflowTabs() {
     });
     const pct1 = Math.round((s1Count / s1Fields.length) * 100);
 
-    // 2. المرفقات
+    // 2. المرفقات — مؤشر للتاب بس زي الموبايل (فيه مرفق مرفوع = 100%). مش
+    // داخلة في اكتمال السيرفر ولا شرط للإرسال (رد الباك إند 2026-10-08 §7).
     const s2AttachedCount = DOM.qsa('#attachments-list .case-page-att-item[data-att-id]').length;
-    const s2Type = DOM.qs('#case-doc-type');
-    const pct2 = s2AttachedCount > 0 ? 100 : (s2Type && s2Type.value !== '' ? 50 : 0);
+    const pct2 = s2AttachedCount > 0 ? 100 : 0;
 
     // 3. السكن (حقول Multi-select Chips)
     const pct3 = calculateChipFieldsProgress('#step-pane-3');
@@ -727,10 +727,15 @@ export function initWorkflowTabs() {
     // تاب الدعم: الأفراد المعلّمين والأنواع المفتوحة والاسم الحر في «أخرى».
     resetSupportManager();
 
-    // 5. المرفقات المرفوعة (مرحلة 2) — قايمة العرض المحلية (object URLs).
+    // 5. المرفقات المرفوعة (مرحلة 2) — قايمة العرض، وتصنيف المستند ووصفه.
     const attachmentsList = DOM.qs('#attachments-list');
     if (attachmentsList) {
-      DOM.qsa('.case-page-att-item', attachmentsList).forEach(row => row.remove());
+      DOM.qsa('.case-page-att-item[data-att-row]', attachmentsList).forEach(row => row.remove());
+    }
+    const docTypeSelect = DOM.qs('#case-doc-type');
+    if (docTypeSelect) {
+      docTypeSelect.selectedIndex = 0;
+      docTypeSelect.dispatchEvent(new Event('change', { bubbles: true }));
     }
     const attachmentsEmptyState = DOM.qs('#attachments-empty-state');
     if (attachmentsEmptyState) attachmentsEmptyState.style.display = 'flex';
