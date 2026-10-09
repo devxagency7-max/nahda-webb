@@ -19,7 +19,7 @@
    trust the client check alone.
    -------------------------------------------------------------------------- */
 import { HttpClient } from './http.js';
-import { ApiError } from './errors.js';
+import { ApiError, NetworkError } from './errors.js';
 import { documentTypeCode } from './document-types.js';
 
 const ALLOWED_MIME_TYPES = new Set([
@@ -48,6 +48,20 @@ export const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
 export const MAX_ATTACHMENTS_PER_CASE = 50;
 export const MAX_FILES_PER_PICK = 5;
 export const MAX_DESCRIPTION_LENGTH = 300;
+
+// The PUT goes straight to object storage, outside HttpClient's timeout —
+// without one a dead connection would leave the upload spinning forever.
+const STORAGE_PUT_TIMEOUT_MS = 5 * 60 * 1000;
+
+/** Storage PUT failures as ApiErrors, so the UI shows a real reason. */
+function storageError(status) {
+  if (status === 403) {
+    // An expired (15-minute) signed link, or a Content-Type the link wasn't signed for.
+    return new ApiError('UPLOAD_LINK_EXPIRED', 'رابط الرفع انتهى قبل ما الملف يخلص، جرّب ترفعه تاني', undefined, 403);
+  }
+  if (status === 413) return new ApiError('FILE_TOO_LARGE', undefined, undefined, 413);
+  return new ApiError('STORAGE_UNAVAILABLE', undefined, undefined, status);
+}
 
 /** The MIME type to declare for a picked file, or '' if it isn't allowed. */
 export function resolveMimeType(file) {
@@ -107,9 +121,18 @@ export const AttachmentsService = {
     await this.uploadToStorage(initRes.uploadUrl, file, initRes.mimeType || mimeType);
 
     onProgress?.({ stage: 'commit' });
-    // One key per logical upload: a network-level retry of this same commit
-    // must reuse it, a brand-new upload gets a fresh one.
-    const commitRes = await this.commit(initRes.attachmentId, undefined, crypto.randomUUID());
+    // One key per logical upload: the network-level retry of this same commit
+    // reuses it. Commit is idempotent on the server (an already-complete
+    // attachment answers alreadyComplete), so retrying once after a dropped
+    // connection is safe — the file is already in storage, don't lose it.
+    const commitKey = crypto.randomUUID();
+    let commitRes;
+    try {
+      commitRes = await this.commit(initRes.attachmentId, undefined, commitKey);
+    } catch (err) {
+      if (!(err instanceof NetworkError)) throw err;
+      commitRes = await this.commit(initRes.attachmentId, undefined, commitKey);
+    }
 
     onProgress?.({ stage: 'done' });
     return commitRes;
@@ -135,14 +158,23 @@ export const AttachmentsService = {
    * header must exactly match the mimeType returned by /init.
    */
   async uploadToStorage(uploadUrl, file, mimeType) {
-    const response = await fetch(uploadUrl, {
-      method: 'PUT',
-      headers: { 'Content-Type': mimeType },
-      body: file
-    });
-    if (!response.ok) {
-      throw new Error(`فشل رفع الملف إلى التخزين (HTTP ${response.status})`);
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), STORAGE_PUT_TIMEOUT_MS);
+    let response;
+    try {
+      response = await fetch(uploadUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': mimeType },
+        body: file,
+        signal: controller.signal
+      });
+    } catch (cause) {
+      // Offline, dropped mid-upload, or our own timeout.
+      throw new NetworkError(cause);
+    } finally {
+      clearTimeout(timer);
     }
+    if (!response.ok) throw storageError(response.status);
   },
 
   /**

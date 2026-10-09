@@ -17,13 +17,13 @@ import { showToast } from '../../utils/toast.js';
 import { CasesService } from '../../services/cases.service.js';
 import { AttachmentsService, MAX_ATTACHMENTS_PER_CASE, MAX_FILES_PER_PICK, validateFile } from '../../services/attachments.service.js';
 import { OTHER_DOCUMENT_TYPE } from '../../services/document-types.js';
-import { ApiError, messageFromError } from '../../services/errors.js';
+import { ApiError, NetworkError, messageFromError } from '../../services/errors.js';
 import { parseEgyptianNationalId } from '../../utils/nationalId.js';
 import { isValidEgyptianPhone, PHONE_ERROR_MESSAGE } from '../../utils/phone.js';
 import { choiceDialog } from '../../utils/dialog.js';
 import { loadCaseIntoForm } from './case-edit.loader.js';
 import { collectSupportItems, getSupportValidationError } from '../support/support.component.js';
-import { addUploadedAttachmentRow, attachmentRowCount, renderAttachmentList } from '../attachments/attachments.component.js';
+import { addUploadedAttachmentRow, attachmentRowCount, renderAttachmentList, renderAttachmentLoadError } from '../attachments/attachments.component.js';
 import { memberClearableValues, memberFilledKeys } from '../family-members/family-members.component.js';
 
 function val(id) {
@@ -722,10 +722,27 @@ export async function saveStep1() {
 export async function saveStep2() {
   const caseId = currentCaseId();
   if (!caseId) return true; // nothing to sync before the case exists
-  return runSave(async () => {
-    renderAttachmentList((await AttachmentsService.listAllForCase(caseId)).items);
-    return true;
-  }).then(() => true, () => false);
+  // Nothing is saved here, so a failed refresh must not block "التالي" — the
+  // list just says it couldn't load, with its own retry.
+  const reload = () => AttachmentsService.listAllForCase(caseId);
+  try {
+    renderAttachmentList((await reload()).items);
+  } catch (err) {
+    renderAttachmentLoadError(err, reload);
+  }
+  return true;
+}
+
+// Errors that will hit every remaining file the same way — stop the batch
+// instead of repeating the same failure up to 5 times.
+const BATCH_STOPPING_CODES = new Set([
+  'UNAUTHORIZED', 'TOKEN_EXPIRED', 'TOKEN_REVOKED', 'TOKEN_INVALID', 'FORBIDDEN',
+  'CASE_NOT_ASSIGNED', 'CASE_NOT_FOUND', 'INVALID_STATUS_TRANSITION',
+  'RATE_LIMITED', 'STORAGE_UNAVAILABLE'
+]);
+
+function stopsBatch(err) {
+  return err instanceof NetworkError || (err instanceof ApiError && BATCH_STOPPING_CODES.has(err.code));
 }
 
 /**
@@ -796,6 +813,7 @@ export function wireAttachmentUpload() {
 
     uploading = true;
     let uploaded = 0;
+    let stoppedAt = -1;
     try {
       for (const [i, file] of valid.entries()) {
         showToast(valid.length > 1 ? `جاري رفع ${i + 1} من ${valid.length}... ⏳` : 'جاري رفع الملف... ⏳', 'info');
@@ -815,11 +833,17 @@ export function wireAttachmentUpload() {
           uploaded++;
         } catch (err) {
           errors.push(`${file.name}: ${messageFromError(err)}`);
+          if (stopsBatch(err)) {
+            stoppedAt = i;
+            break;
+          }
         }
       }
     } finally {
       uploading = false;
     }
+    const skipped = stoppedAt >= 0 ? valid.length - stoppedAt - 1 : 0;
+    if (skipped > 0) errors.push(`ووقفنا الرفع، فـ${skipped} ملف تاني ما اترفعش — جرّب ترفعهم تاني`);
 
     if (uploaded > 0) {
       // جاهز لاختيار تصنيف جديد للملفات اللي بعدها — بعد نجاح الرفع بس.
@@ -833,6 +857,8 @@ export function wireAttachmentUpload() {
       showToast(total > 1 ? `تم رفع ${total} مرفقات بنجاح ✅` : 'تم رفع المرفق بنجاح ✅', 'success');
     } else if (total === 1) {
       showToast(errors[0].slice(errors[0].indexOf(': ') + 2), 'error');
+    } else if (uploaded === 0) {
+      showToast(`ما اترفعش ولا ملف. ${errors.join(' — ')}`, 'error');
     } else {
       showToast(`اترفع ${uploaded} من ${total}. ${errors.join(' — ')}`, 'error');
     }

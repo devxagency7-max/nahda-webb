@@ -730,7 +730,7 @@ export function initWorkflowTabs() {
     // 5. المرفقات المرفوعة (مرحلة 2) — قايمة العرض، وتصنيف المستند ووصفه.
     const attachmentsList = DOM.qs('#attachments-list');
     if (attachmentsList) {
-      DOM.qsa('.case-page-att-item[data-att-row]', attachmentsList).forEach(row => row.remove());
+      DOM.qsa('.case-page-att-item[data-att-row], [data-att-load-error]', attachmentsList).forEach(row => row.remove());
     }
     const docTypeSelect = DOM.qs('#case-doc-type');
     if (docTypeSelect) {

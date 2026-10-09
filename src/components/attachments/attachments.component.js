@@ -11,13 +11,15 @@
    - Rows whose upload never finished (status ≠ complete) are marked
      «الرفع ماكملش», can't be opened, and aren't counted.
    - Infected files (scanStatus = infected) can't be opened.
+   - Errors: an already-deleted file (404) just leaves the list; a list that
+     failed to load says so with a retry instead of looking empty.
    -------------------------------------------------------------------------- */
 import { showToast } from '../../utils/toast.js';
 import { triggerWorkflowRecalc } from '../../core/state.js';
 import { DOM } from '../../utils/dom.js';
 import { confirmDialog } from '../../utils/dialog.js';
 import { AttachmentsService } from '../../services/attachments.service.js';
-import { messageFromError } from '../../services/errors.js';
+import { ApiError, messageFromError } from '../../services/errors.js';
 import { documentTypeLabel } from '../../services/document-types.js';
 
 function formatFileSize(bytes) {
@@ -70,6 +72,14 @@ async function removeAttachment(row, item) {
     triggerWorkflowRecalc();
     showToast(`تم حذف المرفق "${item.fileName || ''}"`, 'success');
   } catch (err) {
+    // Someone else (another tab, the mobile app) already deleted it.
+    if (err instanceof ApiError && err.httpStatus === 404) {
+      row.remove();
+      syncEmptyState();
+      triggerWorkflowRecalc();
+      showToast('المرفق ده كان اتحذف قبل كده، واتشال من القايمة', 'info');
+      return;
+    }
     if (delBtn) delBtn.disabled = false;
     showToast(`تعذّر حذف المرفق — ${messageFromError(err)}`, 'error');
   }
@@ -130,6 +140,18 @@ function showImagePreview(url, item) {
   overlay.querySelector('[data-att-preview-close]')?.focus();
 }
 
+const opening = new Set();
+
+function openErrorMessage(err) {
+  if (err instanceof ApiError && err.httpStatus === 403) {
+    return 'الملف ده مش متاح للفتح (ممكن يكون فيه فيروس، أو معندكش صلاحية عليه)';
+  }
+  if (err instanceof ApiError && err.httpStatus === 404) {
+    return 'المرفق ده مش موجود على السيرفر — ممكن يكون اتحذف';
+  }
+  return messageFromError(err);
+}
+
 /**
  * Opens an attachment: images in a preview, everything else in a new tab
  * (the browser shows PDFs and downloads the rest).
@@ -146,25 +168,30 @@ export async function openAttachment(item) {
     return;
   }
 
+  if (opening.has(item.id)) return; // double click while the link is on its way
+  opening.add(item.id);
+
   const asImage = isImageMime(item.mimeType);
   // Opened before the await: a tab opened after it gets blocked as a popup.
   const tab = asImage ? null : window.open('', '_blank');
   try {
     const res = await AttachmentsService.getDownloadUrl(item.id);
     const url = res?.downloadUrl;
-    if (!url) throw new Error('empty downloadUrl');
+    if (!url) throw new ApiError('INVALID_RESPONSE', 'السيرفر مارجّعش رابط للملف، جرّب تاني');
     if (asImage || isImageMime(res.mimeType)) {
       if (tab) tab.close();
       showImagePreview(url, item);
     } else if (tab) {
       tab.opener = null;
       tab.location.href = url;
-    } else {
-      window.open(url, '_blank', 'noopener');
+    } else if (!window.open(url, '_blank', 'noopener')) {
+      showToast('المتصفح منع فتح تاب جديد — اسمح بالنوافذ المنبثقة للموقع ده وجرّب تاني', 'warning');
     }
   } catch (err) {
     if (tab) tab.close();
-    showToast(`تعذّر فتح المرفق — ${messageFromError(err)}`, 'error');
+    showToast(`تعذّر فتح المرفق — ${openErrorMessage(err)}`, 'error');
+  } finally {
+    opening.delete(item.id);
   }
 }
 
@@ -276,10 +303,49 @@ function buildRow(item) {
   return row;
 }
 
+function removeLoadError(listEl) {
+  listEl.querySelector('[data-att-load-error]')?.remove();
+}
+
+/**
+ * The list couldn't be fetched — say so (with a retry) instead of showing
+ * «لسه مفيش مستندات», which would look like the case has none.
+ * @param {() => Promise<{items: Array}>} reload
+ */
+export function renderAttachmentLoadError(err, reload) {
+  const listEl = DOM.qs('#attachments-list');
+  if (!listEl) return;
+  removeLoadError(listEl);
+  const emptyState = DOM.qs('#attachments-empty-state');
+  if (emptyState) emptyState.style.display = 'none';
+
+  const box = DOM.createElement('div', {
+    className: 'case-page-att-item',
+    dataset: { attLoadError: '1' },
+    style: { justifyContent: 'space-between', color: '#b91c1c' }
+  });
+  const text = DOM.createElement('span', {}, null);
+  text.textContent = `تعذّر تحميل المرفقات — ${messageFromError(err)}`;
+  const retry = DOM.createElement('button', { type: 'button', className: 'btn btn--secondary' });
+  retry.textContent = 'إعادة المحاولة';
+  retry.addEventListener('click', async () => {
+    retry.disabled = true;
+    try {
+      renderAttachmentList((await reload()).items);
+    } catch (e) {
+      renderAttachmentLoadError(e, reload);
+    }
+  });
+  box.appendChild(text);
+  box.appendChild(retry);
+  listEl.prepend(box);
+}
+
 /** Replaces the whole step-2 list with the server's attachments. */
 export function renderAttachmentList(items) {
   const listEl = DOM.qs('#attachments-list');
   if (!listEl) return;
+  removeLoadError(listEl);
   DOM.qsa('.case-page-att-item[data-att-row]', listEl).forEach(row => row.remove());
   (items || []).forEach(item => listEl.appendChild(buildRow(item)));
   syncEmptyState();

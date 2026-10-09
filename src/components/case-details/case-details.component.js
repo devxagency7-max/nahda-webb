@@ -319,6 +319,8 @@ function normalizeApiCase(detail, familyRes, supportRes, attachmentsRes, applian
       takafulAmount: m.takafulAmount,
       notes: m.notes
     })),
+    // فشل تحميل القايمة غير «مفيش مرفقات» — الكارت بيقول كده صراحة.
+    attachmentsLoadError: attachmentsRes?.loadError ? messageFromError(attachmentsRes.loadError) : '',
     attachments: attachments.map(a => ({
       id: a.id,
       title: a.description || a.fileName,
@@ -446,7 +448,7 @@ async function loadCaseFromApi(id) {
       CasesService.getReport(id),
       CasesService.getFamilyMembers(id).catch(() => ({ members: [] })),
       CasesService.getSupport(id).catch(() => ({})),
-      AttachmentsService.listAllForCase(id).catch(() => ({ items: [] })),
+      AttachmentsService.listAllForCase(id).catch(err => ({ items: [], loadError: err })),
       loadApplianceLabels()
     ]);
     const detail = reportRes.case;
@@ -714,7 +716,9 @@ function renderAttachmentsCard(c) {
             </div>
           `).join('')}
         </div>
-      ` : `<p class="case-page-empty">لا توجد مرفقات مرفوعة.</p>`}
+      ` : c.attachmentsLoadError
+        ? `<p class="case-page-empty" style="color: #b91c1c;">تعذّر تحميل المرفقات — ${DOM.escapeHTML(c.attachmentsLoadError)}. حدّث الصفحة وحاول تاني.</p>`
+        : `<p class="case-page-empty">لا توجد مرفقات مرفوعة.</p>`}
     </div>
   `;
 }

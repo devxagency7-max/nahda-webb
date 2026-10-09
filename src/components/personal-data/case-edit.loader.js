@@ -19,7 +19,7 @@ import { triggerWorkflowRecalc } from '../../core/state.js';
 import { CasesService } from '../../services/cases.service.js';
 import { AttachmentsService } from '../../services/attachments.service.js';
 import { messageFromError } from '../../services/errors.js';
-import { renderAttachmentList } from '../attachments/attachments.component.js';
+import { renderAttachmentList, renderAttachmentLoadError } from '../attachments/attachments.component.js';
 import { restoreAgricultureManager } from '../agriculture/agriculture.component.js';
 import { loadFamilyMembersManager } from '../family-members/family-members.component.js';
 import { loadFinancialManager } from '../financial-ledger/financial-ledger.component.js';
@@ -153,7 +153,11 @@ function fillStep1(detail) {
 /* ---------------------------- تاب 2 — المرفقات ---------------------------- */
 
 /** الصفوف نفسها (فتح/معاينة، حذف بتأكيد، حالة الرفع) في attachments.component.js. */
-function fillStep2(attachments) {
+function fillStep2(attachments, caseId) {
+  if (attachments?.loadError) {
+    renderAttachmentLoadError(attachments.loadError, () => AttachmentsService.listAllForCase(caseId));
+    return;
+  }
   renderAttachmentList((attachments && attachments.items) || []);
 }
 
@@ -301,7 +305,7 @@ export async function loadCaseIntoForm(caseId) {
       CasesService.getById(caseId),
       CasesService.getFamilyMembers(caseId),
       CasesService.getSupport(caseId).catch(err => ({ loadError: err })),
-      AttachmentsService.listAllForCase(caseId).catch(() => ({ items: [] })),
+      AttachmentsService.listAllForCase(caseId).catch(err => ({ items: [], loadError: err })),
       whenDropdownsReady()
     ]);
 
@@ -340,7 +344,7 @@ export async function loadCaseIntoForm(caseId) {
     });
 
     fillStep1(detail);
-    fillStep2(attachmentsRes);
+    fillStep2(attachmentsRes, caseId);
     fillStep3(detail.housing);
     fillStep4(detail.utilities);
     fillStep5(detail.agriculture);
