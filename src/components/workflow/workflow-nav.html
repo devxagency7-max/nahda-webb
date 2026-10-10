@@ -28,7 +28,7 @@
 
   <div class="workflow-road-wrapper" id="workflow-road-wrapper">
 
-    <!-- DEVX Continuous Snake Journey Timeline Engine (7 Stations: 4 + 3) -->
+    <!-- DEVX Continuous Snake Journey Timeline Engine (7 Stations: 3 + 4) -->
     <div class="case-journey" id="case-journey-container">
 
       <!-- Unified SVG Track & Progress Overlay (dynamically rendered via JS Engine) -->
@@ -50,7 +50,7 @@
       <!-- Stations Grid Container -->
       <div class="case-journey__grid" id="case-journey-grid">
 
-        <!-- ROW 1: 4 Stations (1, 2, 3, 4) — Visual RTL (1 Right -> 4 Left) -->
+        <!-- ROW 1: 3 Stations (1, 2, 3) — Visual RTL (1 Right -> 3 Left) -->
         <div class="case-journey__row case-journey__row--r1" data-row="1">
 
           <!-- Station 1 -->
@@ -101,6 +101,11 @@
             </div>
           </button>
 
+        </div>
+
+        <!-- ROW 2: 4 Stations (4, 5, 6, 7) — Visual LTR (4 Left -> 7 Right) -->
+        <div class="case-journey__row case-journey__row--r2 case-journey__row--reversed" data-row="2">
+
           <!-- Station 4 -->
           <button class="workflow-tab case-journey__station" data-step="4" id="step-node-4" type="button" aria-label="المحطة 4: الحيازة الزراعية والمواشي">
             <div class="case-journey__node-box">
@@ -116,11 +121,6 @@
               <span class="workflow-tab__label">4. الحيازة الزراعية</span>
             </div>
           </button>
-
-        </div>
-
-        <!-- ROW 2: 3 Stations (5, 6, 7) — Visual LTR (5 Left -> 7 Right) -->
-        <div class="case-journey__row case-journey__row--r2 case-journey__row--reversed" data-row="2">
 
           <!-- Station 5 -->
           <button class="workflow-tab case-journey__station" data-step="5" id="step-node-5" type="button" aria-label="المحطة 5: الدخل والمصروفات والوضع المالي">

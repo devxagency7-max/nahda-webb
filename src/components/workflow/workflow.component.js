@@ -1,6 +1,6 @@
 /* --------------------------------------------------------------------------
    DEVX CASE JOURNEY TIMELINE ENGINE CONTROLLER
-   Unified dynamic SVG continuous snake journey for 7 stations (4 + 3).
+   Unified dynamic SVG continuous snake journey for 7 stations (3 + 4).
    Features:
    - Dynamic station centers measurement relative to SVG coordinate space
    - Continuous G1-smooth 180° Cubic Bezier U-Turns
@@ -45,7 +45,7 @@ export const STAGES_METADATA = [
   { id: 'stage-02', step: 2, row: 1, title: '2. المرفقات والوثائق', target: 'step-pane-2', route: 'personal-data' },
   // المرافق والأجهزة اتدمجت في مرحلة السكن (مفيش مرحلة مرافق منفصلة).
   { id: 'stage-03', step: 3, row: 1, title: '3. بيانات السكن', target: 'step-pane-3', route: 'personal-data' },
-  { id: 'stage-04', step: 4, row: 1, title: '4. الحيازة الزراعية', target: 'step-pane-4', route: 'personal-data' },
+  { id: 'stage-04', step: 4, row: 2, title: '4. الحيازة الزراعية', target: 'step-pane-4', route: 'personal-data' },
   { id: 'stage-05', step: 5, row: 2, title: '5. الدخل والمصروفات', target: 'step-pane-5', route: 'personal-data' },
   { id: 'stage-06', step: 6, row: 2, title: '6. الدعم والقرار', target: 'step-pane-6', route: 'personal-data' },
   { id: 'stage-07', step: 7, row: 2, title: '7. الرأي', target: 'step-pane-7', route: 'personal-data' },
@@ -912,7 +912,7 @@ function setupResizeObserver() {
 /**
  * DEVX SVG TIMELINE ENGINE
  * Dynamically measures station DOM centers and builds a continuous
- * G1-smooth snake path across 2 rows (4 + 3) or vertical stack on mobile.
+ * G1-smooth snake path across 2 rows (3 + 4) or vertical stack on mobile.
  */
 export function renderJourneyTimeline() {
   const svgEl = DOM.qs('#case-journey-svg');
@@ -959,32 +959,32 @@ export function renderJourneyTimeline() {
       stationSubpaths[s] = currentSub;
     }
   } else {
-    // Desktop / Tablet Snake: Row 1 (4), U-Turn, Row 2 (3)
+    // Desktop / Tablet Snake: Row 1 (3), U-Turn, Row 2 (4)
 
-    // Row 1: 1 -> 2 -> 3 -> 4 (Visual RTL: 1 is Right, 4 is Left)
+    // Row 1: 1 -> 2 -> 3 (Visual RTL: 1 is Right, 3 is Left)
     pathString = `M ${centers[1].x.toFixed(1)},${centers[1].y.toFixed(1)}`;
     stationSubpaths[1] = pathString;
-    for (let s = 2; s <= 4; s++) {
+    for (let s = 2; s <= 3; s++) {
       pathString += ` L ${centers[s].x.toFixed(1)},${centers[s].y.toFixed(1)}`;
       stationSubpaths[s] = pathString;
     }
 
-    // U-Turn: Between Station 4 (Row 1 Left) and Station 5 (Row 2 Left)
+    // U-Turn: Between Station 3 (Row 1 Left) and Station 4 (Row 2 Left)
     // Curving smoothly around the left side with horizontal tangents (G1 continuity)
-    const rowGap = Math.abs(centers[5].y - centers[4].y);
+    const rowGap = Math.abs(centers[4].y - centers[3].y);
     const uTurnRadius = Math.min(Math.max(rowGap * 0.72, 45), 90);
-    const minLeftX = Math.min(centers[4].x, centers[5].x) - uTurnRadius;
+    const minLeftX = Math.min(centers[3].x, centers[4].x) - uTurnRadius;
     const c1x = minLeftX.toFixed(1);
-    const c1y = centers[4].y.toFixed(1);
+    const c1y = centers[3].y.toFixed(1);
     const c2x = minLeftX.toFixed(1);
-    const c2y = centers[5].y.toFixed(1);
+    const c2y = centers[4].y.toFixed(1);
 
-    const uTurn = ` C ${c1x},${c1y} ${c2x},${c2y} ${centers[5].x.toFixed(1)},${centers[5].y.toFixed(1)}`;
+    const uTurn = ` C ${c1x},${c1y} ${c2x},${c2y} ${centers[4].x.toFixed(1)},${centers[4].y.toFixed(1)}`;
     pathString += uTurn;
-    stationSubpaths[5] = pathString;
+    stationSubpaths[4] = pathString;
 
-    // Row 2: 5 -> 6 -> 7 (Visual LTR: 5 is Left, 7 is Right)
-    for (let s = 6; s <= TOTAL_STEPS; s++) {
+    // Row 2: 4 -> 5 -> 6 -> 7 (Visual LTR: 4 is Left, 7 is Right)
+    for (let s = 5; s <= TOTAL_STEPS; s++) {
       pathString += ` L ${centers[s].x.toFixed(1)},${centers[s].y.toFixed(1)}`;
       stationSubpaths[s] = pathString;
     }
