@@ -873,19 +873,36 @@ function chipValues(fieldName) {
   return [...field.querySelectorAll('.chip-btn--active')].map(b => b.dataset.value).filter(Boolean);
 }
 
+/**
+ * القيمة الواحدة اللي بتتبعت للخانة: الاختيار، أو النص المكتوب لو «أخرى»
+ * (كانت بتبعت كلمة «أخرى» نفسها والنص بيضيع).
+ */
 function chipSingle(fieldName) {
-  return chipValues(fieldName)[0] || null;
+  const value = chipValues(fieldName)[0];
+  if (!value) return null;
+  if (value !== 'أخرى') return value;
+  const other = DOM.qs(`.chip-field[data-field="${fieldName}"] .chip-field__other`);
+  return other?.value.trim() || null;
 }
 
 function chipHasValue(fieldName, value) {
   return chipValues(fieldName).includes(value);
 }
 
+/*
+ * خطوة السكن فيها خانات السكن والمرافق والأجهزة مع بعض، والحفظ بيبعت طلبين
+ * بالترتيب: PUT /housing وبعده PUT /utilities (رد الباك إند 2026-10-08 §8).
+ * الكهرباء/المياه/الموتور/المواصلات/الإنترنت بتتبعت كمان في السكن (مكانها
+ * القديم) — PUT /housing استبدال كامل، فلو بطّلنا نبعتها هناك القديم يتمسح.
+ * الغاز مالوش مكان في العقد لسه — مش بيتبعت.
+ *
+ * لازم يفضل مطابق للموبايل: lib/features/case_details/data/mappers/housing_mapper.dart
+ */
 function collectHousingPayload() {
   return {
     description: val('housing-description') || null,
     ownership: chipSingle('housingType'),
-    buildingType: chipSingle('walls'),
+    buildingType: chipSingle('buildingType'),
     walls: chipSingle('walls'),
     roof: chipSingle('roof'),
     floor: chipSingle('floor'),
@@ -894,13 +911,14 @@ function collectHousingPayload() {
     // يتبعت كنص، مش رقم — إرساله كـ number بيرجّع 400 فاضي بلا أي تفاصيل
     // validation (السيرفر بيرمي استثناء تحويل نوع قبل ما يوصل للـ validator).
     roomsCount: val('rooms-count') || null,
+    bathroomType: chipSingle('bathroomType'),
     bathroomCondition: chipSingle('bathroomCondition'),
-    sanitation: chipSingle('bathroomCondition'),
+    sanitation: chipSingle('sanitation'),
     electricity: chipSingle('electricity'),
     water: chipSingle('waterMeter'),
     waterMotor: chipHasValue('waterMotor', 'يوجد'),
     transport: chipSingle('transportation'),
-    internet: chipHasValue('internet', 'متوفر'),
+    internet: chipHasValue('internet', 'يوجد'),
     rowVersion: sectionVersion('housing')
   };
 }
@@ -926,32 +944,49 @@ async function saveHousing() {
 
 /* ------------------ Step 3 (تكملة) — Utilities & appliances ------------------ */
 
-// step3-housing.html (قسم المرافق والأجهزة): each utility/appliance is its own chip-field (a
-// single yes/no or condition chip), not one shared multi-select — unlike
-// case-preview.js's older shared-'devices'/'appliances' field reading.
-const UTILITY_CHIP_FIELDS = ['electricity', 'waterMeter', 'waterMotor'];
+// الأجهزة: data-field ← applianceKey (نفس الاسم). المرافق: data-field ← name.
 const APPLIANCE_CHIP_FIELDS = ['fridge', 'washer', 'oven', 'cookingAppliances', 'computer', 'tv', 'freezer'];
+const UTILITY_CHIP_FIELDS = {
+  electricity: 'electricity',
+  waterMeter: 'water',
+  waterMotor: 'waterMotor',
+  transportation: 'transportation',
+  internet: 'internet'
+};
+const NONE_VALUE = 'لا يوجد';
+const YES_VALUE = 'يوجد';
 
+/**
+ * الخانة اللي محدش اختار فيها حاجة ما بتتبعتش (رد الباك إند §8.1).
+ * - جهاز: «لا يوجد» ← isPresent:false. «يوجد» ← true. أي نوع تاني (عادية،
+ *   شاشة...) أو نص «أخرى» ← true + details.
+ * - مرفق: «لا يوجد» ← isAvailable:false. «يوجد» ← true. أي قيمة تانية (عداد،
+ *   ممارسة، سيارة...) ← true + sourceOrMeter (زي أمثلة الباك إند).
+ */
 function collectUtilitiesPayload() {
-  const appliances = APPLIANCE_CHIP_FIELDS.map(fieldName => ({
-    applianceKey: fieldName,
-    isPresent: chipValues(fieldName).length > 0
-  }));
+  const appliances = [];
+  APPLIANCE_CHIP_FIELDS.forEach(fieldName => {
+    const value = chipSingle(fieldName);
+    if (!value) return;
+    appliances.push({
+      applianceKey: fieldName,
+      isPresent: value !== NONE_VALUE,
+      details: value === NONE_VALUE || value === YES_VALUE ? null : value
+    });
+  });
 
-  const utilities = UTILITY_CHIP_FIELDS
-    .map(fieldName => ({
-      name: fieldName,
-      isAvailable: chipValues(fieldName).length > 0,
-      condition: chipSingle(fieldName)
-    }))
-    .filter(u => u.isAvailable || u.condition);
-
-  // transportation/internet aren't appliances or metered utilities in the
-  // API's two-list shape — surfaced as notes on the utilities list instead
-  // of being dropped silently.
-  const transport = chipSingle('transportation');
-  if (transport) utilities.push({ name: 'transportation', isAvailable: true, condition: transport });
-  if (chipHasValue('internet', 'متوفر')) utilities.push({ name: 'internet', isAvailable: true });
+  const utilities = [];
+  Object.entries(UTILITY_CHIP_FIELDS).forEach(([fieldName, name]) => {
+    const value = chipSingle(fieldName);
+    if (!value) return;
+    utilities.push({
+      name,
+      isAvailable: value !== NONE_VALUE,
+      condition: null,
+      sourceOrMeter: value === NONE_VALUE || value === YES_VALUE ? null : value,
+      notes: null
+    });
+  });
 
   return {
     appliances,

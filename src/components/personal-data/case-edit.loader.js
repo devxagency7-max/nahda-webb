@@ -161,34 +161,50 @@ function fillStep2(attachments, caseId) {
   renderAttachmentList((attachments && attachments.items) || []);
 }
 
-/* ---------------------------- تاب 3 — السكن ---------------------------- */
+/* ---------------------------- تاب 3 — السكن والمرافق ---------------------------- */
 
-function fillStep3(housing) {
+/**
+ * خطوة السكن بتعرض خانات قسمين: housing والمرافق/الأجهزة من utilities.
+ * المرفق لو موجود في utilities[] بيغلب، وإلا بنقرا مكانه القديم في السكن.
+ * لازم يفضل مطابق للموبايل (HousingMapper.fromApiResponse).
+ */
+function fillStep3(housing, utilities) {
   const h = housing || {};
+  const chip = (field, value) => activateChip(`.chip-field[data-field="${field}"]`, value);
+
   setVal('housing-description', h.description);
-  activateChip('.chip-field[data-field="housingType"]', h.ownership);
-  activateChip('.chip-field[data-field="walls"]', h.walls);
-  activateChip('.chip-field[data-field="roof"]', h.roof);
-  activateChip('.chip-field[data-field="floor"]', h.floor);
-  activateChip('.chip-field[data-field="entrance"]', h.entrance);
-  activateChip('.chip-field[data-field="bathroomCondition"]', h.bathroomCondition);
   setVal('rooms-count', h.roomsCount);
-  triggerWorkflowRecalc();
-}
+  chip('housingType', h.ownership);
+  chip('buildingType', h.buildingType);
+  chip('walls', h.walls);
+  chip('roof', h.roof);
+  chip('floor', h.floor);
+  chip('entrance', h.entrance);
+  chip('bathroomType', h.bathroomType);
+  chip('bathroomCondition', h.bathroomCondition);
+  chip('sanitation', h.sanitation);
 
-/* ---------------------- تاب 3 (تكملة) — المرافق والتجهيزات ---------------------- */
+  // الويب كان بيبعت المياه باسم waterMeter قبل التوحيد.
+  const utilityItems = {};
+  (utilities?.utilities || []).forEach(u => {
+    if (u?.name) utilityItems[u.name === 'waterMeter' ? 'water' : u.name] = u;
+  });
+  const utilityValue = (name, fromHousing) => {
+    const u = utilityItems[name];
+    if (!u) return fromHousing;
+    if (u.isAvailable === false) return 'لا يوجد';
+    if (u.isAvailable !== true) return null;
+    return u.sourceOrMeter || u.condition || 'يوجد';
+  };
+  chip('electricity', utilityValue('electricity', h.electricity));
+  chip('waterMeter', utilityValue('water', h.water));
+  chip('waterMotor', utilityValue('waterMotor', h.waterMotor ? 'يوجد' : null));
+  chip('transportation', utilityValue('transportation', h.transport));
+  chip('internet', utilityValue('internet', h.internet ? 'يوجد' : null));
 
-function fillUtilities(utilities) {
-  const ut = utilities || {};
-  activateChip('.chip-field[data-field="electricity"]', ut.electricity);
-  activateChip('.chip-field[data-field="waterMeter"]', ut.water);
-  activateChip('.chip-field[data-field="waterMotor"]', ut.waterMotor ? 'يوجد' : 'لا يوجد');
-  activateChip('.chip-field[data-field="transportation"]', ut.transport);
-  if (ut.internet) activateChip('.chip-field[data-field="internet"]', 'يوجد');
-
-  (ut.appliances || []).forEach(a => {
-    const value = a.isPresent ? (a.details || 'يوجد') : 'لا يوجد';
-    activateChip(`.chip-field[data-field="${a.applianceKey}"]`, value);
+  (utilities?.appliances || []).forEach(a => {
+    if (!a?.applianceKey) return;
+    chip(a.applianceKey, a.isPresent === false ? 'لا يوجد' : (a.details || 'يوجد'));
   });
 
   triggerWorkflowRecalc();
@@ -345,8 +361,7 @@ export async function loadCaseIntoForm(caseId) {
 
     fillStep1(detail);
     fillStep2(attachmentsRes, caseId);
-    fillStep3(detail.housing);
-    fillUtilities(detail.utilities);
+    fillStep3(detail.housing, detail.utilities);
     fillStep4(detail.agriculture);
     loadFamilyMembersManager(mapMembersFromApi(familyRes?.members));
     fillStep5(detail.financial);

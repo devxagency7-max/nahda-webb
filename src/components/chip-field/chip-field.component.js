@@ -24,6 +24,9 @@ const OTHER_OPTION = 'أخرى';
  *     </div>
  *     <input type="text" class="form-input chip-field__other" style="display:none" placeholder="اكتب هنا...">
  *   </div>
+ *
+ * `data-single="true"` على الـ .chip-field = اختيار واحد بس (اختيار شيب بيلغي
+ * اللي قبله) — للخانات اللي بتتبعت للسيرفر كقيمة واحدة.
  */
 export function initChipFields(scope = document) {
   const fields = DOM.qsa('.chip-field', scope);
@@ -32,6 +35,7 @@ export function initChipFields(scope = document) {
     const countEl = field.querySelector('.chip-field__count');
     const chips = DOM.qsa('.chip-btn', field);
     const otherInput = field.querySelector('.chip-field__other');
+    const single = field.dataset.single === 'true';
 
     // المجموعة والحقل الحر ليهم اسم برمجي من عنوان الحقل (بدل placeholder بس).
     const labelEl = field.querySelector('.chip-field__label');
@@ -63,7 +67,11 @@ export function initChipFields(scope = document) {
 
     chips.forEach(chip => {
       chip.addEventListener('click', () => {
-        chip.classList.toggle('chip-btn--active');
+        const activating = !chip.classList.contains('chip-btn--active');
+        if (single && activating) {
+          chips.forEach(c => c.classList.remove('chip-btn--active'));
+        }
+        chip.classList.toggle('chip-btn--active', activating);
         syncOtherVisibility();
         updateCount();
         triggerWorkflowRecalc();
