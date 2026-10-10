@@ -162,6 +162,15 @@ function renderMembersInto(tile, recipients) {
   box.innerHTML = `
     <p class="support-type-tile__hint">اختر مين من الأسرة أخد/هياخد الدعم ده (اختياري — من غير اختيار بيتسجّل للأسرة كلها).</p>
     <div class="support-members-list">${rows}</div>`;
+
+  // كل المستلمين المعلَّمين اتشالوا من الأسرة: النوع يتشال خالص بدل ما يتسجّل
+  // للأسرة كلها — زي ما الباك بيمسح دعمهم (removedSupport).
+  const ids = new Set(recipients.map(r => r.id));
+  if (checkedIds.size && ![...checkedIds].some(id => ids.has(id))) {
+    const checkbox = tile.querySelector('.support-type-checkbox');
+    if (checkbox) checkbox.checked = false;
+    syncTile(tile);
+  }
 }
 
 function familySize() {
