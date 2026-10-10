@@ -701,6 +701,7 @@ function buildCaseSections(c) {
           <div class="pdf-row"><span class="pdf-row__label">عدد الغرف:</span> <span class="pdf-row__value">${DOM.escapeHTML(val(h.roomsCount))}</span></div>
           <div class="pdf-row"><span class="pdf-row__label">دورات المياه:</span> <span class="pdf-row__value">${DOM.escapeHTML(val(h.bathroomCondition))}</span></div>
           <div class="pdf-row"><span class="pdf-row__label">الصرف الصحي:</span> <span class="pdf-row__value">${DOM.escapeHTML(val(h.sanitation))}</span></div>
+          <div class="pdf-row"><span class="pdf-row__label">الغاز:</span> <span class="pdf-row__value">${DOM.escapeHTML(val(h.gas))}</span></div>
           <div class="pdf-row"><span class="pdf-row__label">المياه:</span> <span class="pdf-row__value">${DOM.escapeHTML(val(h.water))}</span></div>
           <div class="pdf-row"><span class="pdf-row__label">الكهرباء:</span> <span class="pdf-row__value">${DOM.escapeHTML(val(h.electricity))}</span></div>
           <div class="pdf-row"><span class="pdf-row__label">موتور مياه:</span> <span class="pdf-row__value">${yesNo(h.waterMotor)}</span></div>

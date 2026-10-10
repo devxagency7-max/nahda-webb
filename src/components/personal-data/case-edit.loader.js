@@ -22,7 +22,7 @@ import { messageFromError } from '../../services/errors.js';
 import { renderAttachmentList, renderAttachmentLoadError } from '../attachments/attachments.component.js';
 import { restoreAgricultureManager } from '../agriculture/agriculture.component.js';
 import { loadFamilyMembersManager } from '../family-members/family-members.component.js';
-import { loadFinancialManager } from '../financial-ledger/financial-ledger.component.js';
+import { loadFinancialManager, OPTIONAL_EXPENSE_CATEGORIES } from '../financial-ledger/financial-ledger.component.js';
 import { loadSupportSelection } from '../support/support.component.js';
 import { whenDropdownsReady } from './dropdown-data.component.js';
 
@@ -95,11 +95,27 @@ function resolveLocationNames(centerId, villageId) {
 
 /* ---------------------------- تاب 1 — البيانات الأساسية ---------------------------- */
 
+/**
+ * الرقم القومي مقفول في وضع التعديل: PUT /beneficiary مابيبعتوش، وتغييره كان
+ * بيخلّي saveStep1 يعتبرها حالة جديدة ويعمل POST /cases. التصفير بيفتحه تاني.
+ */
+export function setNationalIdLocked(locked) {
+  const input = DOM.qs('#national-id');
+  if (input) {
+    input.readOnly = locked;
+    input.style.background = locked ? 'rgba(241, 245, 249, 0.9)' : '';
+    input.style.cursor = locked ? 'not-allowed' : '';
+  }
+  const hint = DOM.qs('#national-id-locked');
+  if (hint) hint.style.display = locked ? 'block' : 'none';
+}
+
 function fillStep1(detail) {
   const b = detail.beneficiary || {};
 
   setVal('case-name', b.fullName);
   setVal('national-id', b.nationalId);
+  setNationalIdLocked(true);
   // current-age/gender حقول للقراءة بس ومشتقة من الرقم القومي — دوس على
   // الرقم القومي هيولّد استخراجها تلقائيًا (نفس مسار الكتابة اليدوية) عن
   // طريق حدث input اللي بيسمعه workflow.component.js.
@@ -241,9 +257,23 @@ export function fillAgricultureFromServer(agriculture) {
 
 /* ---------------------------- تاب 5 — الدخل والمصروفات ---------------------------- */
 
-const FIXED_EXPENSE_LABELS = new Set([
-  'الأكل والشرب', 'المصروفات الدراسية', 'الكهرباء', 'المياه', 'الغاز', 'الإيجار', 'القسط'
-]);
+// فئات المصروفات اللي ليها صف ثابت في الشاشة. «الكهرباء، المياه، الغاز» فئة
+// واحدة عند السيرفر بتتعرض كلها على صف «الكهرباء» (والمياه/الغاز صفر) — نفس
+// الموبايل، فالمجموع مايتغيّرش بالتحميل ثم الحفظ.
+const FIXED_EXPENSE_ROW = {
+  'الأكل والشرب': 'الأكل والشرب',
+  'المصروفات الدراسية': 'المصروفات الدراسية',
+  'الكهرباء، المياه، الغاز': 'الكهرباء',
+  'الإيجار': 'الإيجار',
+  'القسط': 'القسط'
+};
+
+// أسماء بنود الويب الآلية اللي كانت بتتبعت بالغلط كبنود يدوية (ورجعت من
+// السيرفر يدوية) — السيرفر بيحسبها آليًا، فبتتشال في التحميل والحفظ الجاي
+// بينضّف السيرفر منها.
+const LEAKED_AUTO_INCOME_LABELS = new Set(['الدخل الشهري', 'معاش تكافل وكرامة', 'دخل الأرض الزراعية (شهري)']);
+
+const itemLabel = i => String(i.label || i.category || '').trim();
 
 function fillStep5(financial) {
   const fin = financial || {};
@@ -251,22 +281,41 @@ function fillStep5(financial) {
   const expenseItems = fin.expenseItems || [];
 
   // البنود التلقائية (isAuto) بتتحسب من جديد لوحدها من تاب 1/5 — هنا بنحتفظ
-  // بس بالبنود اليدوية اللي المستخدم ضافها بنفسه.
-  const manualIncomeItems = incomeItems
-    .filter(i => !i.isAuto)
-    .map(i => ({ type: i.label, person: '', amount: Number(i.amount) || 0, frequency: i.period || 'شهري', notes: '' }));
+  // بس بالبنود اليدوية. أول «معاش» بيتحط في البند الآلي بتاعه.
+  let pensionAmount = 0;
+  let pensionTaken = false;
+  const manualIncomeItems = [];
+  incomeItems.forEach(i => {
+    const label = itemLabel(i);
+    if (i.isAuto || !label || LEAKED_AUTO_INCOME_LABELS.has(label)) return;
+    if (label === 'معاش' && !pensionTaken) {
+      pensionTaken = true;
+      pensionAmount = Number(i.amount) || 0;
+      return;
+    }
+    manualIncomeItems.push({ type: label, person: '', amount: Number(i.amount) || 0, frequency: i.period || 'شهري', notes: i.notes || '' });
+  });
 
   const fixedExpenseAmounts = {};
   const manualExpenseItems = [];
+  const loadedOptional = [];
   expenseItems.forEach(i => {
-    if (FIXED_EXPENSE_LABELS.has(i.label) && !i.isAuto) {
-      fixedExpenseAmounts[i.label] = Number(i.amount) || 0;
-    } else if (!i.isAuto) {
-      manualExpenseItems.push({ type: i.label, amount: Number(i.amount) || 0, frequency: i.period || 'شهري', notes: '' });
+    const label = itemLabel(i);
+    if (i.isAuto || !label) return;
+    const row = FIXED_EXPENSE_ROW[label];
+    if (row) {
+      fixedExpenseAmounts[row] = (fixedExpenseAmounts[row] || 0) + (Number(i.amount) || 0);
+      return;
     }
+    if (OPTIONAL_EXPENSE_CATEGORIES.includes(label)) loadedOptional.push(label);
+    // فئة اختيارية بصفر = اتمسحت قبل كده، مالهاش صف.
+    if ((Number(i.amount) || 0) === 0 && OPTIONAL_EXPENSE_CATEGORIES.includes(label)) return;
+    manualExpenseItems.push({ type: label, amount: Number(i.amount) || 0, frequency: i.period || 'شهري', notes: '' });
   });
 
-  loadFinancialManager(manualIncomeItems, fixedExpenseAmounts, manualExpenseItems);
+  // الحفظ بيبعت الاختيارية دي حتى لو صفّها اتحذف (صفر = امسح على السيرفر).
+  store.setCurrentCase({ ...store.currentCase, loadedOptionalExpenses: loadedOptional });
+  loadFinancialManager(manualIncomeItems, fixedExpenseAmounts, manualExpenseItems, pensionAmount);
 }
 
 /* ---------------------------- تاب 6 — الدعم ---------------------------- */

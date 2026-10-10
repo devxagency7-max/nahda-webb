@@ -24,9 +24,21 @@ const _defaultExpenseCategories = [
   'القسط',
 ];
 
+// فئات المصروفات عند السيرفر (PUT /financial): الخمسة الثابتة بنصها الحرفي
+// لازم تتبعت كلها دايمًا (422 لو ناقصة)، والاختياريتين لو ما اتبعتوش السيرفر
+// بيسيب قيمتهم والصفر بيمسحها — نفس FinancialMapper في الأبلكيشن.
+export const FIXED_EXPENSE_CATEGORIES = [
+  'الأكل والشرب',
+  'المصروفات الدراسية',
+  'الكهرباء، المياه، الغاز',
+  'الإيجار',
+  'القسط'
+];
+export const OPTIONAL_EXPENSE_CATEGORIES = ['العلاج الشهري', 'مصروفات أخرى'];
+
 // تطبيع أي مبلغ لقيمته الشهرية حسب الدورية — مطابق تمامًا لـ monthlyAmount
 // في IncomeItemFormData/ExpenseItemFormData بالأبلكيشن.
-function toMonthlyAmount(amount, frequency) {
+export function toMonthlyAmount(amount, frequency) {
   if (!amount) return 0;
   switch (frequency) {
     case 'يومي': return amount * 30;
@@ -53,6 +65,9 @@ export function resetFinancialManager() {
 
 let _loadCallback = null;
 
+/** مصدر بند «معاش» الآلي — مبلغه بيتكتب في الخانة نفسها ومالوش حقل في خطوة تانية. */
+export const PENSION_SOURCE_ID = 'pension';
+
 /**
  * يستبدل بنود الدخل/المصروفات اليدوية (غير التلقائية) بيإلي جايين من حالة
  * محفوظة بيتم فتحها للتعديل — البنود التلقائية بتتحسب من جديد لوحدها (عن
@@ -62,9 +77,10 @@ let _loadCallback = null;
  * @param {Array} manualIncomeItems - بنود دخل يدوية {type, person, amount, frequency, notes}
  * @param {Array} fixedExpenseAmounts - map من اسم الفئة الثابتة -> المبلغ المحفوظ
  * @param {Array} manualExpenseItems - بنود مصروف يدوية إضافية غير الخمسة الثابتة
+ * @param {number} [pensionAmount] - مبلغ بند «معاش» المحفوظ (بيتحط في البند الآلي)
  */
-export function loadFinancialManager(manualIncomeItems, fixedExpenseAmounts, manualExpenseItems) {
-  if (_loadCallback) _loadCallback(manualIncomeItems || [], fixedExpenseAmounts || {}, manualExpenseItems || []);
+export function loadFinancialManager(manualIncomeItems, fixedExpenseAmounts, manualExpenseItems, pensionAmount = 0) {
+  if (_loadCallback) _loadCallback(manualIncomeItems || [], fixedExpenseAmounts || {}, manualExpenseItems || [], pensionAmount);
 }
 
 export function initFinancialManager() {
@@ -103,6 +119,9 @@ export function initFinancialManager() {
   }
 
   let incomeItems = [];
+  // بند «معاش» بيتبني من جديد مع كل مزامنة — مبلغه لازم يتحفظ هنا، وإلا كان
+  // بيرجع صفر مع أي تعديل في خطوة تانية.
+  let pensionAmount = 0;
   const expandedTakaful = { value: false };
   // 7 بنود مصروف ثابتة مزروعة افتراضيًا (locked, amount = 0)، + بند "إيجار
   // أراضي زراعية" الثامن هيتضاف/يتزامن لاحقًا عن طريق syncLandRentExpenseItem.
@@ -172,10 +191,11 @@ export function initFinancialManager() {
     const pensionItem = {
       type: 'معاش',
       person: 'رب الأسرة',
-      amount: 0,
+      amount: pensionAmount,
       frequency: 'شهري',
       auto: true,
-      locked: true
+      locked: true,
+      sourceId: PENSION_SOURCE_ID
     };
 
     // بند "تكافل وكرامة" مُجمَّع من كل المستفيدين (رب الأسرة + الأفراد
@@ -253,6 +273,10 @@ export function initFinancialManager() {
   // كتابة قيمة معدَّلة من بند تلقائي هنا رجوعًا لحقلها الأصلي في خطوة 1 أو 5 —
   // مزامنة ثنائية الاتجاه مطابقة لـ onExternalAmountChanged في financial_tab.dart.
   function writeAmountToSource(sourceId, amount, sourceIsAnnual) {
+    if (sourceId === PENSION_SOURCE_ID) {
+      pensionAmount = amount;
+      return;
+    }
     const memberMatch = /^member-(\d+)-(income|takaful)$/.exec(sourceId);
     if (memberMatch) {
       const idx = parseInt(memberMatch[1], 10);
@@ -565,6 +589,7 @@ export function initFinancialManager() {
 
   _resetCallback = () => {
     incomeItems = [];
+    pensionAmount = 0;
     expenseItems = _defaultExpenseCategories.map(type => ({
       type,
       amount: 0,
@@ -577,12 +602,13 @@ export function initFinancialManager() {
     recalculateBudget(false);
   };
 
-  _loadCallback = (manualIncomeItems, fixedExpenseAmounts, manualExpenseItems) => {
+  _loadCallback = (manualIncomeItems, fixedExpenseAmounts, manualExpenseItems, savedPension) => {
     // البنود التلقائية (دخل رب الأسرة، معاش، تكافل وكرامة، دخل/إيجار الأرض)
     // بتتبني تاني من نفسها فور استدعاء syncAutoIncomeItems/syncLandRentExpenseItem
     // (بيحصل أصلاً مع أي triggerWorkflowRecalc بعد ما نملى تاب 1/5) — هنا بس
     // بنحط البنود اليدوية زي ما كانت متسجّلة على السيرفر.
     incomeItems = [...manualIncomeItems];
+    pensionAmount = Number(savedPension) || 0;
 
     expenseItems = _defaultExpenseCategories.map(type => ({
       type,

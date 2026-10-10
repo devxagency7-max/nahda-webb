@@ -25,6 +25,7 @@ import { briefOpinionDecision, fillAgricultureFromServer, loadCaseIntoForm } fro
 import { collectSupportItems, getSupportValidationError } from '../support/support.component.js';
 import { addUploadedAttachmentRow, attachmentRowCount, renderAttachmentList, renderAttachmentLoadError } from '../attachments/attachments.component.js';
 import { memberClearableValues, memberFilledKeys } from '../family-members/family-members.component.js';
+import { FIXED_EXPENSE_CATEGORIES, OPTIONAL_EXPENSE_CATEGORIES, PENSION_SOURCE_ID, toMonthlyAmount } from '../financial-ledger/financial-ledger.component.js';
 
 function val(id) {
   const el = DOM.qs(`#${id}`);
@@ -596,8 +597,11 @@ export async function saveStep1() {
   // حالة) بدل ما ننشئ حالة جديدة، وده بيمسح بيانات الشخص الأول بصمت. فبنقارن
   // الرقم القومي المكتوب دلوقتي بالرقم اللي اتسجّلت بيه الحالة الحالية، ولو
   // مختلفين بنعتبرها حالة جديدة تمامًا.
+  // في وضع التعديل الرقم مقفول (setNationalIdLocked) — ولو اختلف لأي سبب ماينفعش
+  // نصفّر الحالة ونعمل POST /cases: كانت هتتعمل حالة جديدة بدل تعديل الحالة دي.
   const typedNationalId = val('national-id');
-  if (currentCaseId() && store.currentCase?.nationalId && store.currentCase.nationalId !== typedNationalId) {
+  if (currentCaseId() && !store.currentCase?.isEditMode &&
+      store.currentCase?.nationalId && store.currentCase.nationalId !== typedNationalId) {
     store.clearCurrentCase();
   }
 
@@ -1115,75 +1119,83 @@ export async function saveStep4(readAgricultureData) {
  * أرقام حقيقية على الشاشة. بنقرأ من الـ store مباشرة بدل ما نحاول نعيد قراءة
  * DOM بايت.
  */
-// بنود الأرض الآلية (دخل الأرض الشهري ومصروف إيجار الأرض) — السيرفر بيحسبها
-// بنفسه من PUT /agriculture (API ref §8.10: «do NOT send these»)، فمابنبعتهاش
-// زي الموبايل. من غير الفلتر ده الدخل كان بيتبعت بند يدوي زيادة، والإيجار
-// كان بيتجمّع على فئة «القسط».
-const LAND_AUTO_SOURCE_IDS = new Set(['agri-annual-income', 'agri-rent-amount']);
-const isLandAutoItem = item => LAND_AUTO_SOURCE_IDS.has(item.sourceId);
+/*
+ * البنود الآلية (دخل رب الأسرة ودخل الأفراد، تكافل وكرامة، دخل/إيجار الأرض)
+ * السيرفر بيحسبها بنفسه من الأقسام التانية (API ref §8.10: «do NOT send
+ * these») — زي الموبايل. كانت بتتبعت كبنود يدوية فتتحسب مرتين، وترجع في
+ * التحميل يدوية فتتكرر مع كل حفظ. الاستثناء «معاش»: مالوش حقل عند السيرفر،
+ * فبيتبعت بند يدوي باسمه (نفس الموبايل).
+ *
+ * المبالغ بتتبعت شهرية (`period: شهري`) زي الموبايل: السيرفر مابيحوّلش
+ * الدورات، فمبلغ سنوي خام كان بيبوّظ الإجمالي.
+ */
+const MONTHLY = 'شهري';
 
 function readIncomeRows() {
-  return (store.incomeItems || []).filter(item => !isLandAutoItem(item)).map(item => ({
-    label: item.type || '',
-    amount: Number(item.amount) || 0,
-    period: item.frequency || null
-  })).filter(r => r.label);
+  return (store.incomeItems || [])
+    .filter(item => !item.auto || item.sourceId === PENSION_SOURCE_ID)
+    .map(item => ({
+      label: (item.type || '').trim(),
+      amount: roundMoney(toMonthlyAmount(Number(item.amount) || 0, item.frequency)),
+      period: MONTHLY,
+      notes: (item.notes || '').trim() || null
+    }))
+    // بند «معاش» الآلي بصفر = مفيش معاش.
+    .filter(r => r.label && !(r.label === 'معاش' && r.amount === 0));
 }
 
 function readExpenseRows() {
-  return (store.expenseItems || []).filter(item => !isLandAutoItem(item)).map(item => ({
-    label: item.type || '',
-    amount: Number(item.amount) || 0,
-    period: item.frequency || null
+  return (store.expenseItems || []).filter(item => !item.auto).map(item => ({
+    label: (item.type || '').trim(),
+    amount: toMonthlyAmount(Number(item.amount) || 0, item.frequency)
   })).filter(r => r.label);
 }
 
-// السيرفر بيقبل بالظبط الخمس فئات دي، بنصها الحرفي، لا أكتر ولا أقل —
-// اتحقق منه فعليًا على السيرفر الحي (422 "يجب إدخال جميع بنود المصروفات
-// الثابتة الخمسة، ولا يمكن إضافة تصنيفات أخرى"). الفورم (step5-financial.html
-// #new-expense-type) بتسمح بـ 8 أنواع حرة + "أخرى" — فبنجمّع كل بند مُدخَل
-// على أقرب فئة من الخمسة، وأي فئة متسجلتش بتتبعت بمبلغ صفر (السيرفر بيرفض
-// أي مجموعة غير كاملة).
-const FIXED_EXPENSE_CATEGORIES = [
-  'الأكل والشرب',
-  'المصروفات الدراسية',
-  'الكهرباء، المياه، الغاز',
-  'الإيجار',
-  'القسط'
-];
+function roundMoney(value) {
+  return value > 0 ? Math.round(value * 100) / 100 : 0;
+}
 
-// نص الفورم (كما في new-expense-type) -> الفئة الثابتة المطابقة.
-const EXPENSE_LABEL_TO_FIXED_CATEGORY = {
+// فئات المصروفات (FIXED_EXPENSE_CATEGORIES/OPTIONAL_EXPENSE_CATEGORIES) في
+// financial-ledger.component.js — اللودر بيستخدمها هو كمان.
+const OTHER_EXPENSES = 'مصروفات أخرى';
+
+// اسم البند في الشاشة -> الفئة عند السيرفر: البنود الثابتة السبعة (الكهرباء
+// والمياه والغاز صفوف منفصلة وفئة واحدة)، وخيارات «إضافة مصروف»، وأسماء
+// الفئات نفسها (اللي بترجع من السيرفر). أي اسم تاني ← «مصروفات أخرى».
+const EXPENSE_LABEL_TO_CATEGORY = {
+  ...Object.fromEntries([...FIXED_EXPENSE_CATEGORIES, ...OPTIONAL_EXPENSE_CATEGORIES].map(c => [c, c])),
+  'الكهرباء': 'الكهرباء، المياه، الغاز',
+  'المياه': 'الكهرباء، المياه، الغاز',
+  'الغاز': 'الكهرباء، المياه، الغاز',
   'إيجار سكن': 'الإيجار',
   'فواتير مياه وكهرباء وغاز': 'الكهرباء، المياه، الغاز',
   'أكل وشرب وطعام': 'الأكل والشرب',
   'تعليم ومصروفات دراسية': 'المصروفات الدراسية',
-  'علاج وأدوية': 'الأكل والشرب', // لا فئة طبية مستقلة عند السيرفر — أقرب تصنيف متاح
+  'علاج وأدوية': 'العلاج الشهري',
   'أقساط وقروض': 'القسط',
-  'مواصلات': 'الإيجار', // لا فئة مواصلات مستقلة — تُجمَّع هنا مؤقتًا (راجع محتوى الفئات مع المنتج لو الظهور غير مقبول)
-  'أخرى': 'القسط'
+  'مواصلات': OTHER_EXPENSES,
+  'أخرى': OTHER_EXPENSES
 };
 
 /**
- * يجمّع بنود المصروفات الحرة من الفورم إلى الخمس فئات الثابتة اللي السيرفر
- * بيفرضها بالضبط — كل بند بيتحول لأقرب فئة وقيمته تُجمع معها، وأي فئة
- * متسجلتش بتتبعت بصفر (السيرفر بيرفض مجموعة غير مكتملة).
+ * يجمّع بنود المصروفات (بقيمتها الشهرية) على فئات السيرفر: الخمسة الثابتة
+ * دايمًا (ولو صفر — السيرفر بيرفض مجموعة ناقصة)، والاختيارية لو ليها بند أو
+ * كانت متسجلة على السيرفر وقت الفتح (صفر = اتمسحت).
  */
-function collectFixedExpenseItems() {
-  const rawRows = readExpenseRows();
-  const totals = Object.fromEntries(FIXED_EXPENSE_CATEGORIES.map(c => [c, 0]));
-  let period = 'شهري';
-
-  rawRows.forEach(row => {
-    const category = EXPENSE_LABEL_TO_FIXED_CATEGORY[row.label] || 'القسط';
-    totals[category] += row.amount;
-    if (row.period) period = row.period;
+function collectExpenseItems() {
+  const totals = {};
+  readExpenseRows().forEach(row => {
+    const category = EXPENSE_LABEL_TO_CATEGORY[row.label] || OTHER_EXPENSES;
+    totals[category] = (totals[category] || 0) + row.amount;
   });
 
-  return FIXED_EXPENSE_CATEGORIES.map(category => ({
+  const loadedOptional = store.currentCase?.loadedOptionalExpenses || [];
+  const optional = OPTIONAL_EXPENSE_CATEGORIES.filter(c => c in totals || loadedOptional.includes(c));
+
+  return [...FIXED_EXPENSE_CATEGORIES, ...optional].map(category => ({
     category,
-    amount: totals[category],
-    period
+    amount: roundMoney(totals[category] || 0),
+    period: MONTHLY
   }));
 }
 
@@ -1193,8 +1205,9 @@ function collectFixedExpenseItems() {
  * أي بند قبل ما يعدّي، بنفس فلسفة "تحذير مرة واحدة" المستخدمة في المرحلة 4.
  */
 export function validateStep5() {
-  const hasIncome = readIncomeRows().length > 0;
-  const hasExpense = readExpenseRows().length > 0;
+  // البنود الثابتة موجودة دايمًا بصفر — المهم إن فيه مبلغ متسجّل فعلًا.
+  const hasIncome = (store.incomeItems || []).some(i => Number(i.amount) > 0);
+  const hasExpense = (store.expenseItems || []).some(e => Number(e.amount) > 0);
   if (hasIncome || hasExpense) return [];
   return [{
     el: null,
@@ -1210,7 +1223,7 @@ export async function saveStep5() {
   }
   const items = {
     incomeItems: readIncomeRows(),
-    expenseItems: collectFixedExpenseItems()
+    expenseItems: collectExpenseItems()
   };
 
   return runSave(async () => {

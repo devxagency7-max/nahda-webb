@@ -39,6 +39,7 @@ import { EmployeesService } from '../../services/employees.service.js';
 import { resetFamilyMembersManager } from '../family-members/family-members.component.js';
 import { resetSupportManager } from '../support/support.component.js';
 import { resetFinancialManager } from '../financial-ledger/financial-ledger.component.js';
+import { setNationalIdLocked } from '../personal-data/case-edit.loader.js';
 
 export const STAGES_METADATA = [
   { id: 'stage-01', step: 1, row: 1, title: '1. الأساسية والأفراد', target: 'step-pane-1', route: 'personal-data' },
@@ -687,6 +688,8 @@ export function initWorkflowTabs() {
     // 1. الحالة الجارية نفسها (id، rowVersion كل قسم) — زي ما بيحصل مع أي
     // refresh فعلي (راجع تعليق currentCase في state/store.js).
     store.clearCurrentCase();
+    // الرقم القومي كان مقفول لو الحالة اتفتحت للتعديل — قبل التصفير عشان يتمسح.
+    setNationalIdLocked(false);
 
     // 2. أفراد الأسرة والزراعة — in-memory بس زي currentCase بالظبط (نفس
     // إصلاح باگ "أفراد الأسرة بيفضلوا من حالة سابقة" اللي اتعمل قبل كده).

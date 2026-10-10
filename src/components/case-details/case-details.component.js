@@ -248,9 +248,12 @@ function normalizeApiCase(detail, familyRes, supportRes, attachmentsRes, applian
   } catch {
     livestockTypes = [];
   }
-  // "other" is a placeholder key in the raw list — swap it for the free-text detail the caller actually gave.
+  // «أخرى» (أو "other" في بيانات قديمة) مكانها النص اللي اتكتب فعلًا في livestockOther.
   if (ag.livestockOther) {
-    livestockTypes = livestockTypes.map(t => (String(t).toLowerCase() === 'other' ? ag.livestockOther : t));
+    const isOther = t => String(t).trim() === 'أخرى' || String(t).toLowerCase() === 'other';
+    livestockTypes = livestockTypes.some(isOther)
+      ? livestockTypes.map(t => (isOther(t) ? ag.livestockOther : t))
+      : [...livestockTypes, ag.livestockOther];
   }
 
   // Single shared appliances source for both the housing and utilities cards.
@@ -314,6 +317,8 @@ function normalizeApiCase(detail, familyRes, supportRes, attachmentsRes, applian
       age: m.computedCurrentAge ?? m.age,
       gender: m.gender,
       religion: m.religion,
+      phone: m.phone,
+      diseases: m.diseases,
       isStudent: m.isStudent,
       stage: m.educationStage,
       grade: m.grade,
@@ -351,6 +356,7 @@ function normalizeApiCase(detail, familyRes, supportRes, attachmentsRes, applian
       bathroomType: h.bathroomType,
       bathroomCondition: h.bathroomCondition,
       sanitation: h.sanitation,
+      gas: h.gas,
       electricity: h.electricity,
       water: h.water,
       waterMotor: h.waterMotor,
@@ -672,6 +678,7 @@ function renderBasicDataCard(c, gone = () => false) {
                 ${row('العمر', m.age ? `${m.age} سنة` : '')}
                 ${row('النوع', m.gender)}
                 ${row('الديانة', m.religion)}
+                ${row('رقم الهاتف', m.phone)}
                 <div><strong>طالب:</strong> ${yesNo(m.isStudent)}</div>
                 ${m.isStudent ? row('المرحلة الدراسية', m.stage) : row('المؤهل الدراسي', m.education)}
                 ${m.isStudent ? row('الصف', m.grade) : ''}
@@ -680,6 +687,7 @@ function renderBasicDataCard(c, gone = () => false) {
                 ${!m.isStudent ? row('الدخل الشهري', money(m.monthlyIncome)) : ''}
                 <div><strong>تكافل وكرامة:</strong> ${yesNo(m.takafulBeneficiary)}</div>
                 ${m.takafulBeneficiary ? row('مبلغ تكافل', money(m.takafulAmount)) : ''}
+                ${m.diseases ? `<div style="grid-column: 1 / -1;"><strong>الأمراض:</strong> ${DOM.escapeHTML(m.diseases)}</div>` : ''}
                 ${m.notes ? `<div style="grid-column: 1 / -1;"><strong>ملاحظات:</strong> ${DOM.escapeHTML(m.notes)}</div>` : ''}
               </div>
             </div>
@@ -746,6 +754,7 @@ function renderHousingCard(c, gone = () => false) {
         ${row('طبيعة دورات المياه', h.bathroomType)}
         ${row('حالة دورات المياه', h.bathroomCondition)}
         ${row('الصرف الصحي', h.sanitation)}
+        ${row('الغاز', h.gas)}
         ${row('الكهرباء', h.electricity)}
         ${row('المياه', h.water)}
         <div><strong>موتور المياه:</strong> ${yesNo(h.waterMotor)}</div>
