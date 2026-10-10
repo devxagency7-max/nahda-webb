@@ -309,8 +309,23 @@ function fillStep8(workerOpinion) {
 
 /* ---------------------------- أفراد الأسرة ---------------------------- */
 
+/**
+ * نسخ قديمة كانت بتبعت مرحلة «أخرى» حرفيًا والتفاصيل في grade (موبايل) أو
+ * university (ويب). المعتمد دلوقتي (رد الباك إند 2026-10-10): التفاصيل هي
+ * educationStage نفسها — فبتتنقل، والحقل القديم بيتعلّم عشان يتمسح بـ "".
+ */
+function migrateOtherStage(member) {
+  if (member.isStudent !== 'true' || member.stage.trim() !== 'أخرى') return member;
+  const grade = member.grade.trim();
+  const university = member.university.trim();
+  const details = grade || university;
+  if (!details) return member;
+  const filled = [grade && 'grade', university && 'university'].filter(Boolean).join(',');
+  return { ...member, stage: details, grade: '', university: '', filled };
+}
+
 function mapMembersFromApi(members) {
-  return (members || []).map(m => ({
+  return (members || []).map(m => migrateOtherStage({
     memberId: m.id || '',
     name: m.name || '',
     relation: m.relation || '',

@@ -417,10 +417,12 @@ function collectFamilyMembersPayload() {
       gender: m.gender || null,
       religion: m.religion || null,
       isStudent: m.isStudent === 'true' || m.isStudent === true,
-      educationStage: clearable('educationStage'),
+      // المرحلة والمؤهل استبدال كامل على السيرفر: الفاضي null (بيمسح) —
+      // رد الباك إند 2026-10-10.
+      educationStage: values.educationStage || null,
       grade: clearable('grade'),
       university: clearable('university'),
-      education: clearable('education'),
+      education: values.education || null,
       job: clearable('job'),
       monthlyIncome: m.income ? Number(m.income) : null,
       phone: clearable('phone'),

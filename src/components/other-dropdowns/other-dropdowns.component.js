@@ -47,6 +47,8 @@ export function initOtherOptionDropdowns() {
       inlineInput.type = 'text';
       inlineInput.className = 'form-input in-field-other-input';
       inlineInput.placeholder = 'اكتب الاختيار المخصص مباشرة هنا...';
+      // حد طول الكتابة الحرة = حد الخانة على السيرفر ([data-other-maxlength]).
+      if (select.dataset.otherMaxlength) inlineInput.maxLength = Number(select.dataset.otherMaxlength);
       inlineInput.style.display = 'none';
       inlineInput.style.paddingLeft = '40px';
 

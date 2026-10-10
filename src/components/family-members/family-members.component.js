@@ -226,15 +226,14 @@ export function initFamilyMembersManager() {
         universityInput.placeholder = 'أدخل اسم التخصص أو الماجستير والجامعة...';
         if (savedUni) universityInput.value = savedUni;
       }
-    } else if (selectedStage === 'أخرى') {
+    } else if (selectedStage) {
+      // «أخرى» أو مرحلة مكتوبة بإيد المستخدم: النص نفسه هو المرحلة
+      // (educationStage، حد 80 — رد الباك إند 2026-10-10)، وبيتكتب في خانة
+      // «أخرى» جوه القايمة. مفيش صف ولا كلية.
       if (gradeGroup) gradeGroup.style.display = 'none';
       if (gradeSelect) gradeSelect.value = '';
-      if (universityGroup) universityGroup.style.display = 'block';
-      if (uniLabel) uniLabel.textContent = 'تفاصيل المرحلة التعليمية / التخصص';
-      if (universityInput) {
-        universityInput.placeholder = 'أدخل تفاصيل المرحلة التعليمية...';
-        if (savedUni) universityInput.value = savedUni;
-      }
+      if (universityGroup) universityGroup.style.display = 'none';
+      if (universityInput) universityInput.value = '';
     } else {
       if (gradeGroup) gradeGroup.style.display = 'block';
       if (gradeSelect) gradeSelect.innerHTML = '<option value="" selected disabled>-- اختر المرحلة التعليمية أولاً لتحديد الصف --</option>';
@@ -559,6 +558,14 @@ export function initFamilyMembersManager() {
       if (relation === 'أخرى') {
         showToast('اكتب صلة القرابة في خانة «أخرى»');
         const otherInput = relationInput?.closest('.form-select-wrapper')?.querySelector('.in-field-other-input');
+        if (otherInput) otherInput.focus();
+        return;
+      }
+
+      // «أخرى» في المرحلة من غير ما تتكتب المرحلة الفعلية.
+      if (isStudent && stage === 'أخرى') {
+        showToast('اكتب المرحلة التعليمية في خانة «أخرى»');
+        const otherInput = stageSelect?.closest('.form-select-wrapper')?.querySelector('.in-field-other-input');
         if (otherInput) otherInput.focus();
         return;
       }
