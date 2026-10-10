@@ -894,7 +894,7 @@ function chipHasValue(fieldName, value) {
  * بالترتيب: PUT /housing وبعده PUT /utilities (رد الباك إند 2026-10-08 §8).
  * الكهرباء/المياه/الموتور/المواصلات/الإنترنت بتتبعت كمان في السكن (مكانها
  * القديم) — PUT /housing استبدال كامل، فلو بطّلنا نبعتها هناك القديم يتمسح.
- * الغاز مالوش مكان في العقد لسه — مش بيتبعت.
+ * الغاز في السكن `gas` (رد الباك إند 2026-10-10): null = سيب القيمة القديمة.
  *
  * لازم يفضل مطابق للموبايل: lib/features/case_details/data/mappers/housing_mapper.dart
  */
@@ -929,6 +929,7 @@ function collectHousingPayload() {
     sanitation: chipSingle('sanitation'),
     electricity: chipSingle('electricity'),
     water: chipSingle('waterMeter'),
+    gas: chipSingle('gas'),
     waterMotor: Boolean(serverHousing().waterMotor),
     transport: chipSingle('transportation'),
     internet: chipHasValue('internet', 'يوجد'),

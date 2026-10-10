@@ -182,6 +182,7 @@ function fillStep3(housing, utilities) {
   chip('roomsCount', h.roomsCount);
   chip('bathroomCondition', h.bathroomCondition);
   chip('sanitation', h.sanitation);
+  chip('gas', h.gas);
 
   // الويب كان بيبعت المياه باسم waterMeter قبل التوحيد.
   const utilityItems = {};
