@@ -118,9 +118,21 @@
         <input type="text" class="form-input chip-field__other" style="display: none;" placeholder="اكتب هنا...">
       </div>
 
-      <div class="form-group form-group--full">
-        <label class="form-label" for="rooms-count"><span>عدد الغرف</span></label>
-        <input type="text" id="rooms-count" class="form-input" maxlength="50" placeholder="مثال: 3 + صالة">
+      <div class="chip-field" data-single="true" data-field="roomsCount">
+        <div class="chip-field__header">
+          <span class="chip-field__label">عدد الغرف</span>
+          <span class="badge chip-field__count">0 اختيار</span>
+        </div>
+        <div class="chip-field__options">
+          <button type="button" class="chip-btn" data-value="1">1</button>
+          <button type="button" class="chip-btn" data-value="2">2</button>
+          <button type="button" class="chip-btn" data-value="3">3</button>
+          <button type="button" class="chip-btn" data-value="4">4</button>
+          <button type="button" class="chip-btn" data-value="5">5</button>
+          <button type="button" class="chip-btn" data-value="6">6</button>
+          <button type="button" class="chip-btn" data-value="أخرى">أخرى</button>
+        </div>
+        <input type="text" class="form-input chip-field__other" style="display: none;" maxlength="50" placeholder="اكتب العدد (مثال: 3 + صالة)">
       </div>
 
       <div class="chip-field" data-single="true" data-field="bathroomCondition">

@@ -165,7 +165,7 @@ export function collectCaseFromForm() {
       transport: chips('transport'),
       internet: chipHas('internet', 'متوفر'),
       buildingType: chips('walls'),
-      roomsCount: val('rooms-count'),
+      roomsCount: chips('roomsCount'),
       sanitation: chips('bathroom')
     },
 

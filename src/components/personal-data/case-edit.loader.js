@@ -173,13 +173,13 @@ function fillStep3(housing, utilities) {
   const chip = (field, value) => activateChip(`.chip-field[data-field="${field}"]`, value);
 
   setVal('housing-description', h.description);
-  setVal('rooms-count', h.roomsCount);
   chip('housingType', h.ownership);
   chip('buildingType', h.buildingType);
   chip('walls', h.walls);
   chip('roof', h.roof);
   chip('floor', h.floor);
   chip('entrance', h.entrance);
+  chip('roomsCount', h.roomsCount);
   chip('bathroomCondition', h.bathroomCondition);
   chip('sanitation', h.sanitation);
 

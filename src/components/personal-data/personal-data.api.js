@@ -923,7 +923,7 @@ function collectHousingPayload() {
     // ملحوظة API حقيقية (اتأكدت باختبار حي على السيرفر): roomsCount محتاج
     // يتبعت كنص، مش رقم — إرساله كـ number بيرجّع 400 فاضي بلا أي تفاصيل
     // validation (السيرفر بيرمي استثناء تحويل نوع قبل ما يوصل للـ validator).
-    roomsCount: val('rooms-count') || null,
+    roomsCount: chipSingle('roomsCount'),
     bathroomType: serverHousing().bathroomType ?? null,
     bathroomCondition: chipSingle('bathroomCondition'),
     sanitation: chipSingle('sanitation'),
