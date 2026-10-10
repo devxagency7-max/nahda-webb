@@ -275,6 +275,38 @@ function fillStep6(recommendations) {
   return loadSupportSelection(recommendations);
 }
 
+/* ---------------------------- تاب 8 — الرأي ---------------------------- */
+
+/**
+ * قيمة `decision` اللي السيرفر بيحوّل لها خيار الرأي المختصر: accepted/rejected
+ * نفسها، أو نص بيبدأ بـ«غير موافق»/«موافق» (رد الباك إند 2026-10-10).
+ */
+export function briefOpinionDecision(value) {
+  const v = String(value || '').trim();
+  if (v === 'accepted' || v === 'rejected') return v;
+  if (v.startsWith('غير موافق')) return 'rejected';
+  if (v.startsWith('موافق')) return 'accepted';
+  return null;
+}
+
+/**
+ * الرأي المحفوظ في خانة الأخصائي (`opinions.worker`) — من غيره المرحلة كانت
+ * بتفتح فاضية في التعديل. السيرفر بيخزن decision بس (مش النص العربي)، فبنختار
+ * الخيار اللي بيتحوّل لنفس القيمة، والتقرير من notes.
+ */
+function fillStep8(workerOpinion) {
+  if (!workerOpinion) return;
+  const select = DOM.qs('#researcher-brief-opinion');
+  const match = select && workerOpinion.decision
+    ? [...select.options].find(o => o.value && briefOpinionDecision(o.value) === workerOpinion.decision)
+    : null;
+  if (match) {
+    select.value = match.value;
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+  setVal('researcher-opinion', workerOpinion.notes);
+}
+
 /* ---------------------------- أفراد الأسرة ---------------------------- */
 
 function mapMembersFromApi(members) {
@@ -360,6 +392,11 @@ export async function loadCaseIntoForm(caseId) {
       utilities: detail.utilities || null,
       // الجمعية المربوطة على السيرفر — saveStep1 بيبعت PUT /charity بس لو اتغيرت.
       charityId: detail.charityId || null,
+      // الرأي المحفوظ لحظة الفتح — saveStep8 مابيبعتوش تاني لو ماتغيّرش، عشان
+      // كل حفظ كان هيضيف نسخة مكررة في workerHistory.
+      workerOpinion: detail.opinions?.worker
+        ? { decision: detail.opinions.worker.decision || null, notes: detail.opinions.worker.notes || null }
+        : null,
       sectionVersions: {
         beneficiary: detail.beneficiary?.rowVersion,
         housing: detail.housing?.rowVersion,
@@ -375,6 +412,7 @@ export async function loadCaseIntoForm(caseId) {
     loadFamilyMembersManager(mapMembersFromApi(familyRes?.members));
     fillStep5(detail.financial);
     await fillStep6(supportRes?.recommendations || supportRes?.supportRecommendations || []);
+    fillStep8(detail.opinions?.worker);
 
     triggerWorkflowRecalc();
     return true;

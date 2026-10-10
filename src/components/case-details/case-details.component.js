@@ -199,7 +199,11 @@ function mapOpinion(o) {
     author: o.authorName,
     date: (o.displayDate || o.updatedAtUtc || o.createdAtUtc || '').slice(0, 10),
     submitted: o.isSubmitted,
-    isLegacyImport: o.isLegacyImport
+    isLegacyImport: o.isLegacyImport,
+    // social_worker = رأي الأخصائي نفسه؛ data_entry/manager/reviewer = رأي
+    // مبدئي اتكتب من الويب (رد الباك إند 2026-10-10). مش isSubmitted — دايمًا
+    // true في خانة الأخصائي.
+    authorRole: o.authorRole || null
   };
 }
 
@@ -1019,9 +1023,20 @@ function lockedNotice(reason) {
 }
 
 /* -------------------------- Card 8: رأي الأخصائي -------------------------- */
+const PRELIMINARY_AUTHOR_LABEL = {
+  data_entry: 'مدخل البيانات',
+  manager: 'المدير',
+  reviewer: 'المراجع'
+};
+
 function renderWorkerOpinionCard(c) {
   const op = c.workerOpinion;
   const recorded = Boolean(op && op.decision);
+  // رأي مبدئي من الويب لسه الأخصائي ما بعتش رأيه فوقه — بيتعرض كده عشان
+  // مايتقريش على إنه رأي الأخصائي نفسه.
+  const preliminaryBy = recorded && op.authorRole && op.authorRole !== 'social_worker'
+    ? (PRELIMINARY_AUTHOR_LABEL[op.authorRole] || 'الويب')
+    : '';
 
   return `
     <div class="glass-card case-page-card" style="border: 1.5px solid rgba(13, 148, 136, 0.4); background: rgba(240, 253, 250, 0.95);">
@@ -1029,6 +1044,11 @@ function renderWorkerOpinionCard(c) {
         <span>🏠 8. الرأي — رأي الأخصائي الاجتماعي الميداني</span>
         ${decisionBadge(op && op.decision)}
       </div>
+      ${preliminaryBy ? `
+        <div style="margin-bottom: 10px; padding: 10px 12px; background: rgba(245, 158, 11, 0.1); border: 1px dashed rgba(217, 119, 6, 0.5); border-radius: 10px; color: #b45309; font-size: 13px; font-weight: 700;">
+          📝 رأي مبدئي من ${DOM.escapeHTML(preliminaryBy)} — لسه الأخصائي ما راجعوش ولا بعته باسمه
+        </div>
+      ` : ''}
       ${recorded ? `
         <p style="font-size: 15px; line-height: 1.8; color: #134e4a; margin: 0; font-weight: 600; padding: 12px; background: rgba(255,255,255,0.75); border-radius: 12px;">
           "${DOM.escapeHTML(op.notes)}"

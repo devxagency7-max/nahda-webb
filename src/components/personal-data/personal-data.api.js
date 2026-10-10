@@ -21,7 +21,7 @@ import { ApiError, NetworkError, messageFromError } from '../../services/errors.
 import { parseEgyptianNationalId, parseLocalizedFloat } from '../../utils/nationalId.js';
 import { isValidEgyptianPhone, PHONE_ERROR_MESSAGE } from '../../utils/phone.js';
 import { choiceDialog } from '../../utils/dialog.js';
-import { fillAgricultureFromServer, loadCaseIntoForm } from './case-edit.loader.js';
+import { briefOpinionDecision, fillAgricultureFromServer, loadCaseIntoForm } from './case-edit.loader.js';
 import { collectSupportItems, getSupportValidationError } from '../support/support.component.js';
 import { addUploadedAttachmentRow, attachmentRowCount, renderAttachmentList, renderAttachmentLoadError } from '../attachments/attachments.component.js';
 import { memberClearableValues, memberFilledKeys } from '../family-members/family-members.component.js';
@@ -1312,11 +1312,19 @@ export async function saveStep7() {
     showToast('كمّل بيانات المرحلة الأولى (اسم ورقم قومي رب الأسرة) الأول، وبعدين ارجع هنا 🙏', 'warning');
     return false;
   }
-  const briefOpinion = val('researcher-brief-opinion') || null;
-  const detailedReport = val('researcher-opinion') || null;
+  let briefOpinion = val('researcher-brief-opinion') || null;
+  let detailedReport = val('researcher-opinion') || null;
   if (detailedReport && !briefOpinion) {
     showToast('اختار الرأي المختصر للباحث الاجتماعي الأول قبل كتابة التقرير التفصيلي 🙏', 'warning');
     return false;
+  }
+  // الرأي المحمّل في التعديل (case-edit.loader.js) ماتغيّرش ← نبعت الحقلين فاضيين:
+  // السيرفر بيسيب الرأي القديم زي ما هو، بدل نسخة مكررة في workerHistory.
+  const loaded = store.currentCase?.workerOpinion;
+  if (loaded && briefOpinionDecision(briefOpinion) === loaded.decision &&
+      (detailedReport || null) === (loaded.notes || null)) {
+    briefOpinion = null;
+    detailedReport = null;
   }
   return runSave(async () => {
     const updated = await CasesService.submitSocialWorkerAssessment(caseId, {
@@ -1325,9 +1333,10 @@ export async function saveStep7() {
       caseRowVersion: sectionVersion('caseRowVersion')
     });
     store.setSectionVersion('caseRowVersion', updated?.caseRowVersion ?? sectionVersion('caseRowVersion'));
-    if (updated?.status) {
-      store.setCurrentCase({ ...store.currentCase, status: updated.status });
-    }
+    const workerOpinion = briefOpinion
+      ? { decision: briefOpinionDecision(briefOpinion), notes: detailedReport }
+      : store.currentCase?.workerOpinion ?? null;
+    store.setCurrentCase({ ...store.currentCase, workerOpinion, ...(updated?.status ? { status: updated.status } : {}) });
     return true;
   }, {
     onConflict: (err) => refreshCaseRowVersion(caseId, err)
