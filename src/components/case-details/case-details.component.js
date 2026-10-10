@@ -367,7 +367,6 @@ function normalizeApiCase(detail, familyRes, supportRes, attachmentsRes, applian
       landArea: ag.landAreaFeddan,
       landRentAmount: ag.landRentAmount,
       landAnnualIncome: ag.annualLandIncome,
-      cropType: ag.cropType,
       hasLivestock: ag.hasLivestock,
       livestockTypes,
       livestockDetails: ag.livestockDetails,
@@ -799,7 +798,6 @@ function renderAgricultureCard(c, gone = () => false) {
         ${hasLand ? row('مساحة الأرض', a.landArea ? `${a.landArea} فدان` : '') : ''}
         ${hasLand && a.landType === 'إيجار' ? row('قيمة الإيجار', money(a.landRentAmount)) : ''}
         ${hasLand && a.landType === 'تمليك' ? row('الدخل السنوي من الأرض', money(a.landAnnualIncome)) : ''}
-        ${hasLand ? row('نوع الزراعة', a.cropType) : ''}
       </div>
 
       <div class="case-page-subtitle">المواشي والأصول الحيوانية</div>

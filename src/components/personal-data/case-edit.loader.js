@@ -210,7 +210,9 @@ function fillStep3(housing, utilities) {
 
 /* ---------------------------- تاب 4 — الزراعة ---------------------------- */
 
-function fillStep4(agriculture) {
+/** يملا الـ store وفورم الزراعة من agriculture بتاع GET /cases/{id} — بيتنادى
+ * كمان بعد حفظ المرحلة عشان الفورم يعرض اللي السيرفر صفّره فعلًا. */
+export function fillAgricultureFromServer(agriculture) {
   const ag = agriculture || {};
   let livestockTypes = [];
   try {
@@ -365,7 +367,7 @@ export async function loadCaseIntoForm(caseId) {
     fillStep1(detail);
     fillStep2(attachmentsRes, caseId);
     fillStep3(detail.housing, detail.utilities);
-    fillStep4(detail.agriculture);
+    fillAgricultureFromServer(detail.agriculture);
     loadFamilyMembersManager(mapMembersFromApi(familyRes?.members));
     fillStep5(detail.financial);
     await fillStep6(supportRes?.recommendations || supportRes?.supportRecommendations || []);

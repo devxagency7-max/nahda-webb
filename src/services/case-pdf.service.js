@@ -732,7 +732,6 @@ function buildCaseSections(c) {
         <div class="pdf-section-subtitle">الحيازة الزراعية والأصول</div>
         <div class="pdf-grid pdf-grid--3col">
           <div class="pdf-row"><span class="pdf-row__label">حيازة أرض زراعية:</span> <span class="pdf-row__value">${hasLand ? `نعم (${val(ag.landType)} — ${val(ag.landArea)} فدان)` : 'لا'}</span></div>
-          ${hasLand && ag.cropType ? `<div class="pdf-row"><span class="pdf-row__label">نوع المحصول:</span> <span class="pdf-row__value">${DOM.escapeHTML(ag.cropType)}</span></div>` : ''}
           ${hasLand && ag.landRentAmount ? `<div class="pdf-row"><span class="pdf-row__label">قيمة الإيجار:</span> <span class="pdf-row__value">${money(ag.landRentAmount)}</span></div>` : ''}
           ${hasLand && ag.landAnnualIncome ? `<div class="pdf-row"><span class="pdf-row__label">الدخل السنوي من الأرض:</span> <span class="pdf-row__value">${money(ag.landAnnualIncome)}</span></div>` : ''}
           <div class="pdf-row"><span class="pdf-row__label">حيازة مواشي ودواجن:</span> <span class="pdf-row__value">${hasLivestock ? `نعم ${Array.isArray(ag.livestockTypes) && ag.livestockTypes.length ? `(${ag.livestockTypes.join('، ')})` : ''}` : 'لا'}</span></div>

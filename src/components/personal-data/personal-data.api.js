@@ -18,10 +18,10 @@ import { CasesService } from '../../services/cases.service.js';
 import { AttachmentsService, MAX_ATTACHMENTS_PER_CASE, MAX_FILES_PER_PICK, validateFile } from '../../services/attachments.service.js';
 import { OTHER_DOCUMENT_TYPE } from '../../services/document-types.js';
 import { ApiError, NetworkError, messageFromError } from '../../services/errors.js';
-import { parseEgyptianNationalId } from '../../utils/nationalId.js';
+import { parseEgyptianNationalId, parseLocalizedFloat } from '../../utils/nationalId.js';
 import { isValidEgyptianPhone, PHONE_ERROR_MESSAGE } from '../../utils/phone.js';
 import { choiceDialog } from '../../utils/dialog.js';
-import { loadCaseIntoForm } from './case-edit.loader.js';
+import { fillAgricultureFromServer, loadCaseIntoForm } from './case-edit.loader.js';
 import { collectSupportItems, getSupportValidationError } from '../support/support.component.js';
 import { addUploadedAttachmentRow, attachmentRowCount, renderAttachmentList, renderAttachmentLoadError } from '../attachments/attachments.component.js';
 import { memberClearableValues, memberFilledKeys } from '../family-members/family-members.component.js';
@@ -1051,13 +1051,18 @@ export async function saveStep4(readAgricultureData) {
     return false;
   }
   const agri = readAgricultureData();
+  // readAgricultureData بيرجّع الأرقام نصوص بمفاتيح area/rentAmount/annualIncome
+  // — السيرفر عايزها number أو null (الفاضي/غير الصالح = null، والصفر صفر).
+  const num = (v) => {
+    const n = parseLocalizedFloat(v);
+    return Number.isFinite(n) ? n : null;
+  };
   const payload = {
     hasLand: agri.hasLand || 'unanswered',
     landType: agri.landType || null,
-    landAreaFeddan: agri.landArea || null,
-    landRentAmount: agri.landRentAmount || null,
-    annualLandIncome: agri.landAnnualIncome || null,
-    cropType: agri.cropType || null,
+    landAreaFeddan: num(agri.area),
+    landRentAmount: num(agri.rentAmount),
+    annualLandIncome: num(agri.annualIncome),
     hasLivestock: agri.hasLivestock || 'unanswered',
     selectedLivestock: agri.livestockTypes || [],
     livestockOther: agri.livestockOther || null,
@@ -1076,21 +1081,10 @@ export async function saveStep4(readAgricultureData) {
     // UI doesn't keep showing values the backend just discarded.
     // ممنوع ناخد fresh.rowVersion هنا: الزراعة مابتزوّدش caseRowVersion، فلو
     // الرقم اختلف يبقى مستخدم تاني عدّل قسم قوائم — أخده كان هيخفي تعديله.
+    // نفس شكل/مفاتيح readAgricultureData (area/rentAmount/annualIncome...)
+    // عشان الاستعادة ومرحلة الدخل والمصروفات يقروها صح.
     const fresh = await CasesService.getById(caseId);
-    if (fresh?.agriculture) {
-      store.setAgriculture({
-        hasLand: fresh.agriculture.hasLand,
-        landType: fresh.agriculture.landType,
-        landArea: fresh.agriculture.landAreaFeddan,
-        landRentAmount: fresh.agriculture.landRentAmount,
-        landAnnualIncome: fresh.agriculture.annualLandIncome,
-        cropType: fresh.agriculture.cropType,
-        hasLivestock: fresh.agriculture.hasLivestock,
-        livestockTypes: fresh.agriculture.selectedLivestock,
-        livestockDetails: fresh.agriculture.livestockDetails,
-        notes: fresh.agriculture.notes
-      });
-    }
+    if (fresh?.agriculture) fillAgricultureFromServer(fresh.agriculture);
     return true;
   }, {
     onConflict: async () => {
