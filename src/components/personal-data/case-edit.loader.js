@@ -328,7 +328,10 @@ export async function loadCaseIntoForm(caseId) {
     // support-recommendations بيتحفظ بـ PUT "استبدال القائمة كلها" (والـ
     // assessed-needs اتقفل) — فلو فشل جلبه ماينفعش نكمّل، وإلا أول "التالي"
     // كان هيبعت قائمة فاضية ويمسح الدعم المسجّل.
-    if (supportRes?.loadError) throw supportRes.loadError;
+    if (supportRes?.loadError) {
+      showToast(`تعذّر تحميل الدعم المحفوظ للحالة، فالتعديل اتوقف عشان مايتمسحش — ${messageFromError(supportRes.loadError)}. جرّب تاني 🙏`, 'error', 7000);
+      return false;
+    }
 
     // caseRowVersion = rowVersion الحالة لحظة الفتح — مرجع التزامن لكل أقسام
     // القوائم لحد ما حفظ من عندنا يرجّع رقم أحدث. beneficiary/housing/

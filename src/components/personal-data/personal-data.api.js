@@ -1247,12 +1247,19 @@ export async function saveStep6() {
     return false;
   }
 
+  // مفيش ولا نوع مختار: مابنبعتش حاجة، فالدعم المحفوظ قبل كده بيفضل زي ما هو
+  // (نفس الموبايل) — قايمة فاضية في PUT كانت بتمسحه كله.
+  if (collectSupportItems().length === 0) {
+    showToast('مفيش نوع دعم مختار — الدعم المحفوظ قبل كده (لو موجود) هيفضل زي ما هو', 'info');
+    return true;
+  }
+
   // caseRowVersion بيتقرا جوه كل محاولة عشان إعادة المحاولة (بعد حفظ الأفراد
   // أو بعد "حفظ بياناتي فوقها") تبعت الرقم الجديد مش القديم.
   const putSupport = async () => {
     const updated = await CasesService.updateSupportRecommendations(
       caseId,
-      collectSupportItems(val('support-notes')),
+      collectSupportItems(),
       sectionVersion('caseRowVersion')
     );
     store.setSectionVersion('caseRowVersion', updated?.caseRowVersion ?? sectionVersion('caseRowVersion'));

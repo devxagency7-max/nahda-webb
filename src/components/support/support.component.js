@@ -22,6 +22,9 @@ const GROUP_KEY_BY_LABEL = new Map(SUPPORT_GROUPS.map(g => [g.label, g.key]));
 
 let tileSeq = 0;
 let membersSignature = null;
+// صفوف الدعم زي ما رجعت من السيرفر (loadSupportSelection) — الحفظ استبدال
+// كامل، فبنرجّع المبلغ والدورية والمدة وملاحظات الصف من هنا عشان مايتمسحوش.
+let serverRows = [];
 
 /* ---------------------------- أدوات صغيرة ---------------------------- */
 
@@ -245,6 +248,7 @@ export function resetSupportManager() {
   // أي كارت «أخرى» إضافي اتعمل من حالة محمّلة يتشال؛ الأساسي بس يفضل.
   const customs = DOM.qsa('.support-type-tile[data-custom="true"]');
   customs.slice(1).forEach(t => t.remove());
+  serverRows = [];
   membersSignature = null;
   renderAllMembers(true);
 }
@@ -259,14 +263,44 @@ export function getSupportValidationError() {
   return empty ? 'اكتب اسم نوع الدعم في «أخرى» أو شيل العلامة منها 🙏' : null;
 }
 
+/** نص مقصوص أو null (حدود العقد: frequency ≤ 30، duration ≤ 50). */
+function optText(value, max) {
+  const text = typeof value === 'string' ? value.trim() : '';
+  return text ? text.slice(0, max) : null;
+}
+
+/** صف السيرفر لنفس (النوع × المستلم)، أو {} لو صف جديد. */
+function serverRowFor(typeName, recipientType, familyMemberId) {
+  return serverRows.find(r =>
+    canonicalSupportType(r.supportType).name === typeName &&
+    (r.recipientType || 'household') === recipientType &&
+    (recipientType === 'family_member' ? r.familyMemberId === familyMemberId : true)
+  ) || {};
+}
+
 /**
  * عناصر PUT /support-recommendations — صف لكل (نوع × مستلم). نوع الأفراد من
- * غير ولا فرد معلَّم = صف واحد للأسرة كلها.
+ * غير ولا فرد معلَّم = صف واحد للأسرة كلها. المبلغ والدورية والمدة وملاحظات
+ * الصف (مش ظاهرين في الشاشة) بيرجعوا من صف السيرفر نفسه (زي الموبايل).
  */
-export function collectSupportItems(notes = null) {
+export function collectSupportItems() {
   const head = headName() || 'رب الأسرة';
   const byId = new Map((store.familyMembers || []).map(m => [m.memberId, m]));
   const items = [];
+
+  const withServerExtras = (base, recipientType, familyMemberId) => {
+    const old = serverRowFor(base.supportType, recipientType, familyMemberId);
+    const amount = Number(old.proposedAmount);
+    return {
+      ...base,
+      proposedAmount: Number.isFinite(amount) && amount > 0 ? Math.round(amount * 100) / 100 : 0,
+      frequency: optText(old.frequency, 30),
+      duration: optText(old.duration, 50),
+      notes: optText(old.notes, 2000),
+      recipientType,
+      familyMemberId
+    };
+  };
 
   DOM.qsa('.support-type-tile').forEach(tile => {
     if (!tile.querySelector('.support-type-checkbox')?.checked) return;
@@ -278,13 +312,12 @@ export function collectSupportItems(notes = null) {
     if (!typeName) return;
     const category = tile.dataset.auto === 'meat'
       ? meatCategory(familySize())
-      : (tile.querySelector('.support-type-tile__subs .chip-btn--active')?.dataset.value || null);
+      : (tile.querySelector('.support-type-tile__subs .chip-btn--active')?.dataset.value ||
+        optText(serverRows.find(r => canonicalSupportType(r.supportType).name === typeName && r.supportCategory)?.supportCategory, 100));
 
     const base = {
       supportType: typeName,
-      supportCategory: category,
-      proposedAmount: 0,
-      notes: notes || null
+      supportCategory: category
     };
 
     const picked = tile.dataset.scope === 'members'
@@ -292,14 +325,14 @@ export function collectSupportItems(notes = null) {
       : [];
 
     if (!picked.length) {
-      items.push({ ...base, beneficiary: HOUSEHOLD_BENEFICIARY, recipientType: 'household', familyMemberId: null });
+      items.push(withServerExtras({ ...base, beneficiary: HOUSEHOLD_BENEFICIARY }, 'household', null));
       return;
     }
     picked.forEach(id => {
       if (id === HEAD_ID) {
-        items.push({ ...base, beneficiary: head, recipientType: 'head', familyMemberId: null });
+        items.push(withServerExtras({ ...base, beneficiary: head }, 'head', null));
       } else if (byId.has(id)) {
-        items.push({ ...base, beneficiary: byId.get(id).name || 'فرد', recipientType: 'family_member', familyMemberId: id });
+        items.push(withServerExtras({ ...base, beneficiary: byId.get(id).name || 'فرد' }, 'family_member', id));
       }
     });
   });
@@ -333,6 +366,7 @@ export async function loadSupportSelection(recommendations) {
   // الأنواع المخصصة لازم تكون اتضافت قبل ما نعلّم عليها.
   await syncServerTypes();
   resetSupportManager();
+  serverRows = Array.isArray(recommendations) ? recommendations.filter(r => r && typeof r === 'object') : [];
   renderAllMembers(true);
 
   const grouped = new Map();
