@@ -180,7 +180,6 @@ function fillStep3(housing, utilities) {
   chip('roof', h.roof);
   chip('floor', h.floor);
   chip('entrance', h.entrance);
-  chip('bathroomType', h.bathroomType);
   chip('bathroomCondition', h.bathroomCondition);
   chip('sanitation', h.sanitation);
 
@@ -198,7 +197,6 @@ function fillStep3(housing, utilities) {
   };
   chip('electricity', utilityValue('electricity', h.electricity));
   chip('waterMeter', utilityValue('water', h.water));
-  chip('waterMotor', utilityValue('waterMotor', h.waterMotor ? 'يوجد' : null));
   chip('transportation', utilityValue('transportation', h.transport));
   chip('internet', utilityValue('internet', h.internet ? 'يوجد' : null));
 
@@ -349,6 +347,11 @@ export async function loadCaseIntoForm(caseId) {
       // كامل) حتى لا يمسح الحفظ خانات الفورم مابيعرضهاش (راجع
       // collectBeneficiaryPayload في personal-data.api.js).
       beneficiary: detail.beneficiary || null,
+      // السكن والمرافق كما هم على السيرفر — خانات مش معروضة في خطوة السكن
+      // («طبيعة دورات المياه» و«موتور المياه») بتتبعت بقيمتها دي عشان الـ PUT
+      // استبدال كامل ومايمسحهاش (راجع collectHousingPayload).
+      housing: detail.housing || null,
+      utilities: detail.utilities || null,
       // الجمعية المربوطة على السيرفر — saveStep1 بيبعت PUT /charity بس لو اتغيرت.
       charityId: detail.charityId || null,
       sectionVersions: {

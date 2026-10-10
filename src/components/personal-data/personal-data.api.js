@@ -898,6 +898,19 @@ function chipHasValue(fieldName, value) {
  *
  * لازم يفضل مطابق للموبايل: lib/features/case_details/data/mappers/housing_mapper.dart
  */
+/*
+ * «طبيعة دورات المياه» و«موتور المياه» اتشالوا من الشاشة (قرار المنتج: مكررين
+ * مع «حالة دورات المياه» و«عداد المياه») — بنبعت قيمتهم اللي على السيرفر زي
+ * ما هي، عشان الاستبدال الكامل مايمسحهاش.
+ */
+function serverHousing() {
+  return store.currentCase?.housing || {};
+}
+
+function serverUtility(name) {
+  return (store.currentCase?.utilities?.utilities || []).find(u => u?.name === name) || null;
+}
+
 function collectHousingPayload() {
   return {
     description: val('housing-description') || null,
@@ -911,12 +924,12 @@ function collectHousingPayload() {
     // يتبعت كنص، مش رقم — إرساله كـ number بيرجّع 400 فاضي بلا أي تفاصيل
     // validation (السيرفر بيرمي استثناء تحويل نوع قبل ما يوصل للـ validator).
     roomsCount: val('rooms-count') || null,
-    bathroomType: chipSingle('bathroomType'),
+    bathroomType: serverHousing().bathroomType ?? null,
     bathroomCondition: chipSingle('bathroomCondition'),
     sanitation: chipSingle('sanitation'),
     electricity: chipSingle('electricity'),
     water: chipSingle('waterMeter'),
-    waterMotor: chipHasValue('waterMotor', 'يوجد'),
+    waterMotor: Boolean(serverHousing().waterMotor),
     transport: chipSingle('transportation'),
     internet: chipHasValue('internet', 'يوجد'),
     rowVersion: sectionVersion('housing')
@@ -949,7 +962,6 @@ const APPLIANCE_CHIP_FIELDS = ['fridge', 'washer', 'oven', 'cookingAppliances', 
 const UTILITY_CHIP_FIELDS = {
   electricity: 'electricity',
   waterMeter: 'water',
-  waterMotor: 'waterMotor',
   transportation: 'transportation',
   internet: 'internet'
 };
@@ -987,6 +999,13 @@ function collectUtilitiesPayload() {
       notes: null
     });
   });
+
+  // موتور المياه مش معروض — بيتبعت زي ما هو على السيرفر لو موجود.
+  const waterMotor = serverUtility('waterMotor');
+  if (waterMotor) {
+    const { name, isAvailable, condition, sourceOrMeter, notes } = waterMotor;
+    utilities.push({ name, isAvailable, condition, sourceOrMeter, notes });
+  }
 
   return {
     appliances,
