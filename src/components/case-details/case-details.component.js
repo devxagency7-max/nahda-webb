@@ -242,7 +242,9 @@ function normalizeApiCase(detail, familyRes, supportRes, attachmentsRes, applian
 
   let livestockTypes = [];
   try {
-    livestockTypes = ag.selectedLivestockJson ? JSON.parse(ag.selectedLivestockJson) : [];
+    // الرسمي selectedLivestock (array)؛ الـ Json متساب للتوافق وهيتشال.
+    livestockTypes = Array.isArray(ag.selectedLivestock) ? ag.selectedLivestock
+      : (ag.selectedLivestockJson ? JSON.parse(ag.selectedLivestockJson) : []);
   } catch {
     livestockTypes = [];
   }
