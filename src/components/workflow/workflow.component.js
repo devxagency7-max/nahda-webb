@@ -20,10 +20,7 @@ import { DOM } from '../../utils/dom.js';
 import { parseEgyptianNationalId, normalizeNumerals } from '../../utils/nationalId.js';
 import {
   readAgricultureData,
-  agricultureProgress,
-  validateAgriculture,
-  highlightAgricultureIssues,
-  clearAgricultureErrors
+  agricultureProgress
 } from '../agriculture/agriculture.component.js';
 import {
   STEP_SAVE_HANDLERS,
@@ -404,18 +401,15 @@ export function initWorkflowTabs() {
   // تحذير خالص — نوع الدعم اختياري بالكامل.
   const STEP_VALIDATORS = {
     1: validateStep1,
-    4: validateAgriculture,
     5: validateStep5
   };
 
   const STEP_ERROR_CLEANERS = {
-    1: clearStep1Errors,
-    4: clearAgricultureErrors
+    1: clearStep1Errors
   };
 
   const STEP_HIGHLIGHTERS = {
-    1: highlightStep1Issues,
-    4: highlightAgricultureIssues
+    1: highlightStep1Issues
   };
 
   function getValidationMsgEl(step) {

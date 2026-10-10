@@ -1,5 +1,5 @@
 /* --------------------------------------------------------------------------
-   AGRICULTURAL HOLDING & LIVESTOCK COMPONENT (STAGE 5: الحيازة والأصول الزراعية)
+   AGRICULTURAL HOLDING & LIVESTOCK COMPONENT (STAGE 4: الحيازة والأصول الزراعية)
    Mirrors the mobile app's AgriculturalHoldingTab: two explicit yes/no radio
    questions (land / livestock) that reveal their own sub-fields, and a
    conditional rent-vs-annual-income field depending on land tenure type.
@@ -8,7 +8,6 @@
    - قراءة/كتابة بيانات المرحلة في الـ store (حفظ واستعادة بعد الـ refresh)
    - مسح الحقول المخفية فعليًا علشان ما يبقاش فيه "بيانات شبح"
    - تطبيع الأرقام العربية ومنع القيم السالبة
-   - التحقق من اكتمال المرحلة قبل السماح بالانتقال منها
    -------------------------------------------------------------------------- */
 import { triggerWorkflowRecalc } from '../../core/state.js';
 import { store } from '../../state/store.js';
@@ -29,7 +28,7 @@ export function restoreAgricultureManager() {
   if (_restoreCallback) _restoreCallback();
 }
 
-/* ---------- Helpers مشتركة بين القراءة والتحقق ---------- */
+/* ---------- Helpers القراءة ---------- */
 
 function landAnswer() {
   const yes = DOM.qs('#agri-has-land-yes');
@@ -88,46 +87,10 @@ export function readAgricultureData() {
   };
 }
 
-/**
- * تحقق اكتمال المرحلة الخامسة. بيرجع قائمة المشاكل مع العنصر المسؤول عن كل
- * واحدة علشان نقدر نبرزها بصريًا وننقل التركيز لأول حقل ناقص.
- */
-export function validateAgriculture() {
-  const issues = [];
-  const data = readAgricultureData();
-
-  if (data.hasLand === 'yes') {
-    if (data.landType === '') {
-      issues.push({ el: DOM.qs('#agri-land-type'), message: 'اختر طبيعة حيازة الأرض (تمليك / إيجار).' });
-    }
-    if (data.area === '') {
-      issues.push({ el: DOM.qs('#agri-area'), message: 'أدخل مساحة الأرض بالفدان.' });
-    } else if (parseFloat(data.area) < 0) {
-      issues.push({ el: DOM.qs('#agri-area'), message: 'مساحة الأرض لا يمكن أن تكون قيمة سالبة.' });
-    }
-    if (data.landType === 'إيجار' && data.rentAmount !== '' && parseFloat(data.rentAmount) < 0) {
-      issues.push({ el: DOM.qs('#agri-rent-amount'), message: 'قيمة الإيجار لا يمكن أن تكون سالبة.' });
-    }
-    if (data.landType === 'تمليك' && data.annualIncome !== '' && parseFloat(data.annualIncome) < 0) {
-      issues.push({ el: DOM.qs('#agri-annual-income'), message: 'الدخل السنوي لا يمكن أن يكون قيمة سالبة.' });
-    }
-  }
-
-  if (data.hasLivestock === 'yes') {
-    if (data.livestockTypes.length === 0) {
-      issues.push({ el: livestockChipField(), chip: true, message: 'اختر نوعًا واحدًا على الأقل من المواشي.' });
-    } else if (data.livestockTypes.includes(OTHER_OPTION) && data.livestockOther === '') {
-      issues.push({ el: livestockChipField(), chip: true, message: 'اكتب تفاصيل خيار "أخرى" في المواشي.' });
-    }
-  }
-
-  return issues;
-}
-
 /** نسبة إكمال المرحلة — مصدر واحد للحقيقة يستخدمه شريط التقدّم. */
 export function agricultureProgress() {
   // مرحلة لسه محدش فتحها = 0% مهما كانت حالة الحقول الافتراضية.
-  if (!store.isStageVisited(5)) return 0;
+  if (!store.isStageVisited(4)) return 0;
 
   const data = readAgricultureData();
   let done = 0;
@@ -146,35 +109,6 @@ export function agricultureProgress() {
   }
 
   return Math.round((done / 2) * 100);
-}
-
-/* ---------- إبراز/مسح حالات الخطأ ---------- */
-
-export function clearAgricultureErrors() {
-  DOM.qsa('#step-pane-4 .field-invalid').forEach(el => el.classList.remove('field-invalid'));
-  DOM.qsa('#step-pane-4 .agri-yesno--invalid').forEach(el => el.classList.remove('agri-yesno--invalid'));
-  DOM.qsa('#step-pane-4 .chip-field--invalid').forEach(el => el.classList.remove('chip-field--invalid'));
-}
-
-export function highlightAgricultureIssues(issues) {
-  clearAgricultureErrors();
-  issues.forEach(issue => {
-    if (!issue.el) return;
-    if (issue.group) issue.el.classList.add('agri-yesno--invalid');
-    else if (issue.chip) issue.el.classList.add('chip-field--invalid');
-    else issue.el.classList.add('field-invalid');
-  });
-
-  const first = issues.find(i => i.el);
-  if (first && first.el) {
-    const focusTarget = first.group
-      ? first.el.querySelector('input[type="radio"]')
-      : (first.chip ? first.el.querySelector('.chip-btn') : first.el);
-    if (focusTarget && typeof focusTarget.focus === 'function') {
-      focusTarget.focus({ preventScroll: true });
-    }
-    first.el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }
 }
 
 /* ---------- التهيئة ---------- */
@@ -258,7 +192,6 @@ export function initAgricultureManager() {
   landRadios.forEach(radio => {
     radio.addEventListener('change', () => {
       syncLandVisibility();
-      clearAgricultureErrors();
       persist();
       triggerWorkflowRecalc();
     });
@@ -267,7 +200,6 @@ export function initAgricultureManager() {
   livestockRadios.forEach(radio => {
     radio.addEventListener('change', () => {
       syncLivestockVisibility();
-      clearAgricultureErrors();
       persist();
       triggerWorkflowRecalc();
     });
@@ -276,7 +208,6 @@ export function initAgricultureManager() {
   if (landTypeSelect) {
     landTypeSelect.addEventListener('change', () => {
       syncLandTypeFields();
-      clearAgricultureErrors();
       persist();
       triggerWorkflowRecalc();
     });
@@ -311,7 +242,6 @@ export function initAgricultureManager() {
   if (chipField) {
     chipField.addEventListener('click', (e) => {
       if (e.target.closest('.chip-btn')) {
-        clearAgricultureErrors();
         // التأجيل لبعد ما مكوّن الـ chip-field يبدّل الكلاس.
         setTimeout(persist, 0);
       }

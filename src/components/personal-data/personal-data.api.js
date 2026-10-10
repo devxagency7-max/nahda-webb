@@ -1065,9 +1065,10 @@ export async function saveStep4(readAgricultureData) {
     annualLandIncome: num(agri.annualIncome),
     hasLivestock: agri.hasLivestock || 'unanswered',
     selectedLivestock: agri.livestockTypes || [],
-    livestockOther: agri.livestockOther || null,
-    livestockDetails: agri.livestockDetails || null,
-    notes: agri.notes || null
+    // الحقول النصية الفاضية بتتبعت "" (زي الموبايل) — مش null.
+    livestockOther: agri.livestockOther || '',
+    livestockDetails: agri.livestockDetails || '',
+    notes: agri.notes || ''
   };
 
   return runSave(async () => {
@@ -1108,8 +1109,15 @@ export async function saveStep4(readAgricultureData) {
  * أرقام حقيقية على الشاشة. بنقرأ من الـ store مباشرة بدل ما نحاول نعيد قراءة
  * DOM بايت.
  */
+// بنود الأرض الآلية (دخل الأرض الشهري ومصروف إيجار الأرض) — السيرفر بيحسبها
+// بنفسه من PUT /agriculture (API ref §8.10: «do NOT send these»)، فمابنبعتهاش
+// زي الموبايل. من غير الفلتر ده الدخل كان بيتبعت بند يدوي زيادة، والإيجار
+// كان بيتجمّع على فئة «القسط».
+const LAND_AUTO_SOURCE_IDS = new Set(['agri-annual-income', 'agri-rent-amount']);
+const isLandAutoItem = item => LAND_AUTO_SOURCE_IDS.has(item.sourceId);
+
 function readIncomeRows() {
-  return (store.incomeItems || []).map(item => ({
+  return (store.incomeItems || []).filter(item => !isLandAutoItem(item)).map(item => ({
     label: item.type || '',
     amount: Number(item.amount) || 0,
     period: item.frequency || null
@@ -1117,7 +1125,7 @@ function readIncomeRows() {
 }
 
 function readExpenseRows() {
-  return (store.expenseItems || []).map(item => ({
+  return (store.expenseItems || []).filter(item => !isLandAutoItem(item)).map(item => ({
     label: item.type || '',
     amount: Number(item.amount) || 0,
     period: item.frequency || null

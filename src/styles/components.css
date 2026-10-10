@@ -1948,11 +1948,6 @@ body.sidebar-is-collapsed .state-mgmt-page-grid,
   text-align: right;
 }
 
-.agri-yesno__required {
-  color: #dc2626;
-  font-weight: 800;
-}
-
 .agri-yesno__options {
   display: flex;
   gap: 10px;
@@ -1996,26 +1991,11 @@ body.sidebar-is-collapsed .state-mgmt-page-grid,
   outline-offset: 2px;
 }
 
-/* حالة الخطأ عند محاولة الانتقال بحقول ناقصة */
-.agri-yesno--invalid .agri-yesno__legend {
-  color: #dc2626;
-}
-
-.agri-yesno--invalid .agri-yesno__option {
-  border-color: #dc2626;
-}
-
 .field-invalid,
 .form-input.field-invalid,
 .form-select.field-invalid {
   border-color: #dc2626 !important;
   box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.12);
-}
-
-.chip-field--invalid {
-  border-radius: 12px;
-  outline: 1.5px solid #dc2626;
-  outline-offset: 4px;
 }
 
 /* رسالة التحقق أسفل الخطوة قبل الانتقال */

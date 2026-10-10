@@ -74,6 +74,9 @@ export function normalizeDecimalNumerals(input) {
   return str
     .replace(/[٠-٩]/g, d => arabicNumerals.indexOf(d))
     .replace(/[۰-۹]/g, d => persianNumerals.indexOf(d))
+    // الفاصلة العشرية العربية (٫) نقطة — كانت بتتشال فـ«٢٫٥» تبقى 25. زي
+    // normalizeDigits في الموبايل؛ فاصل الآلاف (٬) بيتشال مع الباقي تحت.
+    .replace(/٫/g, '.')
     .replace(/[^\d.]/g, ''); // Strip everything except digits and decimal point
 }
 
