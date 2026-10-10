@@ -143,6 +143,7 @@ function showImagePreview(url, item) {
 const opening = new Set();
 
 function openErrorMessage(err) {
+  if (err instanceof ApiError && err.code === 'ATTACHMENT_INFECTED') return messageFromError(err);
   if (err instanceof ApiError && err.httpStatus === 403) {
     return 'الملف ده مش متاح للفتح (ممكن يكون فيه فيروس، أو معندكش صلاحية عليه)';
   }

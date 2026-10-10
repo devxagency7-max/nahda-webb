@@ -49,7 +49,7 @@
     <div class="form-grid form-grid--full">
       <label class="form-upload">
         <input type="file" id="case-doc-upload" style="display: none;" multiple
-          accept="image/jpeg,image/png,image/heic,image/heif,image/webp,application/pdf,.heic,.heif">
+          accept="image/jpeg,image/png,image/heic,image/heif,image/webp,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.heic,.heif,.doc,.docx">
         <div class="form-upload__icon">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -58,7 +58,7 @@
           </svg>
         </div>
         <div class="form-upload__title">اضغط هنا لإرفاق مستندات أو صور جديدة للحالة</div>
-        <div class="form-upload__hint">صور (JPG, PNG, HEIC, WebP) أو PDF — لحد 5 ملفات في المرة بنفس التصنيف، وحجم الملف الواحد لحد 10 ميجابايت</div>
+        <div class="form-upload__hint">صور (JPG, PNG, HEIC, WebP) أو PDF أو ملف Word — لحد 5 ملفات في المرة بنفس التصنيف، وحجم الملف الواحد لحد <span id="case-doc-size-limit">20</span> ميجابايت</div>
       </label>
     </div>
 

@@ -71,10 +71,12 @@ export const FALLBACK_MESSAGES = {
   MISSING_WORKER_OPINION: 'بانتظار رأي الأخصائي الاجتماعي قبل المتابعة',
   CASE_ALREADY_APPROVED: 'هذه الحالة معتمدة بالفعل، لذلك لا يمكن تغيير حالتها',
   IDEMPOTENCY_KEY_REQUIRED: 'لم تكتمل العملية، حاول مرة أخرى',
-  FILE_TOO_LARGE: 'حجم الملف أكبر من 10 ميجابايت، اختر ملفًا أصغر',
+  FILE_TOO_LARGE: 'حجم الملف أكبر من الحد المسموح، اختر ملفًا أصغر',
   UNSUPPORTED_FILE_TYPE: 'نوع هذا الملف غير مدعوم، جرّب صيغة أخرى',
   STORAGE_UNAVAILABLE: 'خدمة رفع الملفات غير متاحة الآن، حاول بعد قليل',
-  ATTACHMENT_DELETE_LOCKED: 'الحالة مقفولة، لذلك لا يمكن حذف هذا المرفق الآن'
+  ATTACHMENT_DELETE_LOCKED: 'الحالة مقفولة، لذلك لا يمكن حذف هذا المرفق الآن',
+  ATTACHMENT_LIMIT_REACHED: 'الحالة وصلت للحد الأقصى من المرفقات (50)، احذف مرفقًا غير مطلوب أولًا',
+  ATTACHMENT_INFECTED: 'هذا الملف يحتوي على فيروس، ولا يمكن فتحه'
 };
 
 /** Convenience for callers that just want something to hand `showToast`. */

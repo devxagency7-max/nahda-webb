@@ -11,9 +11,11 @@
      3. POST /attachments/{id}/commit -> server verifies real magic bytes,
                                      marks the attachment complete
 
-   Allowed MIME types (closed list, backend reply 2026-10-08 §7): images
-   (jpeg/png/heic/heif/webp) and PDF only — Word files are rejected.
-   Max size: 10 MB per file; max 50 attachments per case. An oversized/
+   Allowed MIME types (closed list, final backend reply 2026-10-10): images
+   (jpeg/png/heic/heif/webp), PDF and Word (doc/docx).
+   Max size: whatever /init's `maxFileSizeBytes` says — the only source of
+   truth (20 MB today, used before the first upload); max 50 attachments per
+   case. An oversized/
    disallowed file is rejected at /init, before any bucket write access is
    minted — check client-side first to avoid a wasted round trip, but never
    trust the client check alone.
@@ -27,7 +29,9 @@ const ALLOWED_MIME_TYPES = new Set([
   'image/png',
   'image/heic',
   'image/webp',
-  'application/pdf'
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
 ]);
 
 // Some browsers (Windows especially) give HEIC/HEIF files an empty `type`,
@@ -39,12 +43,31 @@ const MIME_BY_EXTENSION = {
   heic: 'image/heic',
   heif: 'image/heic',
   webp: 'image/webp',
-  pdf: 'application/pdf'
+  pdf: 'application/pdf',
+  doc: 'application/msword',
+  docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
 };
 
 const MIME_ALIASES = { 'image/jpg': 'image/jpeg', 'image/heif': 'image/heic' };
 
-export const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
+// Updated from every /init reply (`maxFileSizeBytes`); this is only the
+// pre-check before the first one.
+let maxFileSizeBytes = 20 * 1024 * 1024;
+
+/** The current per-file size limit, in bytes. */
+export function getMaxFileSizeBytes() {
+  return maxFileSizeBytes;
+}
+
+/** The current limit in MB for messages (20, or 12.5). */
+export function maxFileSizeLabel() {
+  const mb = maxFileSizeBytes / (1024 * 1024);
+  return Number.isInteger(mb) ? String(mb) : mb.toFixed(1);
+}
+
+function fileTooLargeError(status) {
+  return new ApiError('FILE_TOO_LARGE', `حجم الملف أكبر من ${maxFileSizeLabel()} ميجابايت، اختر ملفًا أصغر`, undefined, status);
+}
 export const MAX_ATTACHMENTS_PER_CASE = 50;
 export const MAX_FILES_PER_PICK = 5;
 export const MAX_DESCRIPTION_LENGTH = 300;
@@ -59,7 +82,7 @@ function storageError(status) {
     // An expired (15-minute) signed link, or a Content-Type the link wasn't signed for.
     return new ApiError('UPLOAD_LINK_EXPIRED', 'رابط الرفع انتهى قبل ما الملف يخلص، جرّب ترفعه تاني', undefined, 403);
   }
-  if (status === 413) return new ApiError('FILE_TOO_LARGE', undefined, undefined, 413);
+  if (status === 413) return fileTooLargeError(413);
   return new ApiError('STORAGE_UNAVAILABLE', undefined, undefined, status);
 }
 
@@ -76,7 +99,7 @@ export function validateFile(file) {
   if (!file.size) {
     return new ApiError('EMPTY_FILE', `الملف "${file.name}" فاضي، اختار ملف تاني`, undefined, 422);
   }
-  if (file.size > MAX_FILE_SIZE_BYTES) return new ApiError('FILE_TOO_LARGE', undefined, undefined, 422);
+  if (file.size > maxFileSizeBytes) return fileTooLargeError(422);
   if (!resolveMimeType(file)) return new ApiError('UNSUPPORTED_FILE_TYPE', undefined, undefined, 422);
   return null;
 }
@@ -91,7 +114,7 @@ export const AttachmentsService = {
    * @param {string} [opts.description] - «أخرى» details (max 300)
    * @param {(progress:{stage:string}) => void} [opts.onProgress] - fired at 'init' | 'uploading' | 'commit' | 'done'
    * @returns {Promise<Object>} the commit response: {attachmentId, status:'complete', rowVersion, scanStatus, fileSizeBytes, checksum, ...}
-   * @throws {ApiError} FILE_TOO_LARGE | UNSUPPORTED_FILE_TYPE | STORAGE_UNAVAILABLE | VALIDATION_ERROR
+   * @throws {ApiError} FILE_TOO_LARGE | UNSUPPORTED_FILE_TYPE | STORAGE_UNAVAILABLE | VALIDATION_ERROR | ATTACHMENT_LIMIT_REACHED
    */
   async upload({ caseId, documentType, file, description, onProgress }) {
     const invalid = validateFile(file);
@@ -107,6 +130,8 @@ export const AttachmentsService = {
       fileSize: file.size,
       description: description?.trim() || undefined
     });
+
+    if (Number(initRes?.maxFileSizeBytes) > 0) maxFileSizeBytes = Number(initRes.maxFileSizeBytes);
 
     // Without this, commit() would hit /attachments/undefined/commit and the
     // server answers a misleading 404 «المسار المطلوب غير موجود».

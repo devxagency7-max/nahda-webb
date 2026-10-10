@@ -15,7 +15,7 @@ import { DOM } from '../../utils/dom.js';
 import { store } from '../../state/store.js';
 import { showToast } from '../../utils/toast.js';
 import { CasesService } from '../../services/cases.service.js';
-import { AttachmentsService, MAX_ATTACHMENTS_PER_CASE, MAX_FILES_PER_PICK, validateFile } from '../../services/attachments.service.js';
+import { AttachmentsService, MAX_ATTACHMENTS_PER_CASE, MAX_FILES_PER_PICK, maxFileSizeLabel, validateFile } from '../../services/attachments.service.js';
 import { OTHER_DOCUMENT_TYPE } from '../../services/document-types.js';
 import { ApiError, NetworkError, messageFromError } from '../../services/errors.js';
 import { parseEgyptianNationalId, parseLocalizedFloat } from '../../utils/nationalId.js';
@@ -738,7 +738,7 @@ export async function saveStep2() {
 const BATCH_STOPPING_CODES = new Set([
   'UNAUTHORIZED', 'TOKEN_EXPIRED', 'TOKEN_REVOKED', 'TOKEN_INVALID', 'FORBIDDEN',
   'CASE_NOT_ASSIGNED', 'CASE_NOT_FOUND', 'INVALID_STATUS_TRANSITION',
-  'RATE_LIMITED', 'STORAGE_UNAVAILABLE'
+  'RATE_LIMITED', 'STORAGE_UNAVAILABLE', 'ATTACHMENT_LIMIT_REACHED'
 ]);
 
 function stopsBatch(err) {
@@ -841,6 +841,9 @@ export function wireAttachmentUpload() {
       }
     } finally {
       uploading = false;
+      // الحد بيتحدّث من رد السيرفر — النص اللي تحت خانة الرفع يفضل مطابق.
+      const sizeLimitEl = DOM.qs('#case-doc-size-limit');
+      if (sizeLimitEl) sizeLimitEl.textContent = maxFileSizeLabel();
     }
     const skipped = stoppedAt >= 0 ? valid.length - stoppedAt - 1 : 0;
     if (skipped > 0) errors.push(`ووقفنا الرفع، فـ${skipped} ملف تاني ما اترفعش — جرّب ترفعهم تاني`);
